@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Portfolio | COMMAND CENTER</title>
+    <link rel="stylesheet" href="/src/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+    <!-- Admin Background Layer -->
+    <div class="admin-bg-overlay"></div>
+    <div class="film-grain"></div>
+
+    <div class="admin-wrapper">
+        <!-- Thanh Điều Hướng Bên (Sidebar) -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-brand">
+                <div class="admin-logo">TV</div>
+                <div class="brand-text">
+                    <span class="admin-label">HỆ THỐNG QUẢN TRỊ</span>
+                    <span class="admin-version">COMMAND_CENTER v2.0</span>
+                </div>
+            </div>
+            
+            <nav class="admin-nav">
+                <button class="nav-btn active" data-tab="dashboard">
+                    <span class="nav-icon">⬚</span> TỔNG QUAN
+                </button>
+                <button class="nav-btn" data-tab="content">
+                    <span class="nav-icon">▤</span> KHO SẢN PHẨM
+                </button>
+                <button class="nav-btn" data-tab="profile">
+                    <span class="nav-icon">⌬</span> HỒ SƠ CÁ NHÂN
+                </button>
+                <button class="nav-btn" data-tab="settings">
+                    <span class="nav-icon">⚙</span> CẤU HÌNH HỆ THỐNG
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" class="back-link">← QUAY LẠI TRANG CHỦ</a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="header-info">
+                    <span class="admin-greeting" id="dynamic-greeting">CHÀO BUỔI CHIỀU, ĐẠO DIỄN</span>
+                    <h1 class="admin-title">BẢNG ĐIỀU KHIỂN</h1>
+                </div>
+                <div class="status-pulse">
+                    <span class="status-dot"></span>
+                    <span class="status-text">HỆ THỐNG TRỰC TUYẾN</span>
+                </div>
+            </header>
+
+            <!-- DASHBOARD SECTION -->
+            <section id="dashboard" class="admin-section active">
+                <div class="admin-panel">
+                    <div class="panel-header">
+                        <h2 class="section-heading">CHỈ SỐ TỔNG QUAN</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-label">TỔNG DỰ ÁN</span>
+                                <div class="stat-value">12</div>
+                                <span class="stat-trend">+2 trong tháng này</span>
+                            </div>
+                            <div class="stat-card accent">
+                                <span class="stat-label">LƯỢT TRUY CẬP</span>
+                                <div class="stat-value">1,428</div>
+                                <span class="stat-trend">Ổn định</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-label">TRẠNG THÁI</span>
+                                <div class="stat-value">SẴN SÀNG</div>
+                                <span class="stat-trend">Nhân sự: 01/01</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-panel">
+                    <div class="panel-header">
+                        <h2 class="section-heading">HOẠT ĐỘNG GẦN ĐÂY</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="activity-list">
+                            <div class="activity-item">
+                                <span class="activity-time">10:42 SA</span>
+                                <p class="activity-desc">Đã cập nhật YouTube ID cho phim ngắn "Luxury Watch".</p>
+                            </div>
+                            <div class="activity-item">
+                                <span class="activity-time">HÔM QUA</span>
+                                <p class="activity-desc">Thay đổi màu chủ đạo hệ thống sang màu Đỏ Bordeaux.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONTENT MANAGEMENT -->
+            <section id="content" class="admin-section">
+                <div class="admin-panel">
+                    <div class="panel-header">
+                        <div class="header-group">
+                            <h2 class="section-heading">KHO SẢN PHẨM</h2>
+                            <span class="panel-subtitle">Quản lý và cập nhật danh sách video portfolio</span>
+                        </div>
+                        <button class="btn-primary">+ THÊM VIDEO MỚI</button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>TIÊU ĐỀ</th>
+                                        <th>THỂ LOẠI</th>
+                                        <th>NĂM</th>
+                                        <th>YOUTUBE_ID</th>
+                                        <th>THAO TÁC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="td-title">LUXURY WATCH</td>
+                                        <td><span class="badge ad">QUẢNG CÁO</span></td>
+                                        <td>2023</td>
+                                        <td class="td-code">dQw4w9WgXcQ</td>
+                                        <td>
+                                            <div class="action-group">
+                                                <button class="btn-icon">SỬA</button>
+                                                <button class="btn-icon delete">XÓA</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="td-title">URBAN EXPLORATION</td>
+                                        <td><span class="badge mv">MUSIC VIDEO</span></td>
+                                        <td>2024</td>
+                                        <td class="td-code">p_j_vX0pY8E</td>
+                                        <td>
+                                            <div class="action-group">
+                                                <button class="btn-icon">SỬA</button>
+                                                <button class="btn-icon delete">XÓA</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROFILE EDITOR -->
+            <section id="profile" class="admin-section">
+                <div class="admin-panel">
+                    <div class="panel-header">
+                        <div class="header-group">
+                            <h2 class="section-heading">BIÊN TẬP HỒ SƠ</h2>
+                            <span class="panel-subtitle">Chỉnh sửa câu chuyện và giới thiệu cá nhân</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="editor-interface">
+                            <div class="line-numbers">
+                                <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                            </div>
+                            <div class="editor-container">
+                                <div class="editor-header">
+                                    <span class="file-name">GIOI_THIEU_BAN_THAN.MD</span>
+                                    <span class="file-status">MODIFIED</span>
+                                </div>
+                                <textarea class="admin-textarea" spellcheck="false"> Tôi là Trần Quốc Vinh, một Video Editor với niềm đam mê kể chuyện qua từng khung hình. 
+
+Với hơn 5 năm kinh nghiệm trong lĩnh vực hậu kỳ, tôi tập trung vào việc tạo ra những trải nghiệm thị giác ấn tượng và đầy cảm xúc. Triết lý của tôi là: "Mọi khung hình đều mang một linh hồn riêng."</textarea>
+                            </div>
+                        </div>
+                        <div class="editor-footer">
+                            <button class="btn-primary">LƯU THAY ĐỔI (CTRL+S)</button>
+                            <span class="save-status">Đã lưu lần cuối: 2 phút trước</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SYSTEM SETTINGS -->
+            <section id="settings" class="admin-section">
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label class="setting-label">HÌNH NỀN TRANG CHỦ</label>
+                        <div class="image-uploader">
+                            <div class="upload-preview"></div>
+                            <button class="btn-secondary">CHỌN TỆP ẢNH</button>
+                        </div>
+                    </div>
+                    <div class="setting-card">
+                        <label class="setting-label">MÀU NHẤN (ACCENT COLOR)</label>
+                        <div class="color-picker-group">
+                            <input type="color" class="admin-color-picker" value="#8B0000">
+                            <span class="color-hex">#8B0000</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-primary mt-lg">ÁP DỤNG TOÀN HỆ THỐNG</button>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="/src/admin.js"></script>
+</body>
+</html>
