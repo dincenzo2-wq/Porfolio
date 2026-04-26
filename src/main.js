@@ -45,13 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Skills
         const skillsContainer = document.getElementById('software-skills-container');
         if (skillsContainer) {
-            skillsContainer.innerHTML = profile.skills.map(s => `
-                <div class="soft-module active">
-                    <h4 class="soft-name">${s.name}</h4>
-                    <span class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</span>
-                    <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
+            skillsContainer.innerHTML = `
+                <div class="toolkit-featured-side">
+                    <div class="featured-soft-big">TV</div>
+                    <div class="featured-label">MASTERED_SYSTEMS</div>
                 </div>
-            `).join('');
+                <div class="toolkit-list-side">
+                    ${profile.skills.map(s => `
+                        <div class="soft-module active">
+                            <h4 class="soft-name">${s.name}</h4>
+                            <span class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</span>
+                            <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
         }
 
         // 4. Experience Timeline
