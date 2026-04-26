@@ -45,21 +45,30 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Skills
         const skillsContainer = document.getElementById('software-skills-container');
         if (skillsContainer) {
-            skillsContainer.innerHTML = `
-                <div class="toolkit-featured-side">
-                    <div class="featured-soft-big">TV</div>
-                    <div class="featured-label">MASTERED_SYSTEMS</div>
-                </div>
-                <div class="toolkit-list-side">
-                    ${profile.skills.map(s => `
-                        <div class="soft-module active">
-                            <h4 class="soft-name">${s.name}</h4>
-                            <span class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</span>
-                            <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
+            skillsContainer.innerHTML = profile.skills.map(s => {
+                const radius = 45;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference - (s.level / 100) * circumference;
+                const shortId = s.id || s.name.substring(0, 2).toUpperCase();
+
+                return `
+                    <div class="soft-module active">
+                        <div class="circle-progress-wrap">
+                            <svg class="circle-svg" viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="${radius}"></circle>
+                                <circle class="circle-bar" cx="50" cy="50" r="${radius}" 
+                                    style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};">
+                                </circle>
+                            </svg>
+                            <div class="circle-content">${shortId}</div>
                         </div>
-                    `).join('')}
-                </div>
-            `;
+                        <div class="soft-info">
+                            <h4 class="soft-name">${s.name}</h4>
+                            <div class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // 4. Experience Timeline
