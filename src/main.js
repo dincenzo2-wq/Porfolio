@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Experience Timeline
         const expContainer = document.getElementById('experience-timeline-container');
-        if (expContainer) {
+        if (expContainer && profile.experience) {
             expContainer.innerHTML = profile.experience.map((e, i) => `
                 <div class="reel-card ${i === 0 ? 'active-reel' : ''}">
                     <div class="reel-card-inner">
@@ -70,6 +70,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 class="reel-company">${e.company}</h4>
                         <p class="reel-role">${e.role}</p>
                         <span class="reel-star">★</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 5. Education Timeline
+        const eduContainer = document.getElementById('education-timeline-container');
+        if (eduContainer && profile.education) {
+            eduContainer.innerHTML = profile.education.map(e => `
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">${e.startYear} — ${e.endYear}</span>
+                        <h5 class="exp-company">${e.company}</h5>
+                        <p class="exp-info">${e.degree}</p>
                     </div>
                 </div>
             `).join('');

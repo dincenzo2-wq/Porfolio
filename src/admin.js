@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddSkill = document.getElementById('btn-add-skill');
     const experienceList = document.getElementById('experience-list');
     const btnAddExp = document.getElementById('btn-add-exp');
+    const educationList = document.getElementById('education-list');
+    const btnAddEdu = document.getElementById('btn-add-edu');
     const bioTextarea = document.getElementById('profile-bio-text');
     const btnSaveProfile = document.getElementById('btn-save-profile');
 
@@ -56,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             projects = data.projects || [];
             profile = data.profile || {};
+            // Ensure arrays exist
+            if (!profile.skills) profile.skills = [];
+            if (!profile.experience) profile.experience = [];
+            if (!profile.education) profile.education = [];
             settings = data.settings || {};
             
             // Sync to localStorage as backup
@@ -288,8 +294,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- PROFILE LOGIC ---
+    // Thu thập dữ liệu từ các ô nhập hiện tại (để không bị mất khi render lại)
+    const collectProfileInputs = () => {
+        // Bio
+        profile.bio = bioTextarea.value;
+
+        // Skills
+        const skillItems = document.querySelectorAll('.skill-edit-item');
+        profile.skills = Array.from(skillItems).map(item => ({
+            name: item.querySelector('.skill-name').value,
+            level: parseInt(item.querySelector('.skill-range').value)
+        }));
+
+        // Experience
+        const expItems = document.querySelectorAll('#experience-list .exp-edit-item');
+        profile.experience = Array.from(expItems).map(item => ({
+            year: item.querySelector('.exp-year').value,
+            role: item.querySelector('.exp-role').value,
+            company: item.querySelector('.exp-company').value
+        }));
+
+        // Education
+        const eduItems = document.querySelectorAll('#education-list .exp-edit-item');
+        profile.education = Array.from(eduItems).map(item => ({
+            startYear: item.querySelector('.edu-start').value,
+            endYear: item.querySelector('.edu-end').value,
+            company: item.querySelector('.exp-company').value,
+            degree: item.querySelector('.exp-role').value
+        }));
+    };
+
     const renderProfile = () => {
-        bioTextarea.value = profile.bio;
+        if (!profile.skills) profile.skills = [];
+        if (!profile.experience) profile.experience = [];
+        if (!profile.education) profile.education = [];
+
+        bioTextarea.value = profile.bio || '';
 
         skillsList.innerHTML = profile.skills.map((s, i) => `
             <div class="skill-edit-item" data-index="${i}">
@@ -304,43 +344,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
         experienceList.innerHTML = profile.experience.map((e, i) => `
             <div class="exp-edit-item" data-index="${i}">
-                <input type="text" value="${e.year}" class="admin-input exp-year" placeholder="NĂM">
+                <input type="text" value="${e.year}" class="admin-input exp-year" placeholder="NĂM (VD: 2021-2024)">
                 <input type="text" value="${e.role}" class="admin-input exp-role" placeholder="VỊ TRÍ">
-                <input type="text" value="${e.company}" class="admin-input exp-company" placeholder="CÔNG TY/TRƯỜNG">
+                <input type="text" value="${e.company}" class="admin-input exp-company" placeholder="CÔNG TY">
                 <button class="btn-icon delete btn-remove-exp">XÓA</button>
+            </div>
+        `).join('');
+
+        educationList.innerHTML = profile.education.map((e, i) => `
+            <div class="exp-edit-item" data-index="${i}">
+                <div class="year-range-inputs">
+                    <input type="text" value="${e.startYear || ''}" class="admin-input edu-start" placeholder="BẮT ĐẦU">
+                    <span class="year-separator">—</span>
+                    <input type="text" value="${e.endYear || ''}" class="admin-input edu-end" placeholder="KẾT THÚC">
+                </div>
+                <input type="text" value="${e.degree || ''}" class="admin-input exp-role" placeholder="CHUYÊN NGÀNH">
+                <input type="text" value="${e.company || ''}" class="admin-input exp-company" placeholder="TRƯỜNG HỌC">
+                <button class="btn-icon delete btn-remove-edu">XÓA</button>
             </div>
         `).join('');
     };
 
     btnAddSkill.addEventListener('click', () => {
+        collectProfileInputs();
         profile.skills.push({ name: 'KỸ NĂNG MỚI', level: 50 });
         renderProfile();
     });
 
     btnAddExp.addEventListener('click', () => {
+        collectProfileInputs();
         profile.experience.push({ year: '2024', role: 'VỊ TRÍ', company: 'CÔNG TY' });
+        renderProfile();
+    });
+
+    btnAddEdu.addEventListener('click', () => {
+        collectProfileInputs();
+        profile.education.push({ startYear: '2020', endYear: '2024', degree: 'CHUYÊN NGÀNH', company: 'TRƯỜNG HỌC' });
         renderProfile();
     });
 
     skillsList?.addEventListener('click', e => {
         if (e.target.classList.contains('btn-remove-skill')) {
-            const item = e.target.closest('.skill-edit-item');
-            if (item) {
-                const index = parseInt(item.dataset.index, 10);
-                profile.skills.splice(index, 1);
-                renderProfile();
-            }
+            collectProfileInputs();
+            const index = parseInt(e.target.closest('.skill-edit-item').dataset.index, 10);
+            profile.skills.splice(index, 1);
+            renderProfile();
         }
     });
 
     experienceList?.addEventListener('click', e => {
         if (e.target.classList.contains('btn-remove-exp')) {
-            const item = e.target.closest('.exp-edit-item');
-            if (item) {
-                const index = parseInt(item.dataset.index, 10);
-                profile.experience.splice(index, 1);
-                renderProfile();
-            }
+            collectProfileInputs();
+            const index = parseInt(e.target.closest('.exp-edit-item').dataset.index, 10);
+            profile.experience.splice(index, 1);
+            renderProfile();
+        }
+    });
+
+    educationList?.addEventListener('click', e => {
+        if (e.target.classList.contains('btn-remove-edu')) {
+            collectProfileInputs();
+            const index = parseInt(e.target.closest('.exp-edit-item').dataset.index, 10);
+            profile.education.splice(index, 1);
+            renderProfile();
         }
     });
 
@@ -355,30 +421,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnSaveProfile?.addEventListener('click', async () => {
-        // Collect Skills
-        const skillItems = document.querySelectorAll('.skill-edit-item');
-        const updatedSkills = Array.from(skillItems).map(item => ({
-            name: item.querySelector('.skill-name').value.toUpperCase(),
-            level: parseInt(item.querySelector('.skill-range').value)
-        }));
-
-        // Collect Experience
-        const expItems = document.querySelectorAll('.exp-edit-item');
-        const updatedExp = Array.from(expItems).map(item => ({
-            year: item.querySelector('.exp-year').value,
-            role: item.querySelector('.exp-role').value.toUpperCase(),
-            company: item.querySelector('.exp-company').value.toUpperCase()
-        }));
-
-        const updatedProfile = {
-            bio: bioTextarea.value,
-            skills: updatedSkills,
-            experience: updatedExp
-        };
+        collectProfileInputs();
 
         await showToast('Hồ sơ đã cập nhật!', btnSaveProfile, async () => {
-            await apiSave('/api/profile', updatedProfile);
-            profile = updatedProfile;
+            await apiSave('/api/profile', profile);
             saveStorage('tv_profile', profile);
         });
     });
