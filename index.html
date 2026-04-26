@@ -17,6 +17,7 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="/src/style.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body class="midnight-timeline">
     <!-- Artist Effects Elements -->
@@ -30,6 +31,9 @@
             <li><a href="#director-cut">SẢN PHẨM</a></li>
             <li><a href="#contact" class="nav-cta">LIÊN HỆ</a></li>
         </ul>
+        <button class="mobile-nav-toggle" aria-label="Toggle navigation">
+            <span class="hamburger"></span>
+        </button>
     </nav>
 
     <main>
@@ -48,13 +52,13 @@
 
                 <div class="hero-portrait-container fade-in">
                     <div class="glow-bg"></div>
-                    <img src="/images/portrait.png" alt="Trần Quốc Vinh" class="hero-portrait" fetchpriority="high" decoding="async">
+                    <img src="/images/portrait.png" alt="Trần Quốc Vinh" class="hero-portrait" id="hero-avatar" fetchpriority="high" decoding="async">
                     
                     <div class="hero-identity-block">
-                        <h1 class="id-name">Trần Quốc <span class="accent-name">Vinh</span></h1>
+                        <h1 class="id-name" id="hero-name">Trần Quốc <span class="accent-name">Vinh</span></h1>
                         <div class="id-profession-wrap">
                             <div class="id-line-sm"></div>
-                            <p class="id-profession">Cinematic Video Editor</p>
+                            <p class="id-profession" id="hero-profession">Cinematic Video Editor</p>
                             <div class="id-line-sm"></div>
                         </div>
                     </div>
@@ -81,8 +85,8 @@
 
                 <!-- Simplified Concise Bio -->
                 <div class="concise-bio-container fade-in">
-                    <div class="bio-text-block">
-                        <p>Tôi là <strong>Trần Quốc Vinh</strong>, một Cinematic Video Editor với niềm đam mê xây dựng những trải nghiệm thị giác giàu cảm xúc. Với tư duy Storytelling kết hợp nền tảng Marketing, tôi không chỉ cắt ghép video mà còn tạo ra những thông điệp thương mại mạnh mẽ, thấu hiểu mục tiêu của khách hàng để tối ưu hóa từng giây trong mỗi khung hình.</p>
+                    <div class="bio-text-block" id="about-bio">
+                        <p>Tôi là <strong>Trần Quốc Vinh</strong>, một Cinematic Video Editor với niềm đam mê xây dựng những trải nghiệm thị giác giàu cảm xúc.</p>
                     </div>
                 </div>
 
@@ -97,70 +101,8 @@
                             </div>
                         </div>
                         
-                        <div class="work-reel-container" id="work-reel">
-                            <!-- 1. LOTUS -->
-                            <div class="reel-card active-reel">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">3/2025 — HIỆN TẠI</span>
-                                    <h4 class="reel-company">LOTUS WEDDING HOUSE</h4>
-                                    <p class="reel-role">Full Time | Editor</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 2. WHITE WEDDING -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">10/2024 — HIỆN TẠI</span>
-                                    <h4 class="reel-company">WHITE WEDDING DECOR & MORE</h4>
-                                    <p class="reel-role">Freelance | Videographer</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 3. TEAM NGHIỆP DƯ -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">6/2024 — HIỆN TẠI</span>
-                                    <h4 class="reel-company">TEAM LÀM PHIM NGHIỆP DƯ</h4>
-                                    <p class="reel-role">Freelance | Videographer</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 4. NHA KHOA -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">5/2022 — 2/2025</span>
-                                    <h4 class="reel-company">NHA KHOA TRỒNG RĂNG SÀI GÒN</h4>
-                                    <p class="reel-role">Full Time | Videographer</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 5. CAM BEAUTY SPA -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">3/2021 — 1/2022</span>
-                                    <h4 class="reel-company">CAM BEAUTY SPA</h4>
-                                    <p class="reel-role">Full Time | Content Marketing</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 6. STORE ADIDAS -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">6/2020 — 12/2020</span>
-                                    <h4 class="reel-company">STORE ADIDAS</h4>
-                                    <p class="reel-role">Full Time | Sales</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
-                            <!-- 7. DANH KHÔI -->
-                            <div class="reel-card">
-                                <div class="reel-card-inner">
-                                    <span class="reel-date">1/2020 — 5/2020</span>
-                                    <h4 class="reel-company">TẬP ĐOÀN DANH KHÔI</h4>
-                                    <p class="reel-role">Full Time | Sales</p>
-                                    <span class="reel-star">★</span>
-                                </div>
-                            </div>
+                        <div class="work-reel-container" id="experience-timeline-container">
+                            <!-- Experience items injected via JS -->
                         </div>
                     </div>
 
@@ -175,66 +117,8 @@
                                 </div>
                             </div>
                             
-                            <div class="software-dossier-grid">
-                                <div class="soft-module active">
-                                    <div class="module-bg"></div>
-                                    <div class="module-content">
-                                        <div class="module-top">
-                                            <span class="soft-id">PR</span>
-                                            <span class="soft-level">MASTERED</span>
-                                        </div>
-                                        <h4 class="soft-name">PREMIERE PRO</h4>
-                                        <div class="module-bar"><div class="bar-fill" style="width: 95%"></div></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="soft-module active">
-                                    <div class="module-bg"></div>
-                                    <div class="module-content">
-                                        <div class="module-top">
-                                            <span class="soft-id">DR</span>
-                                            <span class="soft-level">EXPERT</span>
-                                        </div>
-                                        <h4 class="soft-name">DAVINCI RESOLVE</h4>
-                                        <div class="module-bar"><div class="bar-fill" style="width: 90%"></div></div>
-                                    </div>
-                                </div>
-
-                                <div class="soft-module active">
-                                    <div class="module-bg"></div>
-                                    <div class="module-content">
-                                        <div class="module-top">
-                                            <span class="soft-id">AE</span>
-                                            <span class="soft-level">EXPERT</span>
-                                        </div>
-                                        <h4 class="soft-name">AFTER EFFECTS</h4>
-                                        <div class="module-bar"><div class="bar-fill" style="width: 85%"></div></div>
-                                    </div>
-                                </div>
-
-                                <div class="soft-module active">
-                                    <div class="module-bg"></div>
-                                    <div class="module-content">
-                                        <div class="module-top">
-                                            <span class="soft-id">FG</span>
-                                            <span class="soft-level">ADVANCED</span>
-                                        </div>
-                                        <h4 class="soft-name">FIGMA</h4>
-                                        <div class="module-bar"><div class="bar-fill" style="width: 80%"></div></div>
-                                    </div>
-                                </div>
-
-                                <div class="soft-module active">
-                                    <div class="module-bg"></div>
-                                    <div class="module-content">
-                                        <div class="module-top">
-                                            <span class="soft-id">PS</span>
-                                            <span class="soft-level">MASTERED</span>
-                                        </div>
-                                        <h4 class="soft-name">PHOTOSHOP</h4>
-                                        <div class="module-bar"><div class="bar-fill" style="width: 92%"></div></div>
-                                    </div>
-                                </div>
+                            <div class="software-dossier-grid" id="software-skills-container">
+                                <!-- Software items injected via JS -->
                             </div>
                         </div>
 
@@ -325,74 +209,7 @@
 
                 <div class="works-container obsidian-glass fade-in">
                     <div class="works-grid bento-layout" id="projects-grid">
-                        <!-- Featured Large -->
-                        <div class="work-item interactive-project bento-large" data-category="travel" data-youtube-id="dQw4w9WgXcQ">
-                            <div class="wipe-container">
-                                <img src="/images/thumb1.png" alt="Travel RAW" class="img-raw" loading="lazy" decoding="async">
-                                <img src="/images/thumb1.png" alt="Travel Graded" class="img-graded" loading="lazy" decoding="async">
-                                <div class="wipe-line"></div>
-                                <div class="play-overlay">
-                                    <div class="play-btn-cinematic">▶</div>
-                                </div>
-                                <div class="bento-tag">FEATURED</div>
-                            </div>
-                            <div class="work-meta">
-                                <span class="work-year">2024</span>
-                                <h3 class="work-title">Đà Nẵng Journey</h3>
-                                <span class="work-cat">Travel Vlog</span>
-                            </div>
-                        </div>
-
-                        <!-- Wedding Wide -->
-                        <div class="work-item interactive-project bento-wide" data-category="wedding" data-youtube-id="dQw4w9WgXcQ">
-                            <div class="wipe-container">
-                                <img src="/images/thumb2.png" alt="Wedding RAW" class="img-raw" loading="lazy" decoding="async">
-                                <img src="/images/thumb2.png" alt="Wedding Graded" class="img-graded" loading="lazy" decoding="async">
-                                <div class="wipe-line"></div>
-                                <div class="play-overlay">
-                                    <div class="play-btn-cinematic">▶</div>
-                                </div>
-                            </div>
-                            <div class="work-meta">
-                                <span class="work-year">2023</span>
-                                <h3 class="work-title">Eternal Love</h3>
-                                <span class="work-cat">Wedding Film</span>
-                            </div>
-                        </div>
-
-                        <!-- Event Standard -->
-                        <div class="work-item interactive-project" data-category="event" data-youtube-id="dQw4w9WgXcQ">
-                            <div class="wipe-container">
-                                <img src="/images/thumb3.png" alt="Event RAW" class="img-raw" loading="lazy" decoding="async">
-                                <img src="/images/thumb3.png" alt="Event Graded" class="img-graded" loading="lazy" decoding="async">
-                                <div class="wipe-line"></div>
-                                <div class="play-overlay">
-                                    <div class="play-btn-cinematic">▶</div>
-                                </div>
-                            </div>
-                            <div class="work-meta">
-                                <span class="work-year">2024</span>
-                                <h3 class="work-title">Night of Stars</h3>
-                                <span class="work-cat">Event Recap</span>
-                            </div>
-                        </div>
-
-                        <!-- Commercial Standard -->
-                        <div class="work-item interactive-project" data-category="commercial" data-youtube-id="dQw4w9WgXcQ">
-                            <div class="wipe-container">
-                                <img src="/images/thumb1.png" alt="Comm RAW" class="img-raw" loading="lazy" decoding="async">
-                                <img src="/images/thumb1.png" alt="Comm Graded" class="img-graded" loading="lazy" decoding="async">
-                                <div class="wipe-line"></div>
-                                <div class="play-overlay">
-                                    <div class="play-btn-cinematic">▶</div>
-                                </div>
-                            </div>
-                            <div class="work-meta">
-                                <span class="work-year">2023</span>
-                                <h3 class="work-title">Luxury Watch</h3>
-                                <span class="work-cat">Commercial</span>
-                            </div>
-                        </div>
+                        <!-- Projects injected via JS -->
                     </div>
                 </div>
                 </div>

@@ -1,118 +1,234 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Interaction Logic (Lights Out Focus)
-    const interactiveElements = document.querySelectorAll('a, button, .interactive-project, .nav-link, .reel-card, .work-item, .reel-btn');
-    
-    interactiveElements.forEach(el => {
-        el.addEventListener('mouseenter', () => {
-            if (el.classList.contains('work-item')) {
-                document.body.classList.add('lights-out');
-                el.classList.add('project-focus');
-            }
-        });
-        el.addEventListener('mouseleave', () => {
-            document.body.classList.remove('lights-out');
-            el.classList.remove('project-focus');
-        });
+    // --- DATA LOADING (LOCALSTORAGE) ---
+    const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
+
+    const projects = getStorage('tv_projects', [
+        { id: 1, title: 'Đà Nẵng Journey', category: 'COMMERCIAL', year: '2024', youtubeId: 'dQw4w9WgXcQ' },
+        { id: 2, title: 'Eternal Love', category: 'WEDDING', year: '2023', youtubeId: 'dQw4w9WgXcQ' }
+    ]);
+
+    const profile = getStorage('tv_profile', {
+        bio: 'Tôi là <strong>Trần Quốc Vinh</strong>, một Cinematic Video Editor với niềm đam mê xây dựng những trải nghiệm thị giác giàu cảm xúc.',
+        skills: [
+            { name: 'PREMIERE PRO', level: 95, id: 'PR' },
+            { name: 'AFTER EFFECTS', level: 85, id: 'AE' },
+            { name: 'DAVINCI RESOLVE', level: 90, id: 'DR' },
+            { name: 'PHOTOSHOP', level: 92, id: 'PS' }
+        ],
+        experience: [
+            { year: '3/2025 — HIỆN TẠI', role: 'Full Time | Editor', company: 'LOTUS WEDDING HOUSE' },
+            { year: '10/2024 — HIỆN TẠI', role: 'Freelance | Videographer', company: 'WHITE WEDDING DECOR' }
+        ]
     });
 
-    // 2. Project Filter Logic
+    const settings = getStorage('tv_settings', {
+        name: 'TRẦN QUỐC VINH',
+        profession: 'SENIOR VIDEO EDITOR',
+        slogan: 'Kể chuyện qua từng khung hình. Kiến tạo trải nghiệm điện ảnh ấn tượng.',
+        avatar: '/src/assets/avatar.jpg',
+        accentColor: '#E21D1D'
+    });
 
-    // Intersection Observer for Animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
+    // --- DYNAMIC RENDERING ---
+    const renderApp = () => {
+        // 1. Branding
+        document.getElementById('hero-name').innerHTML = settings.name.replace(' ', ' <span class="accent-name">') + '</span>';
+        document.getElementById('hero-profession').textContent = settings.profession;
+        document.getElementById('hero-avatar').src = settings.avatar;
+        document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+
+        // 2. Bio
+        // SECURITY NOTE: Using .innerHTML with data from localStorage can be a security risk (XSS).
+        // If the bio content can be complex, consider using a sanitization library like DOMPurify
+        // to prevent malicious scripts from being injected.
+        // Example: document.getElementById('about-bio').innerHTML = DOMPurify.sanitize(`<p>${profile.bio}</p>`);
+        document.getElementById('about-bio').innerHTML = `<p>${profile.bio}</p>`;
+
+        // 3. Skills
+        const skillsContainer = document.getElementById('software-skills-container');
+        if (skillsContainer) {
+            skillsContainer.innerHTML = profile.skills.map(s => `
+                <div class="soft-module active">
+                    <div class="module-bg"></div>
+                    <div class="module-content">
+                        <div class="module-top">
+                            <span class="soft-id">${s.id || s.name.substring(0, 2)}</span>
+                            <span class="soft-level">${s.level > 90 ? 'MASTERED' : 'EXPERT'}</span>
+                        </div>
+                        <h4 class="soft-name">${s.name}</h4>
+                        <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 4. Experience Timeline
+        const expContainer = document.getElementById('experience-timeline-container');
+        if (expContainer) {
+            expContainer.innerHTML = profile.experience.map((e, i) => `
+                <div class="reel-card ${i === 0 ? 'active-reel' : ''}">
+                    <div class="reel-card-inner">
+                        <span class="reel-date">${e.year}</span>
+                        <h4 class="reel-company">${e.company}</h4>
+                        <p class="reel-role">${e.role}</p>
+                        <span class="reel-star">★</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 5. Projects Grid
+        const projectsGrid = document.getElementById('projects-grid');
+        if (projectsGrid) {
+            renderProjects(projects, projectsGrid);
+        }
     };
 
+    const renderProjects = (projectsData, container) => {
+        container.innerHTML = ''; // Clear existing content
+        const fragment = document.createDocumentFragment();
+
+        projectsData.forEach((p, i) => {
+            const projectItem = document.createElement('div');
+            projectItem.className = `work-item interactive-project ${i === 0 ? 'bento-large' : i === 1 ? 'bento-wide' : ''}`;
+            projectItem.dataset.category = p.category.toLowerCase();
+            projectItem.dataset.youtubeId = p.youtubeId;
+
+            projectItem.innerHTML = `
+                <div class="wipe-container">
+                    <img src="https://img.youtube.com/vi/${p.youtubeId}/maxresdefault.jpg" alt="${p.title}" class="img-raw" loading="lazy">
+                    <img src="https://img.youtube.com/vi/${p.youtubeId}/maxresdefault.jpg" alt="${p.title}" class="img-graded" loading="lazy">
+                    <div class="wipe-line"></div>
+                    <div class="play-overlay">
+                        <div class="play-btn-cinematic">▶</div>
+                    </div>
+                    ${i === 0 ? '<div class="bento-tag">FEATURED</div>' : ''}
+                </div>
+                <div class="work-meta">
+                    <span class="work-year">${p.year}</span>
+                    <h3 class="work-title">${p.title}</h3>
+                    <span class="work-cat">${p.category}</span>
+                </div>
+            `;
+
+            // Attach listeners directly to the new element, eliminating the need for a separate `attachListeners` function.
+            projectItem.addEventListener('mouseenter', () => {
+                document.body.classList.add('lights-out');
+                projectItem.classList.add('project-focus');
+            });
+            projectItem.addEventListener('mouseleave', () => {
+                document.body.classList.remove('lights-out');
+                projectItem.classList.remove('project-focus');
+            });
+            projectItem.addEventListener('click', () => {
+                openLightbox(p.youtubeId);
+            });
+
+            fragment.appendChild(projectItem);
+        });
+
+        container.appendChild(fragment);
+    };
+
+    // --- INTERSECTION OBSERVER ---
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('appear');
-            }
+            if (entry.isIntersecting) entry.target.classList.add('appear');
         });
-    }, observerOptions);
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
     document.querySelectorAll('.fade-in').forEach((el, index) => {
         el.style.transitionDelay = `${index * 100}ms`;
         observer.observe(el);
     });
 
-    // Page Load Wipe
-    window.addEventListener('load', () => {
-        document.body.classList.add('loaded');
-    });
-
-    // Category Filtering Logic
+    // --- FILTER LOGIC ---
     const consoleTabs = document.querySelectorAll('.console-tab');
-    const projectItems = document.querySelectorAll('.work-item');
-    const projectsGrid = document.getElementById('projects-grid');
-
     consoleTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            // Remove active class from all tabs
             consoleTabs.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tab
             tab.classList.add('active');
-
             const filterValue = tab.getAttribute('data-filter');
+            const projectsGrid = document.getElementById('projects-grid');
 
-            // Animate grid out
             projectsGrid.style.opacity = '0';
-            projectsGrid.style.transform = 'translateY(10px)';
-
             setTimeout(() => {
+                const projectItems = document.querySelectorAll('.work-item');
                 projectItems.forEach(item => {
-                    const itemCategory = item.getAttribute('data-category');
-                    
-                    if (filterValue === 'all' || itemCategory === filterValue) {
-                        item.classList.remove('hidden');
-                    } else {
-                        item.classList.add('hidden');
-                    }
+                    const cat = item.getAttribute('data-category');
+                    item.classList.toggle('hidden', filterValue !== 'all' && !cat.includes(filterValue));
                 });
-
-                // Animate grid back in
                 projectsGrid.style.opacity = '1';
-                projectsGrid.style.transform = 'translateY(0)';
             }, 400);
         });
     });
 
-    // Video Lightbox Logic
+    // --- LIGHTBOX LOGIC ---
     const lightbox = document.getElementById('video-lightbox');
     const lightboxIframe = document.getElementById('lightbox-iframe');
-    const lightboxClose = document.querySelector('.lightbox-close');
-    const lightboxOverlay = document.querySelector('.lightbox-overlay');
-
-    function openLightbox(youtubeId) {
+    const openLightbox = (youtubeId) => {
         if (!youtubeId) return;
-        const embedUrl = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1`;
-        lightboxIframe.src = embedUrl;
+        lightboxIframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`;
         lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Lock scroll
-    }
-
-    function closeLightbox() {
+        document.body.style.overflow = 'hidden';
+    };
+    const closeLightbox = () => {
         lightbox.classList.remove('active');
-        setTimeout(() => {
-            lightboxIframe.src = '';
-            document.body.style.overflow = ''; // Unlock scroll
-        }, 300);
+        setTimeout(() => { lightboxIframe.src = ''; document.body.style.overflow = ''; }, 300);
+    };
+
+    document.querySelector('.lightbox-close')?.addEventListener('click', closeLightbox);
+    document.querySelector('.lightbox-overlay')?.addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && closeLightbox());
+
+    // --- REEL CAROUSEL ---
+    const reelContainer = document.getElementById('experience-timeline-container');
+    const btnNext = document.getElementById('reel-next');
+    const btnPrev = document.getElementById('reel-prev');
+
+    if (btnNext && btnPrev && reelContainer) {
+        btnNext.addEventListener('click', () => {
+            const active = reelContainer.querySelector('.active-reel');
+            const next = active.nextElementSibling;
+            if (next) {
+                active.classList.remove('active-reel');
+                next.classList.add('active-reel');
+                next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        });
+        btnPrev.addEventListener('click', () => {
+            const active = reelContainer.querySelector('.active-reel');
+            const prev = active.previousElementSibling;
+            if (prev) {
+                active.classList.remove('active-reel');
+                prev.classList.add('active-reel');
+                prev.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        });
     }
 
-    projectItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const youtubeId = item.getAttribute('data-youtube-id');
-            openLightbox(youtubeId);
+    // --- MOBILE NAVIGATION ---
+    const mobileToggle = document.querySelector('.mobile-nav-toggle');
+    const navLinksContainer = document.querySelector('.nav-links');
+    const navLinks = document.querySelectorAll('.nav-links a');
+
+    if (mobileToggle && navLinksContainer) {
+        mobileToggle.addEventListener('click', () => {
+            mobileToggle.classList.toggle('active');
+            navLinksContainer.classList.toggle('active');
+            document.body.style.overflow = navLinksContainer.classList.contains('active') ? 'hidden' : '';
         });
-    });
 
-    if (lightboxClose) lightboxClose.addEventListener('click', closeLightbox);
-    if (lightboxOverlay) lightboxOverlay.addEventListener('click', closeLightbox);
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileToggle.classList.remove('active');
+                navLinksContainer.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+    }
 
-    // Escape key to close lightbox
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
-            closeLightbox();
-        }
-    });
+    // --- STARTUP ---
+    window.addEventListener('load', () => document.body.classList.add('loaded'));
+    renderApp();
 });
