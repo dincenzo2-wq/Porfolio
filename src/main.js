@@ -28,7 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Branding
         document.getElementById('hero-name').innerHTML = settings.name.replace(' ', ' <span class="accent-name">') + '</span>';
         document.getElementById('hero-profession').textContent = settings.profession;
-        document.getElementById('hero-avatar').src = settings.avatar;
+        const heroAvatar = document.getElementById('hero-avatar');
+        if (heroAvatar && settings.avatar) {
+            heroAvatar.src = settings.avatar;
+            heroAvatar.style.opacity = '1';
+        }
         document.documentElement.style.setProperty('--accent-color', settings.accentColor);
 
         // 2. Bio
