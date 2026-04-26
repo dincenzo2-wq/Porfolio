@@ -41,28 +41,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
     const saveStorage = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
-    let projects = getStorage('tv_projects', [
-        { id: Date.now(), title: 'LUXURY WATCH', category: 'COMMERCIAL', year: '2023', youtubeId: 'dQw4w9WgXcQ' }
-    ]);
+    // --- CLOUDFLARE API ---
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
-    let profile = getStorage('tv_profile', {
-        bio: 'Tôi là Trần Quốc Vinh, một Video Editor với niềm đam mê kể chuyện qua từng khung hình...',
-        skills: [
-            { name: 'ADOBE PREMIERE', level: 95 },
-            { name: 'AFTER EFFECTS', level: 85 }
-        ],
-        experience: [
-            { year: '2024', role: 'SENIOR EDITOR', company: 'DYNAMIC STUDIO' }
-        ]
-    });
+    let projects = [];
+    let profile = {};
+    let settings = {};
 
-    let settings = getStorage('tv_settings', {
-        name: 'TRẦN QUỐC VINH',
-        profession: 'SENIOR VIDEO EDITOR',
-        slogan: 'Kể chuyện qua từng khung hình. Kiến tạo trải nghiệm điện ảnh ấn tượng.',
-        avatar: 'assets/avatar.jpg',
-        accentColor: '#E21D1D'
-    });
+    const fetchAllData = async () => {
+        try {
+            const response = await fetch(`${WORKER_URL}/api/all-data`);
+            if (!response.ok) throw new Error('Failed to fetch from D1');
+            const data = await response.json();
+            
+            projects = data.projects || [];
+            profile = data.profile || {};
+            settings = data.settings || {};
+            
+            // Sync to localStorage as backup
+            saveStorage('tv_projects', projects);
+            saveStorage('tv_profile', profile);
+            saveStorage('tv_settings', settings);
+        } catch (err) {
+            console.warn('API Fetch failed, using localStorage fallback:', err);
+            projects = getStorage('tv_projects', []);
+            profile = getStorage('tv_profile', {});
+            settings = getStorage('tv_settings', {});
+        }
+    };
+
+    const apiSave = async (endpoint, data) => {
+        const response = await fetch(`${WORKER_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`Save failed: ${response.statusText}`);
+        return response.json();
+    };
 
     // --- SYNC SIDEBAR ---
     const syncSidebar = (data) => {
@@ -111,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     // --- INITIALIZE UI ---
-    const initUI = () => {
+    const initUI = async () => {
         // Greeting
         const hour = new Date().getHours();
         const greetingEl = document.getElementById('dynamic-greeting');
@@ -119,6 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (hour < 18) greetingEl.textContent = "GOOD AFTERNOON, DIRECTOR";
         else greetingEl.textContent = "GOOD EVENING, DIRECTOR";
 
+        // Show loading state if needed
+        adminWrapper.style.opacity = '0.5';
+        await fetchAllData();
+        adminWrapper.style.opacity = '1';
+
+        syncSidebar(settings);
         renderProjects();
         renderProfile();
         renderSettings();
@@ -182,15 +204,21 @@ document.addEventListener('DOMContentLoaded', () => {
         `}).join('');
     };
 
-    projectGrid?.addEventListener('click', (e) => {
+    projectGrid?.addEventListener('click', async (e) => {
         if (e.target.classList.contains('btn-delete-project')) {
             const card = e.target.closest('.project-card');
             if (card && confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
                 const id = Number(card.dataset.projectId);
                 projects = projects.filter(p => p.id !== id);
-                saveStorage('tv_projects', projects);
-                renderProjects();
-                updateStats();
+                
+                try {
+                    await apiSave('/api/projects', projects);
+                    saveStorage('tv_projects', projects);
+                    renderProjects();
+                    updateStats();
+                } catch (err) {
+                    alert('Lỗi khi xóa dự án: ' + err.message);
+                }
             }
         }
     });
@@ -217,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    addVideoForm.addEventListener('submit', (e) => {
+    addVideoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const title = document.getElementById('add-video-title').value;
@@ -241,18 +269,22 @@ document.addEventListener('DOMContentLoaded', () => {
             youtubeId: youtubeId
         };
 
-        projects.unshift(newProject);
-        saveStorage('tv_projects', projects);
-        renderProjects();
-        updateStats();
-
-        addVideoForm.reset();
-        if (videoPreviewImg) videoPreviewImg.style.display = 'none';
-        if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'block';
-
         const submitBtn = addVideoForm.querySelector('button[type="submit"]');
-        addVideoFormContainer.style.display = 'none';
-        showToast('Đã thêm video mới vào kho thành công!', submitBtn);
+        
+        await showToast('Đã thêm video mới!', submitBtn, async () => {
+            const updatedProjects = [newProject, ...projects];
+            await apiSave('/api/projects', updatedProjects);
+            projects = updatedProjects;
+            saveStorage('tv_projects', projects);
+            
+            addVideoForm.reset();
+            if (videoPreviewImg) videoPreviewImg.style.display = 'none';
+            if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'block';
+            addVideoFormContainer.style.display = 'none';
+            
+            renderProjects();
+            updateStats();
+        });
     });
 
     // --- PROFILE LOGIC ---
@@ -322,25 +354,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    btnSaveProfile?.addEventListener('click', () => {
+    btnSaveProfile?.addEventListener('click', async () => {
         // Collect Skills
         const skillItems = document.querySelectorAll('.skill-edit-item');
-        profile.skills = Array.from(skillItems).map(item => ({
+        const updatedSkills = Array.from(skillItems).map(item => ({
             name: item.querySelector('.skill-name').value.toUpperCase(),
             level: parseInt(item.querySelector('.skill-range').value)
         }));
 
         // Collect Experience
         const expItems = document.querySelectorAll('.exp-edit-item');
-        profile.experience = Array.from(expItems).map(item => ({
+        const updatedExp = Array.from(expItems).map(item => ({
             year: item.querySelector('.exp-year').value,
             role: item.querySelector('.exp-role').value.toUpperCase(),
             company: item.querySelector('.exp-company').value.toUpperCase()
         }));
 
-        profile.bio = bioTextarea.value;
-        saveStorage('tv_profile', profile);
-        showToast('Hồ sơ đã được cập nhật!', btnSaveProfile);
+        const updatedProfile = {
+            bio: bioTextarea.value,
+            skills: updatedSkills,
+            experience: updatedExp
+        };
+
+        await showToast('Hồ sơ đã cập nhật!', btnSaveProfile, async () => {
+            await apiSave('/api/profile', updatedProfile);
+            profile = updatedProfile;
+            saveStorage('tv_profile', profile);
+        });
     });
 
     // --- SETTINGS LOGIC ---
@@ -367,32 +407,71 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.style.setProperty('--accent-color', color);
     });
 
-    btnSaveSettings?.addEventListener('click', () => {
-        settings = {
+    btnSaveSettings?.addEventListener('click', async () => {
+        const updatedSettings = {
             name: inputUserName.value.toUpperCase(),
             profession: inputUserProfession.value.toUpperCase(),
             slogan: inputUserSlogan.value,
             avatar: inputUserAvatar.value || 'assets/avatar.jpg',
             accentColor: colorPicker.value
         };
-        saveStorage('tv_settings', settings);
-        syncSidebar(settings);
-        showToast('Cài đặt trang chủ đã lưu!', btnSaveSettings);
+
+        await showToast('Cài đặt đã lưu!', btnSaveSettings, async () => {
+            await apiSave('/api/settings', updatedSettings);
+            settings = updatedSettings;
+            saveStorage('tv_settings', settings);
+            syncSidebar(settings);
+        });
     });
 
-    // --- AVATAR UPLOAD LOGIC ---
+    // --- AVATAR UPLOAD LOGIC (WITH COMPRESSION) ---
     const handleAvatarFile = (file) => {
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const base64Image = e.target.result;
-                avatarPreview.src = base64Image;
-                inputUserAvatar.value = base64Image; // Store base64 for saving
+                const img = new Image();
+                img.onload = () => {
+                    // Create canvas for compression
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Max dimensions 400x400 for avatar
+                    const MAX_SIZE = 400;
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Export as compressed JPEG
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // Check size (approximate for base64)
+                    if (compressedBase64.length > 800000) { // ~800KB
+                        alert('Ảnh sau khi nén vẫn quá lớn. Vui lòng chọn ảnh khác hoặc dùng Link URL.');
+                        return;
+                    }
+
+                    avatarPreview.src = compressedBase64;
+                    inputUserAvatar.value = compressedBase64;
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         } else {
-            // Simple alert for now, can be replaced with a better toast/notification
-            alert('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WEBP).');
+            alert('Vui lòng chọn file hình ảnh hợp lệ.');
         }
     };
 
@@ -423,24 +502,31 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stat-total-projects').textContent = projects.length;
     };
 
-    const showToast = (msg, btn) => {
-        if (!btn) return; // Nếu không có nút, không làm gì cả
+    const showToast = async (msg, btn, apiCall = null) => {
+        if (!btn) return;
         const originalText = btn.textContent;
         btn.textContent = 'ĐANG LƯU...';
         btn.disabled = true;
 
-        setTimeout(() => {
-            btn.textContent = 'THÀNH CÔNG!';
+        try {
+            if (apiCall) await apiCall();
+            
+            btn.textContent = msg || 'THÀNH CÔNG!';
             btn.style.background = '#00FF41';
             btn.style.color = '#000';
+        } catch (err) {
+            console.error(err);
+            btn.textContent = 'LỖI LƯU TRỮ!';
+            btn.style.background = '#E21D1D';
+            btn.style.color = '#fff';
+        }
 
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.background = '';
-                btn.style.color = '';
-                btn.disabled = false;
-            }, 2000);
-        }, 500);
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.disabled = false;
+        }, 2000);
     };
 
     initUI();

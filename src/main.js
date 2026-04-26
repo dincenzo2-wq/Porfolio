@@ -1,33 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DATA LOADING (LOCALSTORAGE) ---
+    // --- DATA HANDLING ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
-    const projects = getStorage('tv_projects', [
-        { id: 1, title: 'Đà Nẵng Journey', category: 'COMMERCIAL', year: '2024', youtubeId: 'dQw4w9WgXcQ' },
-        { id: 2, title: 'Eternal Love', category: 'WEDDING', year: '2023', youtubeId: 'dQw4w9WgXcQ' }
-    ]);
+    let projects = [];
+    let profile = {};
+    let settings = {};
 
-    const profile = getStorage('tv_profile', {
-        bio: 'Tôi là <strong>Trần Quốc Vinh</strong>, một Cinematic Video Editor với niềm đam mê xây dựng những trải nghiệm thị giác giàu cảm xúc.',
-        skills: [
-            { name: 'PREMIERE PRO', level: 95, id: 'PR' },
-            { name: 'AFTER EFFECTS', level: 85, id: 'AE' },
-            { name: 'DAVINCI RESOLVE', level: 90, id: 'DR' },
-            { name: 'PHOTOSHOP', level: 92, id: 'PS' }
-        ],
-        experience: [
-            { year: '3/2025 — HIỆN TẠI', role: 'Full Time | Editor', company: 'LOTUS WEDDING HOUSE' },
-            { year: '10/2024 — HIỆN TẠI', role: 'Freelance | Videographer', company: 'WHITE WEDDING DECOR' }
-        ]
-    });
-
-    const settings = getStorage('tv_settings', {
-        name: 'TRẦN QUỐC VINH',
-        profession: 'SENIOR VIDEO EDITOR',
-        slogan: 'Kể chuyện qua từng khung hình. Kiến tạo trải nghiệm điện ảnh ấn tượng.',
-        avatar: '/src/assets/avatar.jpg',
-        accentColor: '#E21D1D'
-    });
+    const fetchData = async () => {
+        try {
+            const response = await fetch(`${WORKER_URL}/api/all-data`);
+            if (!response.ok) throw new Error('API fetch failed');
+            const data = await response.json();
+            projects = data.projects || [];
+            profile = data.profile || {};
+            settings = data.settings || {};
+        } catch (err) {
+            console.warn('API Fetch failed, using localStorage fallback:', err);
+            projects = getStorage('tv_projects', []);
+            profile = getStorage('tv_profile', {});
+            settings = getStorage('tv_settings', {});
+        }
+    };
 
     // --- DYNAMIC RENDERING ---
     const renderApp = () => {
@@ -229,6 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- STARTUP ---
-    window.addEventListener('load', () => document.body.classList.add('loaded'));
-    renderApp();
+    const init = async () => {
+        await fetchData();
+        renderApp();
+        document.body.classList.add('loaded');
+    };
+
+    init();
 });
