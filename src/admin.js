@@ -455,8 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Export as compressed JPEG
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    // Export as compressed WebP (supports transparency)
+                    const compressedBase64 = canvas.toDataURL('image/webp', 0.8);
                     
                     // Check size (approximate for base64)
                     if (compressedBase64.length > 800000) { // ~800KB
