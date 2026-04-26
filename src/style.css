@@ -1127,8 +1127,18 @@ footer {
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-md);
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dossier-label {
+    font-family: var(--font-tech);
+    font-size: 0.75rem;
+    color: var(--secondary-text);
+    letter-spacing: 0.4em;
+    font-weight: 800;
+    text-transform: uppercase;
+    opacity: 0.8;
 }
 
 .toolkit-status {
@@ -1166,19 +1176,22 @@ footer {
 
 .software-dossier-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: var(--space-md);
-    margin-top: var(--space-md);
+    margin-top: var(--space-lg);
 }
 
 .soft-module {
     position: relative;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 2px;
     padding: var(--space-md);
     overflow: hidden;
-    transition: var(--transition-fast);
+    transition: all var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .soft-module::before {
@@ -1220,22 +1233,25 @@ footer {
 
 .soft-level {
     font-family: var(--font-tech);
-    font-size: 0.875rem;
+    font-size: 0.7rem;
     color: var(--accent-color);
     letter-spacing: 0.1em;
-    font-weight: 800;
-    border: 1px solid var(--accent-color);
-    padding: 2px 6px;
-    border-radius: 2px;
+    font-weight: 500;
+    border: 1px solid rgba(226, 29, 29, 0.3);
+    padding: 1px 6px;
+    border-radius: 1px;
+    text-transform: uppercase;
 }
 
 .soft-name {
     font-family: var(--font-tech);
     font-size: 0.875rem;
-    color: var(--secondary-text);
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-    font-weight: 600;
+    color: var(--primary-text);
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+    font-weight: 400; /* Regular weight as requested */
+    text-transform: capitalize; /* Title Case */
+    opacity: 0.8;
 }
 
 .module-bar {
