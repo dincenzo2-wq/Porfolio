@@ -47,15 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (skillsContainer) {
             skillsContainer.innerHTML = profile.skills.map(s => `
                 <div class="soft-module active">
-                    <div class="module-bg"></div>
-                    <div class="module-content">
-                        <div class="module-top">
-                            <span class="soft-id">${s.id || s.name.substring(0, 2)}</span>
-                            <span class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</span>
-                        </div>
-                        <h4 class="soft-name">${s.name}</h4>
-                        <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
-                    </div>
+                    <h4 class="soft-name">${s.name}</h4>
+                    <span class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</span>
+                    <div class="module-bar"><div class="bar-fill" style="width: ${s.level}%"></div></div>
                 </div>
             `).join('');
         }
