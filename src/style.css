@@ -3415,3 +3415,195 @@ body.loaded .hero-side-content {
         margin-left: 0;
     }
 }
+
+/* ============================================================
+   MICROLINK FETCHER + R2 THUMBNAIL WORKFLOW
+   ============================================================ */
+
+.microlink-tool,
+.r2-thumb-section {
+    margin-top: 4px;
+}
+
+/* Input + Action button rows */
+.microlink-input-row,
+.r2-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Microlink Fetch Button */
+.btn-microlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 16px;
+    background: rgba(226, 29, 29, 0.12);
+    border: 1px solid rgba(226, 29, 29, 0.4);
+    border-radius: 8px;
+    color: oklch(0.78 0.12 20);
+    font-family: var(--font-tech);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.btn-microlink:hover:not(:disabled) {
+    background: rgba(226, 29, 29, 0.22);
+    border-color: rgba(226, 29, 29, 0.7);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-microlink:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* R2 Preview Button */
+.btn-preview-r2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--font-tech);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.btn-preview-r2:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #fff;
+}
+
+/* Status Indicator */
+.microlink-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: var(--font-tech);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
+.microlink-status.status-loading {
+    background: rgba(255, 170, 0, 0.08);
+    color: oklch(0.82 0.14 72);
+    border: 1px solid rgba(255, 170, 0, 0.2);
+}
+
+.microlink-status.status-success {
+    background: rgba(0, 180, 80, 0.08);
+    color: oklch(0.78 0.15 148);
+    border: 1px solid rgba(0, 180, 80, 0.22);
+}
+
+.microlink-status.status-error {
+    background: rgba(226, 29, 29, 0.08);
+    color: oklch(0.72 0.18 20);
+    border: 1px solid rgba(226, 29, 29, 0.22);
+}
+
+/* Result URL row */
+.microlink-result {
+    margin-top: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+.result-url-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 8px 12px;
+    overflow: hidden;
+}
+
+.result-url-text {
+    font-family: var(--font-tech);
+    font-size: 0.7rem;
+    color: oklch(0.74 0.06 200);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Copy Button */
+.btn-copy-url {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: rgba(0, 180, 80, 0.1);
+    border: 1px solid rgba(0, 180, 80, 0.3);
+    border-radius: 6px;
+    color: oklch(0.78 0.14 148);
+    font-family: var(--font-tech);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.btn-copy-url:hover {
+    background: rgba(0, 180, 80, 0.2);
+    border-color: rgba(0, 180, 80, 0.5);
+    color: #fff;
+}
+
+.btn-copy-url.copied {
+    background: rgba(0, 180, 80, 0.25);
+    border-color: oklch(0.72 0.15 148);
+    color: oklch(0.88 0.14 148);
+}
+
+/* Optional label tag */
+.label-optional {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+}
+
+/* R2 Badge on Project Cards */
+.r2-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: oklch(0.38 0.16 148);
+    color: #fff;
+    font-family: var(--font-tech);
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    padding: 3px 7px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+}

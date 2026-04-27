@@ -188,11 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!projectGrid) return;
         projectGrid.innerHTML = projects.map(p => {
             const categoryClass = p.category.toLowerCase().replace(/\s+/g, '-');
+            const thumbUrl = p.thumbnail || `https://img.youtube.com/vi/${p.youtubeId}/mqdefault.jpg`;
+            const thumbBadge = p.thumbnail ? '<span class="r2-badge" title="Thumbnail t὎0ầy R2">R2</span>' : '';
             return `
             <div class="project-card" data-project-id="${p.id}">
                 <div class="card-thumbnail">
-                    <img src="https://img.youtube.com/vi/${p.youtubeId}/mqdefault.jpg" alt="${p.title}" loading="lazy">
+                    <img src="${thumbUrl}" alt="${p.title}" loading="lazy">
                     <div class="card-overlay">
+                        ${thumbBadge}
                         <button class="btn-icon delete btn-delete-project">XÓA</button>
                     </div>
                 </div>
@@ -236,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LIVE PREVIEW FOR YOUTUBE ---
     const videoPreviewImg = document.getElementById('video-preview-img');
-    const videoPreviewPlaceholder = document.querySelector('.preview-empty');
+    const videoPreviewPlaceholder = document.getElementById('preview-placeholder');
 
     addVideoIdInput?.addEventListener('input', (e) => {
         const youtubeId = getYoutubeIdFromInput(e.target.value);
@@ -258,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rawId = document.getElementById('add-video-id').value;
         const year = document.getElementById('add-video-year').value;
         const category = document.querySelector('input[name="category"]:checked').value;
+        const customThumbnail = (document.getElementById('add-video-thumbnail')?.value || '').trim();
 
         // Extract ID if user pasted a full URL
         const youtubeId = getYoutubeIdFromInput(rawId);
@@ -272,7 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: title.toUpperCase(),
             category: category,
             year: year,
-            youtubeId: youtubeId
+            youtubeId: youtubeId,
+            thumbnail: customThumbnail || null
         };
 
         const submitBtn = addVideoForm.querySelector('button[type="submit"]');
@@ -285,12 +290,124 @@ document.addEventListener('DOMContentLoaded', () => {
             
             addVideoForm.reset();
             if (videoPreviewImg) videoPreviewImg.style.display = 'none';
-            if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'block';
+            if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'flex';
             addVideoFormContainer.style.display = 'none';
+            
+            // Reset Microlink UI
+            const microlinkStatus = document.getElementById('microlink-status');
+            const microlinkResult = document.getElementById('microlink-result');
+            const microlinkImageUrl = document.getElementById('microlink-image-url');
+            if (microlinkStatus) { microlinkStatus.style.display = 'none'; microlinkStatus.textContent = ''; }
+            if (microlinkResult) microlinkResult.style.display = 'none';
+            if (microlinkImageUrl) microlinkImageUrl.textContent = '';
             
             renderProjects();
             updateStats();
         });
+    });
+
+    // --- MICROLINK FETCHER LOGIC ---
+    const btnMicrolinkFetch = document.getElementById('btn-microlink-fetch');
+    const microlinkUrlInput = document.getElementById('microlink-url-input');
+    const microlinkStatus = document.getElementById('microlink-status');
+    const microlinkResult = document.getElementById('microlink-result');
+    const microlinkImageUrl = document.getElementById('microlink-image-url');
+    const btnCopyMicrolink = document.getElementById('btn-copy-microlink');
+    const btnPreviewR2 = document.getElementById('btn-preview-r2');
+    const addVideoThumbnail = document.getElementById('add-video-thumbnail');
+
+    const setMicrolinkStatus = (type, msg) => {
+        microlinkStatus.style.display = 'flex';
+        microlinkStatus.className = `microlink-status status-${type}`;
+        microlinkStatus.textContent = msg;
+    };
+
+    btnMicrolinkFetch?.addEventListener('click', async () => {
+        const url = microlinkUrlInput?.value.trim();
+        if (!url) {
+            setMicrolinkStatus('error', '⚠ Vui lòng nhập URL trang web trước.');
+            return;
+        }
+
+        btnMicrolinkFetch.disabled = true;
+        btnMicrolinkFetch.textContent = 'ĐANG LẤY...';
+        setMicrolinkStatus('loading', '⏳ Đang gọi Microlink API...');
+        if (microlinkResult) microlinkResult.style.display = 'none';
+
+        try {
+            const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}`;
+            const res = await fetch(apiUrl);
+            const json = await res.json();
+
+            if (json.status === 'success' && json.data?.image?.url) {
+                const imgUrl = json.data.image.url;
+                microlinkImageUrl.textContent = imgUrl;
+                microlinkResult.style.display = 'block';
+                setMicrolinkStatus('success', '✓ Lấy thành công! Copy link và upload lên R2.');
+
+                // Auto-copy to clipboard
+                try {
+                    await navigator.clipboard.writeText(imgUrl);
+                    setMicrolinkStatus('success', '✓ Đã copy link vào clipboard! Upload lên R2 rồi dán URL R2 xuống dưới.');
+                } catch (_) {
+                    // Clipboard blocked — user can still click COPY button
+                }
+
+                // Show image preview in slot
+                if (videoPreviewImg && videoPreviewPlaceholder) {
+                    videoPreviewImg.src = imgUrl;
+                    videoPreviewImg.style.display = 'block';
+                    videoPreviewPlaceholder.style.display = 'none';
+                }
+            } else {
+                setMicrolinkStatus('error', `❌ Không tìm thấy ảnh. Status: ${json.status}. Thử URL khác.`);
+            }
+        } catch (err) {
+            setMicrolinkStatus('error', `❌ Lỗi kết nối Microlink: ${err.message}`);
+        } finally {
+            btnMicrolinkFetch.disabled = false;
+            btnMicrolinkFetch.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> LẤY ẢNH`;
+        }
+    });
+
+    btnCopyMicrolink?.addEventListener('click', async () => {
+        const url = microlinkImageUrl?.textContent?.trim();
+        if (!url) return;
+        try {
+            await navigator.clipboard.writeText(url);
+            const orig = btnCopyMicrolink.innerHTML;
+            btnCopyMicrolink.textContent = '✓ COPIED!';
+            btnCopyMicrolink.classList.add('copied');
+            setTimeout(() => {
+                btnCopyMicrolink.innerHTML = orig;
+                btnCopyMicrolink.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            alert('Không thể copy. URL: ' + url);
+        }
+    });
+
+    // Preview R2 URL in thumbnail slot
+    addVideoThumbnail?.addEventListener('input', (e) => {
+        const r2Url = e.target.value.trim();
+        if (r2Url && videoPreviewImg && videoPreviewPlaceholder) {
+            videoPreviewImg.src = r2Url;
+            videoPreviewImg.style.display = 'block';
+            videoPreviewPlaceholder.style.display = 'none';
+        }
+    });
+
+    btnPreviewR2?.addEventListener('click', () => {
+        const r2Url = addVideoThumbnail?.value.trim();
+        if (!r2Url) {
+            alert('Vui lòng nhập URL R2 trước.');
+            return;
+        }
+        if (videoPreviewImg && videoPreviewPlaceholder) {
+            videoPreviewImg.src = r2Url;
+            videoPreviewImg.style.display = 'block';
+            videoPreviewPlaceholder.style.display = 'none';
+        }
     });
 
     // --- PROFILE LOGIC ---

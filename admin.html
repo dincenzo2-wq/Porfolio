@@ -180,15 +180,52 @@
                                     </div>
 
                                     <div class="ingester-preview">
-                                        <label class="setting-label">XEM TRƯỚC HÌNH THU NHỎ</label>
+                                        <label class="setting-label">ẢNH THUMBNAIL</label>
                                         <div class="video-preview-slot" id="video-preview-slot">
-                                            <div class="preview-empty">
+                                            <div class="preview-empty" id="preview-placeholder">
                                                 <span class="preview-icon">🖼️</span>
                                                 <p>Nhập YouTube ID</p>
                                             </div>
                                             <img id="video-preview-img" src="" alt="Thumbnail" style="display: none;">
                                         </div>
-                                        <p class="helper-text">Thumbnail sẽ tự động hiển thị khi bạn nhập ID.</p>
+
+                                        <!-- Microlink Fetcher -->
+                                        <div class="microlink-tool">
+                                            <label class="setting-label" style="margin-top: 14px;">LẤY ẢNH TỪ MICROLINK</label>
+                                            <div class="microlink-input-row">
+                                                <input type="url" id="microlink-url-input" class="admin-input"
+                                                    placeholder="Dán URL trang web vào đây...">
+                                                <button type="button" id="btn-microlink-fetch" class="btn-microlink" title="Lấy ảnh thumbnail từ trang web">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                                    LẤY ẢNH
+                                                </button>
+                                            </div>
+                                            <div id="microlink-status" class="microlink-status" style="display:none;"></div>
+                                            <div id="microlink-result" class="microlink-result" style="display:none;">
+                                                <div class="result-url-row">
+                                                    <code id="microlink-image-url" class="result-url-text"></code>
+                                                    <button type="button" id="btn-copy-microlink" class="btn-copy-url" title="Copy link ảnh">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                                        COPY
+                                                    </button>
+                                                </div>
+                                                <p class="helper-text" style="margin-top: 6px;">↑ Copy link → Upload lên R2 → Dán URL R2 bên dưới</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- R2 Thumbnail URL Input -->
+                                        <div class="r2-thumb-section">
+                                            <label class="setting-label" style="margin-top: 14px;">URL THUMBNAIL TỪ R2 <span class="label-optional">(tuỳ chọn)</span></label>
+                                            <div class="r2-input-row">
+                                                <input type="url" id="add-video-thumbnail" class="admin-input"
+                                                    placeholder="https://r2.yourdomain.com/thumbnails/...">
+                                                <button type="button" id="btn-preview-r2" class="btn-preview-r2" title="Xem trước ảnh R2">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    XEM
+                                                </button>
+                                            </div>
+                                            <p class="helper-text">Nếu có URL R2, thumbnail này sẽ được dùng thay vì ảnh YouTube mặc định.</p>
+                                        </div>
                                     </div>
                                 </div>
 
