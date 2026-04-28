@@ -62,8 +62,8 @@ export default {
                 await env.DB.prepare('DELETE FROM projects').run();
                 if (body && body.length > 0) {
                     const statements = body.map(p => 
-                        env.DB.prepare('INSERT INTO projects (id, title, category, year, videoUrl, thumbnail) VALUES (?, ?, ?, ?, ?, ?)')
-                           .bind(String(p.id), p.title, p.category, p.year, p.videoUrl, p.thumbnail || null)
+                        env.DB.prepare('INSERT INTO projects (id, title, category, year, videoUrl, thumbnail, tags) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                           .bind(String(p.id), p.title, p.category, p.year, p.videoUrl, p.thumbnail || null, JSON.stringify(p.tags || []))
                     );
                     await env.DB.batch(statements);
                 }
@@ -82,8 +82,8 @@ export default {
             // SAVE SETTINGS
             if (url.pathname === '/api/settings' && request.method === 'POST') {
                 const s = await request.json();
-                await env.DB.prepare('INSERT OR REPLACE INTO settings (id, name, profession, slogan, avatar, accentColor) VALUES (1, ?, ?, ?, ?, ?)')
-                    .bind(s.name, s.profession, s.slogan, s.avatar, s.accentColor)
+                await env.DB.prepare('INSERT OR REPLACE INTO settings (id, name, profession, slogan, avatar, accentColor, categories) VALUES (1, ?, ?, ?, ?, ?, ?)')
+                    .bind(s.name, s.profession, s.slogan, s.avatar, s.accentColor, JSON.stringify(s.categories || []))
                     .run();
                 return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
             }

@@ -8,13 +8,16 @@
     <link rel="stylesheet" href="/src/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 
-<body class="admin-body">
+<body class="minimalist-dark admin-page">
+    <!-- Ambient Atmospheric Orbs -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+
     <!-- Admin Background Layer -->
     <div class="admin-bg-overlay"></div>
 
@@ -154,23 +157,14 @@
 
                                         <div class="form-group">
                                             <label class="setting-label">Phân Loại Nội Dung</label>
-                                            <div class="category-chips" id="add-video-category-chips">
-                                                <label class="chip">
-                                                    <input type="radio" name="category" value="COMMERCIAL" checked>
-                                                    <span class="chip-text">Thương Mại</span>
-                                                </label>
-                                                <label class="chip">
-                                                    <input type="radio" name="category" value="TRAVEL">
-                                                    <span class="chip-text">Du Lịch</span>
-                                                </label>
-                                                <label class="chip">
-                                                    <input type="radio" name="category" value="WEDDING">
-                                                    <span class="chip-text">Đám Cưới</span>
-                                                </label>
-                                                <label class="chip">
-                                                    <input type="radio" name="category" value="MUSIC VIDEO">
-                                                    <span class="chip-text">Video Âm Nhạc</span>
-                                                </label>
+                                            <div class="category-chips-wrapper">
+                                                <div class="category-chips" id="add-video-category-chips">
+                                                    <!-- Chips injected via JS -->
+                                                </div>
+                                                <div class="category-quick-manager mt-15">
+                                                    <input type="text" id="quick-add-category-input" class="admin-input" placeholder="Thêm phân loại mới...">
+                                                    <button type="button" class="btn-microlink" id="btn-quick-add-category">THÊM</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -331,8 +325,8 @@
                                     <label class="setting-label">Màu Nhấn Hệ Thống</label>
                                     <div class="color-picker-group">
                                         <input type="color" id="set-system-color" class="admin-color-picker"
-                                            value="#E21D1D">
-                                        <span class="color-hex" id="color-hex-value">#E21D1D</span>
+                                            value="#F59E0B">
+                                        <span class="color-hex" id="color-hex-value">#F59E0B</span>
                                     </div>
                                 </div>
                                 <div class="setting-card full-width">
@@ -351,6 +345,18 @@
                                     </div>
                                     <input type="text" id="setting-avatar" class="admin-input mt-15"
                                         placeholder="Hoặc dán URL ảnh tại đây">
+                                </div>
+                                <div class="setting-card full-width">
+                                    <label class="setting-label">Danh Mục Phân Loại <span class="label-optional">(Quản lý các loại sản phẩm)</span></label>
+                                    <div class="categories-manager">
+                                        <div id="settings-categories-list" class="tags-container">
+                                            <!-- Categories injected via JS -->
+                                        </div>
+                                        <div class="microlink-input-row mt-15">
+                                            <input type="text" id="add-setting-category-input" class="admin-input" placeholder="Thêm phân loại mới (VD: PHIM CƯỚI)...">
+                                            <button class="btn-microlink" id="btn-add-setting-category">THÊM</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

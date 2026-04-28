@@ -26,5 +26,5 @@ INSERT INTO settings (id, name, profession, slogan, avatar, accentColor) VALUES 
     'JUNIOR EDITOR /VIDEO GRAPHER',
     'undefined',
     'assets/avatar.jpg',
-    '#e21d1d'
+    '#F59E0B'
 );

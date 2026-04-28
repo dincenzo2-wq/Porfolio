@@ -66,11 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!profile.experience) profile.experience = [];
             if (!profile.education) profile.education = [];
             settings = data.settings || {};
-            
+            try {
+                if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
+            } catch(e) { settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"]; }
+            if (!settings.categories || settings.categories.length === 0) {
+                settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"];
+            }
+
             // Sync to localStorage as backup
             saveStorage('tv_projects', projects);
             saveStorage('tv_profile', profile);
             saveStorage('tv_settings', settings);
+
+            renderCategoryChipsInForm();
         } catch (err) {
             console.warn('API Fetch failed, using localStorage fallback:', err);
             projects = getStorage('tv_projects', []);
@@ -167,6 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-thumbnail">
                     <img src="${thumbUrl}" alt="${p.title}" loading="lazy">
                     <div class="card-overlay">
+                        <div class="card-drag-handle" title="Kéo để sắp xếp">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg>
+                        </div>
                         <div class="card-actions-row">
                             <button class="btn-icon edit btn-edit-project" title="Sửa dự án">
                                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -189,6 +200,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `}).join('');
+
+        initSortable();
+    };
+
+    const initSortable = () => {
+        // --- Projects Sortable ---
+        const grid = document.getElementById('project-grid');
+        if (grid && typeof Sortable !== 'undefined') {
+            Sortable.create(grid, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                filter: '.btn-icon',
+                onEnd: async (evt) => {
+                    const items = grid.querySelectorAll('.project-card');
+                    const newOrder = Array.from(items).map(item => ({
+                        id: item.dataset.projectId
+                    }));
+                    
+                    try {
+                        const reordered = [];
+                        newOrder.forEach(item => {
+                            const p = projects.find(proj => String(proj.id) === String(item.id));
+                            if (p) reordered.push(p);
+                        });
+                        
+                        projects = reordered;
+                        await apiSave('/api/projects', projects);
+                        saveStorage('tv_projects', projects);
+                        console.log('Project order saved');
+                    } catch (err) {
+                        console.error('Failed to save project order:', err);
+                    }
+                }
+            });
+        }
+
+        // --- Experience Sortable ---
+        const expList = document.getElementById('experience-list');
+        if (expList && typeof Sortable !== 'undefined') {
+            Sortable.create(expList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => {
+                    collectProfileInputs();
+                    console.log('Experience order updated');
+                }
+            });
+        }
+
+        // --- Education Sortable ---
+        const eduList = document.getElementById('education-list');
+        if (eduList && typeof Sortable !== 'undefined') {
+            Sortable.create(eduList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => {
+                    collectProfileInputs();
+                    console.log('Education order updated');
+                }
+            });
+        }
     };
 
     // --- PROJECT ACTIONS (DELEGATION) ---
@@ -395,11 +468,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Experience
         const expItems = document.querySelectorAll('#experience-list .exp-edit-item');
         profile.experience = Array.from(expItems).map(item => {
-            const yearEl = item.querySelector('.exp-year');
+            const startEl = item.querySelector('.exp-start');
+            const endEl = item.querySelector('.exp-end');
             const roleEl = item.querySelector('.exp-role');
             const companyEl = item.querySelector('.exp-company');
             return {
-                year: yearEl ? yearEl.value : '',
+                startYear: startEl ? startEl.value : '',
+                endYear: endEl ? endEl.value : '',
                 role: roleEl ? roleEl.value : '',
                 company: companyEl ? companyEl.value : ''
             };
@@ -430,54 +505,104 @@ document.addEventListener('DOMContentLoaded', () => {
             if (bioTextarea) bioTextarea.value = profile.bio || '';
 
             if (skillsList) {
-                skillsList.innerHTML = profile.skills.map((s, i) => `
-                    <div class="skill-edit-item" data-index="${i}">
+                skillsList.innerHTML = '';
+                profile.skills.forEach((s, i) => {
+                    const skillItem = document.createElement('div');
+                    skillItem.className = 'skill-edit-item';
+                    skillItem.dataset.index = i;
+                    
+                    const isSVG = s.icon && s.icon.trim().startsWith('<svg');
+                    const iconDisplay = s.icon ? (isSVG ? s.icon : `<img src="${s.icon}" alt="Icon">`) : `<span class="no-icon">NO IMG</span>`;
+                    
+                    skillItem.innerHTML = `
                         <div class="skill-top-row">
                             <div class="skill-icon-preview">
-                                ${s.icon ? `<img src="${s.icon}" alt="Icon">` : `<span class="no-icon">NO IMG</span>`}
+                                ${iconDisplay}
                             </div>
                             <div class="skill-inputs">
-                                <input type="text" value="${s.name}" class="admin-input skill-name" placeholder="TÊN PHẦN MỀM">
-                                <input type="text" value="${s.icon || ''}" class="admin-input skill-icon-url" placeholder="URL LOGO (R2)">
+                                <div class="input-group-impeccable">
+                                    <label class="admin-label-tiny">TÊN PHẦN MỀM</label>
+                                    <input type="text" class="admin-input skill-name" placeholder="Ví dụ: DaVinci Resolve">
+                                </div>
+                                <div class="input-group-impeccable">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="admin-label-tiny">LOGO (URL HOẶC MÃ SVG)</label>
+                                        ${isSVG ? '<span class="badge-svg-detected">SVG DETECTED</span>' : ''}
+                                    </div>
+                                    <textarea class="admin-input skill-icon-url code-font" placeholder="Dán link R2 hoặc mã <svg> tại đây..." rows="1"></textarea>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex justify-end">
+                        <div class="flex justify-end mt-2">
                             <button class="btn-icon delete btn-sm btn-remove-skill" title="Xóa phần mềm">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                    
+                    skillItem.querySelector('.skill-name').value = s.name;
+                    skillItem.querySelector('.skill-icon-url').value = s.icon || '';
+                    
+                    skillsList.appendChild(skillItem);
+                });
             }
 
             if (experienceList) {
-                experienceList.innerHTML = profile.experience.map((e, i) => `
-                    <div class="exp-edit-item" data-index="${i}">
-                        <input type="text" value="${e.year}" class="admin-input exp-year" placeholder="NĂM (VD: 2021-2024)">
-                        <input type="text" value="${e.role}" class="admin-input exp-role" placeholder="VỊ TRÍ">
-                        <input type="text" value="${e.company}" class="admin-input exp-company" placeholder="CÔNG TY">
+                experienceList.innerHTML = '';
+                profile.experience.forEach((e, i) => {
+                    const expItem = document.createElement('div');
+                    expItem.className = 'exp-edit-item';
+                    expItem.dataset.index = i;
+                    
+                    expItem.innerHTML = `
+                        <div class="year-range-inputs">
+                            <input type="text" class="admin-input exp-start" placeholder="BẮT ĐẦU">
+                            <span class="year-separator">—</span>
+                            <input type="text" class="admin-input exp-end" placeholder="KẾT THÚC">
+                        </div>
+                        <input type="text" class="admin-input exp-role" placeholder="VỊ TRÍ">
+                        <input type="text" class="admin-input exp-company" placeholder="CÔNG TY">
                         <button class="btn-icon delete btn-remove-exp" title="Xóa">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
-                    </div>
-                `).join('');
+                    `;
+                    
+                    expItem.querySelector('.exp-start').value = e.startYear || e.year || '';
+                    expItem.querySelector('.exp-end').value = e.endYear || '';
+                    expItem.querySelector('.exp-role').value = e.role || '';
+                    expItem.querySelector('.exp-company').value = e.company || '';
+                    
+                    experienceList.appendChild(expItem);
+                });
             }
 
             if (educationList) {
-                educationList.innerHTML = profile.education.map((e, i) => `
-                    <div class="exp-edit-item" data-index="${i}">
+                educationList.innerHTML = '';
+                profile.education.forEach((e, i) => {
+                    const eduItem = document.createElement('div');
+                    eduItem.className = 'exp-edit-item';
+                    eduItem.dataset.index = i;
+                    
+                    eduItem.innerHTML = `
                         <div class="year-range-inputs">
-                            <input type="text" value="${e.startYear || ''}" class="admin-input edu-start" placeholder="BẮT ĐẦU">
+                            <input type="text" class="admin-input edu-start" placeholder="BẮT ĐẦU">
                             <span class="year-separator">—</span>
-                            <input type="text" value="${e.endYear || ''}" class="admin-input edu-end" placeholder="KẾT THÚC">
+                            <input type="text" class="admin-input edu-end" placeholder="KẾT THÚC">
                         </div>
-                        <input type="text" value="${e.degree || ''}" class="admin-input exp-role" placeholder="CHUYÊN NGÀNH">
-                        <input type="text" value="${e.company || ''}" class="admin-input exp-company" placeholder="TRƯỜNG HỌC">
+                        <input type="text" class="admin-input exp-role" placeholder="CHUYÊN NGÀNH">
+                        <input type="text" class="admin-input exp-company" placeholder="TRƯỜNG HỌC">
                         <button class="btn-icon delete btn-remove-edu" title="Xóa">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
-                    </div>
-                `).join('');
+                    `;
+                    
+                    eduItem.querySelector('.edu-start').value = e.startYear || '';
+                    eduItem.querySelector('.edu-end').value = e.endYear || '';
+                    eduItem.querySelector('.exp-role').value = e.degree || '';
+                    eduItem.querySelector('.exp-company').value = e.company || '';
+                    
+                    educationList.appendChild(eduItem);
+                });
             }
         } catch (err) {
             console.error('Error rendering profile:', err);
@@ -492,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnAddExp?.addEventListener('click', () => {
         collectProfileInputs();
-        profile.experience.push({ year: '2024', role: 'VỊ TRÍ', company: 'CÔNG TY' });
+        profile.experience.push({ startYear: '2024', endYear: '', role: 'VỊ TRÍ', company: 'CÔNG TY' });
         renderProfile();
     });
 
@@ -552,10 +677,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 'capcut': 'capcut'
             };
             const slug = mapping[normalized] || normalized;
-            const iconSrc = customIcon || `https://cdn.simpleicons.org/${slug}`;
-
+            
             if (preview) {
-                preview.innerHTML = `<img src="${iconSrc}" alt="Preview" onerror="this.parentElement.innerHTML='<span class=\'no-icon\'>NO IMG</span>'">`;
+                const badgeWrap = item.querySelector('.badge-svg-detected');
+                if (customIcon.startsWith('<svg')) {
+                    preview.innerHTML = customIcon;
+                    if (!badgeWrap) {
+                        const labelBox = item.querySelector('.flex.justify-between.items-center.mb-1');
+                        if (labelBox) {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge-svg-detected';
+                            badge.textContent = 'SVG DETECTED';
+                            labelBox.appendChild(badge);
+                        }
+                    }
+                } else {
+                    const iconSrc = customIcon || `https://cdn.simpleicons.org/${slug}`;
+                    preview.innerHTML = `<img src="${iconSrc}" alt="Preview" onerror="this.parentElement.innerHTML='<span class=\'no-icon\'>NO IMG</span>'">`;
+                    if (badgeWrap) badgeWrap.remove();
+                }
             }
         }
     });
@@ -577,13 +717,131 @@ document.addEventListener('DOMContentLoaded', () => {
         inputUserName.value = settings.name;
         inputUserProfession.value = settings.profession;
         inputUserSlogan.value = settings.slogan;
-        inputUserAvatar.value = settings.avatar;
+        inputUserAvatar.value = settings.avatar || '';
+        inputUserAvatar.classList.add('code-font'); 
         avatarPreview.src = settings.avatar || 'assets/avatar.jpg';
         colorPicker.value = settings.accentColor;
         colorHex.textContent = settings.accentColor.toUpperCase();
+        // Force Amber if legacy red or missing
+        if (!settings.accentColor || settings.accentColor.toLowerCase() === '#e21d1d') {
+            settings.accentColor = '#F59E0B';
+        }
+        
         document.documentElement.style.setProperty('--accent-color', settings.accentColor);
         syncSidebar(settings);
+
+        // Render categories in settings
+        const settingsCategoriesList = document.getElementById('settings-categories-list');
+        if (settingsCategoriesList) {
+            settingsCategoriesList.innerHTML = (settings.categories || []).map((cat, idx) => `
+                <div class="admin-tag">
+                    <span>${cat}</span>
+                    <button type="button" class="btn-remove-category btn-remove-tag" data-index="${idx}">&times;</button>
+                </div>
+            `).join('');
+
+            // Add remove listener
+            settingsCategoriesList.querySelectorAll('.btn-remove-category').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = parseInt(btn.dataset.index);
+                    settings.categories.splice(idx, 1);
+                    renderSettings();
+                    renderCategoryChipsInForm();
+                });
+            });
+        }
     };
+
+    // Add category in settings
+    const addSettingCategoryInput = document.getElementById('add-setting-category-input');
+    const btnAddSettingCategory = document.getElementById('btn-add-setting-category');
+
+    btnAddSettingCategory?.addEventListener('click', () => {
+        const newCat = addSettingCategoryInput.value.trim().toUpperCase();
+        if (newCat && !settings.categories.includes(newCat)) {
+            settings.categories.push(newCat);
+            addSettingCategoryInput.value = '';
+            renderSettings();
+            renderCategoryChipsInForm();
+        }
+    });
+
+    function renderCategoryChipsInForm() {
+        const chipContainer = document.getElementById('add-video-category-chips');
+        if (!chipContainer) return;
+
+        const currentVal = document.querySelector('input[name="category"]:checked')?.value;
+        const cats = settings.categories || ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"];
+        
+        chipContainer.innerHTML = cats.map((cat, idx) => `
+            <label class="chip editable-chip">
+                <input type="radio" name="category" value="${cat}" ${cat === currentVal || (!currentVal && idx === 0) ? 'checked' : ''}>
+                <span class="chip-text" contenteditable="true" spellcheck="false">${cat}</span>
+                <div class="chip-actions">
+                    <button type="button" class="btn-remove-chip" data-category="${cat}">&times;</button>
+                </div>
+            </label>
+        `).join('');
+
+        // Inline Edit listeners
+        chipContainer.querySelectorAll('.chip-text').forEach(span => {
+            span.addEventListener('focus', () => {
+                span.dataset.oldValue = span.textContent.trim().toUpperCase();
+            });
+
+            span.addEventListener('blur', () => {
+                const oldCat = span.dataset.oldValue;
+                const newCat = span.textContent.trim().toUpperCase();
+                
+                if (newCat && newCat !== oldCat) {
+                    // 1. Update settings
+                    settings.categories = settings.categories.map(c => c === oldCat ? newCat : c);
+                    
+                    // 2. Update projects locally
+                    projects.forEach(p => {
+                        if (p.category === oldCat) p.category = newCat;
+                    });
+
+                    renderCategoryChipsInForm();
+                    renderSettings();
+                    renderProjects();
+                }
+            });
+
+            span.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    span.blur();
+                }
+            });
+        });
+
+        // Add delete listeners to chips
+        chipContainer.querySelectorAll('.btn-remove-chip').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const catToRemove = btn.getAttribute('data-category');
+                settings.categories = settings.categories.filter(c => c !== catToRemove);
+                renderCategoryChipsInForm();
+                renderSettings(); // Sync with settings tab
+            });
+        });
+    }
+
+    // Quick add in form
+    const quickAddCategoryInput = document.getElementById('quick-add-category-input');
+    const btnQuickAddCategory = document.getElementById('btn-quick-add-category');
+
+    btnQuickAddCategory?.addEventListener('click', () => {
+        const newCat = quickAddCategoryInput.value.trim().toUpperCase();
+        if (newCat && !settings.categories.includes(newCat)) {
+            settings.categories.push(newCat);
+            quickAddCategoryInput.value = '';
+            renderCategoryChipsInForm();
+            renderSettings();
+        }
+    });
 
     inputUserAvatar?.addEventListener('input', (e) => {
         avatarPreview.src = e.target.value || 'assets/avatar.jpg';
@@ -596,17 +854,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnSaveSettings?.addEventListener('click', async () => {
-        const updatedSettings = {
-            name: inputUserName.value.toUpperCase(),
-            profession: inputUserProfession.value.toUpperCase(),
-            slogan: inputUserSlogan.value,
-            avatar: inputUserAvatar.value || 'assets/avatar.jpg',
-            accentColor: colorPicker.value
-        };
+        settings.name = inputUserName.value.toUpperCase();
+        settings.profession = inputUserProfession.value.toUpperCase();
+        settings.slogan = inputUserSlogan.value;
+        settings.avatar = inputUserAvatar.value || 'assets/avatar.jpg';
+        settings.accentColor = colorPicker.value;
 
         await showToast('Cài đặt đã lưu!', btnSaveSettings, async () => {
-            await apiSave('/api/settings', updatedSettings);
-            settings = updatedSettings;
+            await apiSave('/api/settings', settings);
             saveStorage('tv_settings', settings);
             syncSidebar(settings);
         });
@@ -703,4 +958,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     initUI();
+    // --- GLOBAL SHORTCUTS ---
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault(); // Prevent browser save dialog
+            
+            // 1. Check if video add/edit form is open
+            const videoFormContainer = document.getElementById('add-video-form-container');
+            if (videoFormContainer && videoFormContainer.style.display !== 'none') {
+                const saveVideoBtn = videoFormContainer.querySelector('button[type="submit"]');
+                if (saveVideoBtn) {
+                    saveVideoBtn.click();
+                    return;
+                }
+            }
+            
+            // 2. Check active admin section
+            const activeSection = document.querySelector('.admin-section.active');
+            if (activeSection) {
+                const sectionId = activeSection.id;
+                
+                if (sectionId === 'profile') {
+                    const saveProfileBtn = document.getElementById('btn-save-profile');
+                    if (saveProfileBtn) saveProfileBtn.click();
+                } else if (sectionId === 'settings') {
+                    const saveSettingsBtn = document.getElementById('btn-save-settings');
+                    if (saveSettingsBtn) saveSettingsBtn.click();
+                }
+            }
+        }
+    });
 });

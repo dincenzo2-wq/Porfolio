@@ -11,4 +11,4 @@ INSERT INTO projects (id, title, category, year, youtubeId) VALUES ('17771982529
 
 -- Insert config
 INSERT INTO config (key, value) VALUES ('profile', '{"bio": "Director & Editor", "skills": [{"name": "davinci resolve", "icon": "", "level": 100}, {"name": "adobe premier pro", "icon": "", "level": 100}, {"name": "adobe photoshop", "icon": "", "level": 100}], "experience": [{"year": "2024", "role": "VỊ TRÍ", "company": "CÔNG TY"}], "education": [{"startYear": "2013", "endYear": "2017", "company": "thpt thanh đa", "degree": ""}, {"startYear": "2017", "endYear": "2024", "company": "trường đại học công nghệ tp.hcm", "degree": "CHUYÊN NGÀNH marketing"}]}');
-INSERT INTO config (key, value) VALUES ('settings', '{"name": "TRẦN QUỐC VINH", "profession": "JUNIOR EDITOR /VIDEO GRAPHER", "slogan": "undefined", "accentColor": "#e21d1d"}');
+INSERT INTO config (key, value) VALUES ('settings', '{"name": "TRẦN QUỐC VINH", "profession": "JUNIOR EDITOR /VIDEO GRAPHER", "slogan": "undefined", "accentColor": "#F59E0B"}');

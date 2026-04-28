@@ -6,6 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let projects = [];
     let profile = {};
     let settings = {};
+    
+    // Pagination & Filter State
+    let currentFilter = 'all';
+    let visibleCount = 6;
+    const PROJECTS_PER_PAGE = 6;
 
     const fetchData = async () => {
         try {
@@ -15,6 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
             projects = data.projects || [];
             profile = data.profile || {};
             settings = data.settings || {};
+            try {
+                if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
+            } catch(e) { settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"]; }
+            if (!settings.categories || settings.categories.length === 0) {
+                settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"];
+            }
             
             // Sync to localStorage
             localStorage.setItem('tv_projects', JSON.stringify(projects));
@@ -25,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
             projects = getStorage('tv_projects', []);
             profile = getStorage('tv_profile', {});
             settings = getStorage('tv_settings', {});
+            try {
+                if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
+            } catch(e) { settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"]; }
         }
     };
 
@@ -108,6 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
             heroAvatar.style.opacity = '1';
         }
 
+        // Force Amber if legacy red or missing
+        if (!settings.accentColor || settings.accentColor.toLowerCase() === '#e21d1d') {
+            settings.accentColor = '#F59E0B';
+        }
+        
         if (settings && settings.accentColor) {
             document.documentElement.style.setProperty('--accent-color', settings.accentColor);
         }
@@ -135,24 +154,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 const slug = mapping[normalized] || normalized;
-                const iconSrc = `https://cdn.simpleicons.org/${slug}`;
+                const customIcon = s.icon || '';
+                const fallbackIcon = `https://cdn.simpleicons.org/${slug}`;
 
-                let brandColor = 'var(--accent-color)';
-                if (nameLower.includes('premiere')) brandColor = '#9999FF';
-                else if (nameLower.includes('after effects')) brandColor = '#CF96FD';
-                else if (nameLower.includes('davinci')) brandColor = '#FFD700';
-                else if (nameLower.includes('photoshop')) brandColor = '#31A8FF';
-                else if (nameLower.includes('audition')) brandColor = '#01E496';
-                else if (nameLower.includes('capcut')) brandColor = '#FFFFFF';
-                else if (nameLower.includes('illustrator')) brandColor = '#FF9A00';
+                let iconContent = '';
+                if (customIcon.trim().startsWith('<svg')) {
+                    iconContent = customIcon;
+                } else {
+                    const src = customIcon || fallbackIcon;
+                    iconContent = `
+                        <img src="${src}" alt="${s.name}" class="soft-img" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <span class="soft-id-large" style="display: none;">${shortId}</span>
+                    `;
+                }
 
                 return `
-                    <div class="soft-module active" style="--brand-color: ${brandColor}">
+                    <div class="soft-module active">
                         <div class="soft-icon-box">
-                            <img src="${iconSrc}" alt="${s.name}" class="soft-img" 
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <span class="soft-id-large" style="display: none;">${shortId}</span>
-                            <div class="soft-glow"></div>
+                            ${iconContent}
                         </div>
                         <div class="soft-info-v2">
                             <h4 class="soft-name-v2">${s.name}</h4>
@@ -165,16 +185,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. Experience Timeline
         const expContainer = document.getElementById('experience-timeline-container');
         if (expContainer && profile && profile.experience && profile.experience.length > 0) {
-            expContainer.innerHTML = profile.experience.map((e, i) => `
-                <div class="reel-card ${i === 0 ? 'active-reel' : ''}">
-                    <div class="reel-card-inner">
-                        <span class="reel-date">${e.year}</span>
-                        <h4 class="reel-company">${e.company}</h4>
-                        <p class="reel-role">${e.role}</p>
-                        <span class="reel-star">★</span>
+            expContainer.innerHTML = profile.experience.map((e, i) => {
+                const yearText = e.endYear ? `${e.startYear} — ${e.endYear}` : e.startYear;
+                return `
+                    <div class="reel-card ${i === 0 ? 'active-reel' : ''}">
+                        <div class="reel-card-inner">
+                            <span class="reel-date">${yearText}</span>
+                            <h4 class="reel-company">${e.company}</h4>
+                            <p class="reel-role">${e.role}</p>
+                            <span class="reel-star">★</span>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 5. Education Timeline
@@ -195,7 +218,61 @@ document.addEventListener('DOMContentLoaded', () => {
         // 6. Projects Grid
         const projectsGrid = document.getElementById('projects-grid');
         if (projectsGrid) {
-            renderProjects(projects, projectsGrid);
+            updateProjectDisplay();
+        }
+
+        // 7. Dynamic Category Tabs
+        const consoleTabsContainer = document.querySelector('.console-tabs');
+        if (consoleTabsContainer && settings && settings.categories) {
+            const currentFilter = 'all'; // Default to all on load
+            
+            let tabsHtml = `
+                <button class="console-tab active" data-filter="all">
+                    <span class="tab-icon">▣</span> Tất cả dự án
+                </button>
+            `;
+            
+            settings.categories.forEach(cat => {
+                const filter = cat.toLowerCase();
+                tabsHtml += `
+                    <button class="console-tab" data-filter="${filter}">
+                        <span class="tab-icon">◈</span> ${cat}
+                    </button>
+                `;
+            });
+            
+            consoleTabsContainer.innerHTML = tabsHtml;
+            attachFilterListeners();
+        }
+
+        // 8. Load More Listener
+        const btnLoadMore = document.getElementById('btn-load-more');
+        if (btnLoadMore) {
+            btnLoadMore.addEventListener('click', () => {
+                visibleCount += PROJECTS_PER_PAGE;
+                updateProjectDisplay();
+            });
+        }
+    };
+
+    const updateProjectDisplay = () => {
+        const grid = document.getElementById('projects-grid');
+        const loadMoreContainer = document.getElementById('load-more-container');
+        if (!grid) return;
+
+        // Filter projects
+        const filtered = currentFilter === 'all' 
+            ? projects 
+            : projects.filter(p => p.category.toLowerCase() === currentFilter.toLowerCase());
+
+        // Slice for pagination
+        const sliced = filtered.slice(0, visibleCount);
+        
+        renderProjects(sliced, grid);
+
+        // Toggle Load More Button
+        if (loadMoreContainer) {
+            loadMoreContainer.style.display = (visibleCount < filtered.length) ? 'flex' : 'none';
         }
     };
 
@@ -203,10 +280,13 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
-        projectsData.forEach((p) => {
+        projectsData.forEach((p, index) => {
             const projectItem = document.createElement('div');
-            projectItem.className = 'work-item interactive-project';
+            projectItem.className = 'work-item interactive-project project-reveal-anim';
             projectItem.dataset.category = p.category.toLowerCase();
+            
+            // Staggered reveal delay
+            projectItem.style.animationDelay = `${index * 0.1}s`;
 
             // Auto-fallback for thumbnail if missing
             let thumbUrl = p.thumbnail;
@@ -253,25 +333,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- FILTER LOGIC ---
-    const consoleTabs = document.querySelectorAll('.console-tab');
-    consoleTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            consoleTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const filterValue = tab.getAttribute('data-filter');
-            const projectsGrid = document.getElementById('projects-grid');
+    const attachFilterListeners = () => {
+        const consoleTabs = document.querySelectorAll('.console-tab');
+        const projectsGrid = document.getElementById('projects-grid');
 
-            projectsGrid.style.opacity = '0';
-            setTimeout(() => {
-                const projectItems = document.querySelectorAll('.work-item');
-                projectItems.forEach(item => {
-                    const cat = item.getAttribute('data-category');
-                    item.classList.toggle('hidden', filterValue !== 'all' && !cat.includes(filterValue));
-                });
-                projectsGrid.style.opacity = '1';
-            }, 400);
+        consoleTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                consoleTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                currentFilter = tab.getAttribute('data-filter');
+                visibleCount = PROJECTS_PER_PAGE;
+                
+                if (projectsGrid) {
+                    // Quick clear and re-render with animation
+                    updateProjectDisplay();
+                }
+            });
         });
-    });
+    };
 
     // --- REEL CAROUSEL ---
     const reelContainer = document.getElementById('experience-timeline-container');

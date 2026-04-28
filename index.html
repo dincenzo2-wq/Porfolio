@@ -13,14 +13,18 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;700;900&family=Archivo+Black&family=Vidaloka&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <!-- Styles -->
     <link rel="stylesheet" href="/src/style.css">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
-<body class="midnight-timeline">
-    <!-- Artist Effects Elements -->
+<body class="minimalist-dark">
+    <!-- Ambient Atmospheric Orbs -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+
+    <!-- Admin Background Layer -->
 
 
     <nav id="main-nav">
@@ -92,30 +96,33 @@
 
                 <div class="dossier-layout-v3">
                     <!-- Work Reel (Carousel) -->
-                    <div class="work-reel-wrapper fade-in">
-                        <div class="reel-header">
-                            <span class="dossier-label">LỊCH SỬ LÀM VIỆC</span>
+                    <div class="dossier-folder fade-in">
+                        <div class="folder-header reel-header-sync">
+                            <h4 class="folder-title">LỊCH SỬ LÀM VIỆC</h4>
                             <div class="reel-controls">
                                 <button id="reel-prev" class="reel-btn">←</button>
                                 <button id="reel-next" class="reel-btn">→</button>
                             </div>
                         </div>
                         
-                        <div class="work-reel-container" id="experience-timeline-container">
-                            <!-- Experience items injected via JS -->
+                        <div class="folder-content">
+                            <div class="work-reel-container" id="experience-timeline-container">
+                                <!-- Experience items injected via JS -->
+                            </div>
                         </div>
                     </div>
 
                     <!-- Toolkit & Others -->
                     <div class="secondary-dossier-grid fade-in">
-                        <div class="toolkit-v2">
-                            <div class="toolkit-header">
-                                <span class="dossier-label">CÔNG CỤ & PHẦN MỀM</span>
-
+                        <div class="dossier-folder">
+                            <div class="folder-header">
+                                <h4 class="folder-title">CÔNG CỤ & PHẦN MỀM</h4>
                             </div>
                             
-                            <div class="software-dossier-grid" id="software-skills-container">
-                                <!-- Software items injected via JS -->
+                            <div class="folder-content">
+                                <div class="software-dossier-grid" id="software-skills-container">
+                                    <!-- Software items injected via JS -->
+                                </div>
                             </div>
                         </div>
 
@@ -193,6 +200,12 @@
                 <div class="works-container obsidian-glass fade-in">
                     <div class="projects-grid" id="projects-grid">
                         <!-- Projects injected via JS -->
+                    </div>
+                    <div id="load-more-container" class="load-more-wrapper">
+                        <button id="btn-load-more" class="btn-load-more-cinematic">
+                            <span class="btn-text">XEM THÊM DỰ ÁN</span>
+                            <span class="btn-line"></span>
+                        </button>
                     </div>
                 </div>
                 </div>
