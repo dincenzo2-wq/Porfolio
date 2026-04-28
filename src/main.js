@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DATA HANDLING ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
-    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
+    // --- SMART CONFIG ---
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const WORKER_URL = isLocal ? 'http://localhost:8787' : 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};
