@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DATA HANDLING ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
-    const WORKER_URL = 'http://localhost:8787';
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};

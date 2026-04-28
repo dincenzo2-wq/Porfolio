@@ -46,8 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
     const saveStorage = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
-    // --- CLOUDFLARE API ---
-    const WORKER_URL = 'http://localhost:8787';
+    // --- CONFIG ---
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};
