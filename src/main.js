@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DATA HANDLING ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
-    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
+    const WORKER_URL = 'http://localhost:8787';
 
     let projects = [];
     let profile = {};
@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
             projects = data.projects || [];
             profile = data.profile || {};
             settings = data.settings || {};
+            
+            // Sync to localStorage
+            localStorage.setItem('tv_projects', JSON.stringify(projects));
+            localStorage.setItem('tv_profile', JSON.stringify(profile));
+            localStorage.setItem('tv_settings', JSON.stringify(settings));
         } catch (err) {
             console.warn('API Fetch failed, using localStorage fallback:', err);
             projects = getStorage('tv_projects', []);
@@ -23,48 +28,134 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- LIGHTBOX & YOUTUBE PLAYER LOGIC ---
+    const lightbox = document.getElementById('video-lightbox');
+    
+    const openLightbox = (videoUrl) => {
+        if (!videoUrl) return;
+        
+        if (lightbox) {
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        const container = document.getElementById('player');
+        container.innerHTML = ''; // Clear content
+
+        // Clean YouTube Handler
+        let videoId = '';
+        if (videoUrl.includes('v=')) {
+            videoId = videoUrl.split('v=')[1].split('&')[0];
+        } else if (videoUrl.includes('youtu.be/')) {
+            videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
+        } else if (videoUrl.includes('embed/')) {
+            videoId = videoUrl.split('embed/')[1].split('?')[0];
+        }
+
+        if (videoId) {
+            container.innerHTML = `
+                <div class="youtube-wrapper">
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        src="https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0&iv_load_policy=3&showinfo=0" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                    <!-- Protective mask to prevent clicking out via YouTube logo -->
+                    <div class="yt-mask-bottom-right"></div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `<div class="error-msg">VIDEO LINK KHÔNG HỢP LỆ</div>`;
+        }
+    };
+
+    const closeLightbox = () => {
+        if (lightbox) lightbox.classList.remove('active');
+        const container = document.getElementById('player');
+        if (container) container.innerHTML = '';
+        document.body.style.overflow = '';
+    };
+
+    document.querySelector('.lightbox-close')?.addEventListener('click', closeLightbox);
+    document.querySelector('.lightbox-overlay')?.addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && closeLightbox());
+
     // --- DYNAMIC RENDERING ---
     const renderApp = () => {
         // 1. Branding
-        document.getElementById('hero-name').innerHTML = settings.name.replace(' ', ' <span class="accent-name">') + '</span>';
-        document.getElementById('hero-profession').textContent = settings.profession;
+        if (settings && settings.name) {
+            const name = settings.name || 'DIRECTOR NAME';
+            const nameParts = name.split(' ');
+            if (nameParts.length > 1) {
+                const first = nameParts[0];
+                const rest = nameParts.slice(1).join(' ');
+                document.getElementById('hero-name').innerHTML = `${first} <span class="accent-name">${rest}</span>`;
+            } else {
+                document.getElementById('hero-name').textContent = name;
+            }
+        }
+        
+        if (settings && settings.profession) {
+            document.getElementById('hero-profession').textContent = settings.profession;
+        }
+
         const heroAvatar = document.getElementById('hero-avatar');
-        if (heroAvatar && settings.avatar) {
+        if (heroAvatar && settings && settings.avatar) {
             heroAvatar.src = settings.avatar;
             heroAvatar.style.opacity = '1';
         }
-        document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+
+        if (settings && settings.accentColor) {
+            document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+        }
 
         // 2. Bio
-        // SECURITY NOTE: Using .innerHTML with data from localStorage can be a security risk (XSS).
-        // If the bio content can be complex, consider using a sanitization library like DOMPurify
-        // to prevent malicious scripts from being injected.
-        // Example: document.getElementById('about-bio').innerHTML = DOMPurify.sanitize(`<p>${profile.bio}</p>`);
-        document.getElementById('about-bio').innerHTML = `<p>${profile.bio}</p>`;
+        const bioEl = document.getElementById('about-bio');
+        if (bioEl && profile && profile.bio) {
+            bioEl.innerHTML = `<p>${profile.bio}</p>`;
+        }
 
         // 3. Skills
         const skillsContainer = document.getElementById('software-skills-container');
         if (skillsContainer) {
             skillsContainer.innerHTML = profile.skills.map(s => {
-                const radius = 45;
-                const circumference = 2 * Math.PI * radius;
-                const offset = circumference - (s.level / 100) * circumference;
                 const shortId = s.id || s.name.substring(0, 2).toUpperCase();
+                const nameLower = s.name.toLowerCase();
+                const normalized = nameLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                
+                const mapping = {
+                    'premiere': 'adobepremierepro', 'premierepro': 'adobepremierepro',
+                    'aftereffects': 'adobeaftereffects', 'photoshop': 'adobephotoshop',
+                    'audition': 'adobeaudition', 'illustrator': 'adobeillustrator',
+                    'davinci': 'davinciresolve', 'davinciresolve': 'davinciresolve',
+                    'capcut': 'capcut'
+                };
+                
+                const slug = mapping[normalized] || normalized;
+                const iconSrc = `https://cdn.simpleicons.org/${slug}`;
+
+                let brandColor = 'var(--accent-color)';
+                if (nameLower.includes('premiere')) brandColor = '#9999FF';
+                else if (nameLower.includes('after effects')) brandColor = '#CF96FD';
+                else if (nameLower.includes('davinci')) brandColor = '#FFD700';
+                else if (nameLower.includes('photoshop')) brandColor = '#31A8FF';
+                else if (nameLower.includes('audition')) brandColor = '#01E496';
+                else if (nameLower.includes('capcut')) brandColor = '#FFFFFF';
+                else if (nameLower.includes('illustrator')) brandColor = '#FF9A00';
 
                 return `
-                    <div class="soft-module active">
-                        <div class="circle-progress-wrap">
-                            <svg class="circle-svg" viewBox="0 0 100 100">
-                                <circle class="circle-bg" cx="50" cy="50" r="${radius}"></circle>
-                                <circle class="circle-bar" cx="50" cy="50" r="${radius}" 
-                                    style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};">
-                                </circle>
-                            </svg>
-                            <div class="circle-content">${shortId}</div>
+                    <div class="soft-module active" style="--brand-color: ${brandColor}">
+                        <div class="soft-icon-box">
+                            <img src="${iconSrc}" alt="${s.name}" class="soft-img" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <span class="soft-id-large" style="display: none;">${shortId}</span>
+                            <div class="soft-glow"></div>
                         </div>
-                        <div class="soft-info">
-                            <h4 class="soft-name">${s.name}</h4>
-                            <div class="soft-level">${s.level > 90 ? 'XUẤT SẮC' : 'THÀNH THẠO'}</div>
+                        <div class="soft-info-v2">
+                            <h4 class="soft-name-v2">${s.name}</h4>
                         </div>
                     </div>
                 `;
@@ -73,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Experience Timeline
         const expContainer = document.getElementById('experience-timeline-container');
-        if (expContainer && profile.experience) {
+        if (expContainer && profile && profile.experience && profile.experience.length > 0) {
             expContainer.innerHTML = profile.experience.map((e, i) => `
                 <div class="reel-card ${i === 0 ? 'active-reel' : ''}">
                     <div class="reel-card-inner">
@@ -88,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 5. Education Timeline
         const eduContainer = document.getElementById('education-timeline-container');
-        if (eduContainer && profile.education) {
+        if (eduContainer && profile && profile.education && profile.education.length > 0) {
             eduContainer.innerHTML = profile.education.map(e => `
                 <div class="timeline-item">
                     <div class="timeline-marker"></div>
@@ -101,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         }
 
-        // 5. Projects Grid
+        // 6. Projects Grid
         const projectsGrid = document.getElementById('projects-grid');
         if (projectsGrid) {
             renderProjects(projects, projectsGrid);
@@ -109,44 +200,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderProjects = (projectsData, container) => {
-        container.innerHTML = ''; // Clear existing content
+        container.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
-        projectsData.forEach((p, i) => {
+        projectsData.forEach((p) => {
             const projectItem = document.createElement('div');
-            projectItem.className = `work-item interactive-project ${i === 0 ? 'bento-large' : i === 1 ? 'bento-wide' : ''}`;
+            projectItem.className = 'work-item interactive-project';
             projectItem.dataset.category = p.category.toLowerCase();
-            projectItem.dataset.youtubeId = p.youtubeId;
+
+            // Auto-fallback for thumbnail if missing
+            let thumbUrl = p.thumbnail;
+            if (!thumbUrl && p.videoUrl) {
+                const id = p.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/)?.[2];
+                if (id) thumbUrl = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+            }
+            if (!thumbUrl) thumbUrl = 'https://via.placeholder.com/1280x720/111/eee?text=NO+THUMBNAIL';
 
             projectItem.innerHTML = `
-                <div class="wipe-container">
-                    <img src="https://img.youtube.com/vi/${p.youtubeId}/maxresdefault.jpg" alt="${p.title}" class="img-raw" loading="lazy">
-                    <img src="https://img.youtube.com/vi/${p.youtubeId}/maxresdefault.jpg" alt="${p.title}" class="img-graded" loading="lazy">
-                    <div class="wipe-line"></div>
+                <div class="thumb-container">
+                    <img src="${thumbUrl}" alt="${p.title}" class="project-thumb" loading="lazy">
                     <div class="play-overlay">
                         <div class="play-btn-cinematic">▶</div>
                     </div>
-                    ${i === 0 ? '<div class="bento-tag">FEATURED</div>' : ''}
+                    <div class="work-cat-overlay">${p.category}</div>
                 </div>
                 <div class="work-meta">
                     <span class="work-year">${p.year}</span>
                     <h3 class="work-title">${p.title}</h3>
-                    <span class="work-cat">${p.category}</span>
                 </div>
             `;
 
-            // Attach listeners directly to the new element, eliminating the need for a separate `attachListeners` function.
-            projectItem.addEventListener('mouseenter', () => {
-                document.body.classList.add('lights-out');
-                projectItem.classList.add('project-focus');
-            });
-            projectItem.addEventListener('mouseleave', () => {
-                document.body.classList.remove('lights-out');
-                projectItem.classList.remove('project-focus');
-            });
-            projectItem.addEventListener('click', () => {
-                openLightbox(p.youtubeId);
-            });
+            projectItem.addEventListener('mouseenter', () => document.body.classList.add('lights-out'));
+            projectItem.addEventListener('mouseleave', () => document.body.classList.remove('lights-out'));
+            projectItem.addEventListener('click', () => openLightbox(p.videoUrl));
 
             fragment.appendChild(projectItem);
         });
@@ -187,24 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- LIGHTBOX LOGIC ---
-    const lightbox = document.getElementById('video-lightbox');
-    const lightboxIframe = document.getElementById('lightbox-iframe');
-    const openLightbox = (youtubeId) => {
-        if (!youtubeId) return;
-        lightboxIframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`;
-        lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    };
-    const closeLightbox = () => {
-        lightbox.classList.remove('active');
-        setTimeout(() => { lightboxIframe.src = ''; document.body.style.overflow = ''; }, 300);
-    };
-
-    document.querySelector('.lightbox-close')?.addEventListener('click', closeLightbox);
-    document.querySelector('.lightbox-overlay')?.addEventListener('click', closeLightbox);
-    document.addEventListener('keydown', (e) => e.key === 'Escape' && closeLightbox());
-
     // --- REEL CAROUSEL ---
     const reelContainer = document.getElementById('experience-timeline-container');
     const btnNext = document.getElementById('reel-next');
@@ -213,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnNext && btnPrev && reelContainer) {
         btnNext.addEventListener('click', () => {
             const active = reelContainer.querySelector('.active-reel');
-            const next = active.nextElementSibling;
+            const next = active?.nextElementSibling;
             if (next) {
                 active.classList.remove('active-reel');
                 next.classList.add('active-reel');
@@ -222,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         btnPrev.addEventListener('click', () => {
             const active = reelContainer.querySelector('.active-reel');
-            const prev = active.previousElementSibling;
+            const prev = active?.previousElementSibling;
             if (prev) {
                 active.classList.remove('active-reel');
                 prev.classList.add('active-reel');

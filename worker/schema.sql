@@ -5,17 +5,31 @@ CREATE TABLE projects (
     title TEXT,
     category TEXT,
     year TEXT,
-    youtubeId TEXT,
+    videoUrl TEXT,
+    thumbnail TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for profile and settings (storing as JSON blobs for flexibility)
-DROP TABLE IF EXISTS config;
-CREATE TABLE config (
-    key TEXT PRIMARY KEY,
-    value TEXT
+-- Table for profile
+DROP TABLE IF EXISTS profile;
+CREATE TABLE profile (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    bio TEXT,
+    skills TEXT, -- JSON string
+    experience TEXT, -- JSON string
+    education TEXT -- JSON string
 );
 
--- Initial data (optional)
-INSERT INTO config (key, value) VALUES ('profile', '{"bio": "Director & Editor", "skills": [], "experience": []}');
-INSERT INTO config (key, value) VALUES ('settings', '{"name": "TRẦN QUỐC VINH", "profession": "EDITOR", "accentColor": "#E21D1D"}');
+-- Table for settings
+DROP TABLE IF EXISTS settings;
+CREATE TABLE settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    name TEXT,
+    profession TEXT,
+    slogan TEXT,
+    avatar TEXT,
+    accentColor TEXT
+);
+
+-- Table for old config (cleanup)
+DROP TABLE IF EXISTS config;

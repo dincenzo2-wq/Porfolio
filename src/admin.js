@@ -36,15 +36,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const avatarFileInput = document.getElementById('avatar-file-input');
     const sidebarToggleBtn = document.getElementById('sidebar-toggle');
 
-    // Live preview for Youtube
-    const addVideoIdInput = document.getElementById('add-video-id');
+    // Live preview for Video
+    const addVideoUrlInput = document.getElementById('add-video-url');
+    const videoPreviewImg = document.getElementById('video-preview-img');
+    const videoPreviewPlaceholder = document.getElementById('preview-placeholder');
+
 
     // --- INITIAL DATA (LOCALSTORAGE) ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
     const saveStorage = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
     // --- CLOUDFLARE API ---
-    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
+    const WORKER_URL = 'http://localhost:8787';
 
     let projects = [];
     let profile = {};
@@ -97,20 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebarAvatar) sidebarAvatar.src = data.avatar || 'assets/avatar.jpg';
     };
 
-    // --- SIDEBAR TOGGLE ---
-    const sidebarCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
-
-    if (sidebarCollapsed) {
-        adminWrapper?.classList.add('sidebar-collapsed');
-    }
-
-    sidebarToggleBtn?.addEventListener('click', () => {
-        adminWrapper?.classList.toggle('sidebar-collapsed');
-        const isCollapsed = adminWrapper.classList.contains('sidebar-collapsed');
-        localStorage.setItem('sidebar_collapsed', isCollapsed);
-    });
-
     // --- TAB SWITCHING ---
+
     navTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.getAttribute('data-tab');
@@ -129,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 profile: 'BIÊN TẬP HỒ SƠ',
                 settings: 'CÀI ĐẶT TRANG CHỦ'
             };
+
             document.querySelector('.admin-title').textContent = titleMap[target] || 'COMMAND CENTER';
         });
     });
@@ -137,9 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Greeting
         const hour = new Date().getHours();
         const greetingEl = document.getElementById('dynamic-greeting');
-        if (hour < 12) greetingEl.textContent = "GOOD MORNING, DIRECTOR";
-        else if (hour < 18) greetingEl.textContent = "GOOD AFTERNOON, DIRECTOR";
-        else greetingEl.textContent = "GOOD EVENING, DIRECTOR";
+        if (hour < 12) greetingEl.textContent = "Chào Buổi Sáng, Đạo Diễn";
+        else if (hour < 18) greetingEl.textContent = "Chào Buổi Chiều, Đạo Diễn";
+        else greetingEl.textContent = "Chào Buổi Tối, Đạo Diễn";
+
 
         // Show loading state if needed
         adminWrapper.style.opacity = '0.5';
@@ -163,40 +156,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- PROJECT LOGIC ---
-    const getYoutubeIdFromInput = (input) => {
-        if (!input) return null;
-        const trimmedInput = input.trim();
-        // Regex to extract ID from various YouTube URL formats
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = trimmedInput.match(regExp);
-
-        // If regex matches and the captured group is 11 chars long, it's a valid ID from a URL
-        if (match && match[2].length === 11) {
-            return match[2];
-        }
-
-        // If no match, assume the input itself is the ID, but validate its length
-        if (trimmedInput.length === 11) {
-            return trimmedInput;
-        }
-
-        // Otherwise, it's not a valid ID or URL
-        return null;
-    };
 
     const renderProjects = () => {
         if (!projectGrid) return;
         projectGrid.innerHTML = projects.map(p => {
             const categoryClass = p.category.toLowerCase().replace(/\s+/g, '-');
-            const thumbUrl = p.thumbnail || `https://img.youtube.com/vi/${p.youtubeId}/mqdefault.jpg`;
-            const thumbBadge = p.thumbnail ? '<span class="r2-badge" title="Thumbnail t὎0ầy R2">R2</span>' : '';
+            const thumbUrl = p.thumbnail || 'https://via.placeholder.com/400x225/111/eee?text=VIDEO';
             return `
             <div class="project-card" data-project-id="${p.id}">
                 <div class="card-thumbnail">
                     <img src="${thumbUrl}" alt="${p.title}" loading="lazy">
                     <div class="card-overlay">
-                        ${thumbBadge}
-                        <button class="btn-icon delete btn-delete-project">XÓA</button>
+                        <div class="card-actions-row">
+                            <button class="btn-icon edit btn-edit-project" title="Sửa dự án">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-icon delete btn-delete-project" title="Xóa dự án">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-meta">
@@ -206,336 +184,383 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="meta-footer">
                         <span class="badge ${categoryClass}">${p.category}</span>
-                        <span class="card-id">${p.youtubeId}</span>
+                        <span class="card-id" title="${p.videoUrl}">${p.videoUrl ? p.videoUrl.substring(0, 30) + '...' : 'NO URL'}</span>
                     </div>
                 </div>
             </div>
         `}).join('');
     };
 
-    projectGrid?.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('btn-delete-project')) {
-            const card = e.target.closest('.project-card');
-            if (card && confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
-                const id = Number(card.dataset.projectId);
-                projects = projects.filter(p => p.id !== id);
+    // --- PROJECT ACTIONS (DELEGATION) ---
+    document.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-project');
+        const deleteBtn = e.target.closest('.btn-delete-project');
+
+        if (editBtn) {
+            e.preventDefault();
+            const card = editBtn.closest('.project-card');
+            if (!card) return;
+            const id = card.dataset.projectId;
+            const project = projects.find(p => String(p.id) === String(id));
+            
+            if (project) {
+                // Populate Form
+                const editIdInput = document.getElementById('edit-video-id');
+                const titleInput = document.getElementById('add-video-title');
+                const yearInput = document.getElementById('add-video-year');
+                const submitBtn = addVideoForm?.querySelector('button[type="submit"]');
+
+
+                if (editIdInput) editIdInput.value = project.id;
+                if (titleInput) titleInput.value = project.title;
+                if (addVideoUrlInput) addVideoUrlInput.value = project.videoUrl;
+                if (yearInput) yearInput.value = project.year;
+
+                
+                const chips = document.querySelectorAll('input[name="category"]');
+                chips.forEach(c => { if (c.value === project.category) c.checked = true; });
+
+                if (btnToggleAddVideo) btnToggleAddVideo.textContent = 'ĐANG CHỈNH SỬA DỰ ÁN';
+                if (submitBtn) submitBtn.textContent = 'CẬP NHẬT DỰ ÁN';
+                
+                if (addVideoFormContainer) {
+                    addVideoFormContainer.style.display = 'block';
+                    addVideoFormContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Trigger preview
+                if (addVideoUrlInput) addVideoUrlInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        if (deleteBtn) {
+            e.preventDefault();
+            const card = deleteBtn.closest('.project-card');
+            if (!card) return;
+            const id = card.dataset.projectId;
+            
+            // Precise deletion logic (one click, no confirm as requested)
+            const index = projects.findIndex(p => String(p.id) === String(id));
+            if (index !== -1) {
+                projects.splice(index, 1);
                 
                 try {
-                    await apiSave('/api/projects', projects);
-                    saveStorage('tv_projects', projects);
+                    // Immediate UI update
                     renderProjects();
                     updateStats();
+
+                    // Persist to DB in background
+                    await apiSave('/api/projects', projects);
+                    saveStorage('tv_projects', projects);
                 } catch (err) {
-                    alert('Lỗi khi xóa dự án: ' + err.message);
+                    console.error('Delete failed:', err);
+                    alert('Lỗi khi xóa: ' + err.message);
+                    // Rollback UI
+                    await fetchAllData();
+                    renderProjects();
                 }
             }
         }
     });
+
     btnToggleAddVideo.addEventListener('click', () => {
+        // Reset form for "Add New"
+        document.getElementById('edit-video-id').value = '';
+        addVideoForm.reset();
+        btnToggleAddVideo.textContent = '+ THÊM VIDEO MỚI';
+        addVideoForm.querySelector('button[type="submit"]').textContent = 'LƯU VÀO KHO SẢN PHẨM';
+        
         addVideoFormContainer.style.display = addVideoFormContainer.style.display === 'none' ? 'block' : 'none';
     });
 
-    btnCancelAddVideo.addEventListener('click', () => addVideoFormContainer.style.display = 'none');
-
-    // --- LIVE PREVIEW FOR YOUTUBE ---
-    const videoPreviewImg = document.getElementById('video-preview-img');
-    const videoPreviewPlaceholder = document.getElementById('preview-placeholder');
-
-    addVideoIdInput?.addEventListener('input', (e) => {
-        const youtubeId = getYoutubeIdFromInput(e.target.value);
-        if (youtubeId) {
-            const thumbUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
-            videoPreviewImg.src = thumbUrl;
-            videoPreviewImg.style.display = 'block';
-            if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'none';
-        } else {
-            videoPreviewImg.style.display = 'none';
-            if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'block';
-        }
+    btnCancelAddVideo.addEventListener('click', () => {
+        addVideoFormContainer.style.display = 'none';
+        document.getElementById('edit-video-id').value = '';
+        btnToggleAddVideo.textContent = '+ THÊM VIDEO MỚI';
+        addVideoForm.querySelector('button[type="submit"]').textContent = 'LƯU VÀO KHO SẢN PHẨM';
     });
 
-    addVideoForm.addEventListener('submit', async (e) => {
+
+
+    addVideoForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const title = document.getElementById('add-video-title').value;
-        const rawId = document.getElementById('add-video-id').value;
-        const year = document.getElementById('add-video-year').value;
-        const category = document.querySelector('input[name="category"]:checked').value;
-        const customThumbnail = (document.getElementById('add-video-thumbnail')?.value || '').trim();
+        const titleInput = document.getElementById('add-video-title');
+        const urlInput = document.getElementById('add-video-url');
+        const yearInput = document.getElementById('add-video-year');
+        const categoryInput = document.querySelector('input[name="category"]:checked');
 
-        // Extract ID if user pasted a full URL
-        const youtubeId = getYoutubeIdFromInput(rawId);
-
-        if (!youtubeId) {
-            alert('YouTube ID hoặc URL không hợp lệ!');
+        if (!urlInput?.value) {
+            alert('Vui lòng nhập Video URL!');
             return;
         }
 
-        const newProject = {
-            id: Date.now(),
-            title: title.toUpperCase(),
-            category: category,
-            year: year,
-            youtubeId: youtubeId,
-            thumbnail: customThumbnail || null
-        };
-
+        const editId = document.getElementById('edit-video-id')?.value;
         const submitBtn = addVideoForm.querySelector('button[type="submit"]');
+        const toastMsg = editId ? 'Đã cập nhật dự án!' : 'Đã thêm video mới!';
         
-        await showToast('Đã thêm video mới!', submitBtn, async () => {
-            const updatedProjects = [newProject, ...projects];
+        await showToast(toastMsg, submitBtn, async () => {
+            const finalThumbnail = getYoutubeThumbnail(urlInput.value);
+            
+            const projectData = {
+                id: editId ? Number(editId) : Date.now(),
+                title: titleInput?.value.toUpperCase() || 'UNTITLED',
+                category: categoryInput?.value || 'COMMERCIAL',
+                year: yearInput?.value || '2026',
+                videoUrl: urlInput.value,
+                thumbnail: finalThumbnail
+            };
+
+            let updatedProjects;
+            if (editId) {
+                updatedProjects = projects.map(p => p.id == editId ? projectData : p);
+            } else {
+                updatedProjects = [projectData, ...projects];
+            }
+
             await apiSave('/api/projects', updatedProjects);
             projects = updatedProjects;
             saveStorage('tv_projects', projects);
             
             addVideoForm.reset();
+            const editIdField = document.getElementById('edit-video-id');
+            if (editIdField) editIdField.value = '';
+            
+            if (btnToggleAddVideo) btnToggleAddVideo.textContent = '+ THÊM VIDEO MỚI';
+            if (submitBtn) submitBtn.textContent = 'LƯU VÀO KHO SẢN PHẨM';
+
             if (videoPreviewImg) videoPreviewImg.style.display = 'none';
             if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'flex';
-            addVideoFormContainer.style.display = 'none';
-            
-            // Reset Microlink UI
-            const microlinkStatus = document.getElementById('microlink-status');
-            const microlinkResult = document.getElementById('microlink-result');
-            const microlinkImageUrl = document.getElementById('microlink-image-url');
-            if (microlinkStatus) { microlinkStatus.style.display = 'none'; microlinkStatus.textContent = ''; }
-            if (microlinkResult) microlinkResult.style.display = 'none';
-            if (microlinkImageUrl) microlinkImageUrl.textContent = '';
+            if (addVideoFormContainer) addVideoFormContainer.style.display = 'none';
             
             renderProjects();
             updateStats();
         });
     });
 
-    // --- MICROLINK FETCHER LOGIC ---
-    const btnMicrolinkFetch = document.getElementById('btn-microlink-fetch');
-    const microlinkUrlInput = document.getElementById('microlink-url-input');
-    const microlinkStatus = document.getElementById('microlink-status');
-    const microlinkResult = document.getElementById('microlink-result');
-    const microlinkImageUrl = document.getElementById('microlink-image-url');
-    const btnCopyMicrolink = document.getElementById('btn-copy-microlink');
-    const btnPreviewR2 = document.getElementById('btn-preview-r2');
-    const addVideoThumbnail = document.getElementById('add-video-thumbnail');
-
-    const setMicrolinkStatus = (type, msg) => {
-        microlinkStatus.style.display = 'flex';
-        microlinkStatus.className = `microlink-status status-${type}`;
-        microlinkStatus.textContent = msg;
+    // --- YOUTUBE HELPERS ---
+    const getYoutubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
     };
 
-    btnMicrolinkFetch?.addEventListener('click', async () => {
-        const url = microlinkUrlInput?.value.trim();
-        if (!url) {
-            setMicrolinkStatus('error', '⚠ Vui lòng nhập URL trang web trước.');
-            return;
-        }
+    const getYoutubeThumbnail = (url) => {
+        const id = getYoutubeId(url);
+        return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : '';
+    };
 
-        btnMicrolinkFetch.disabled = true;
-        btnMicrolinkFetch.textContent = 'ĐANG LẤY...';
-        setMicrolinkStatus('loading', '⏳ Đang gọi Microlink API...');
-        if (microlinkResult) microlinkResult.style.display = 'none';
 
-        try {
-            const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}`;
-            const res = await fetch(apiUrl);
-            const json = await res.json();
 
-            if (json.status === 'success' && json.data?.image?.url) {
-                const imgUrl = json.data.image.url;
-                microlinkImageUrl.textContent = imgUrl;
-                microlinkResult.style.display = 'block';
-                setMicrolinkStatus('success', '✓ Lấy thành công! Copy link và upload lên R2.');
-
-                // Auto-copy to clipboard
-                try {
-                    await navigator.clipboard.writeText(imgUrl);
-                    setMicrolinkStatus('success', '✓ Đã copy link vào clipboard! Upload lên R2 rồi dán URL R2 xuống dưới.');
-                } catch (_) {
-                    // Clipboard blocked — user can still click COPY button
-                }
-
-                // Show image preview in slot
-                if (videoPreviewImg && videoPreviewPlaceholder) {
-                    videoPreviewImg.src = imgUrl;
+    if (addVideoUrlInput) {
+        addVideoUrlInput.addEventListener('input', () => {
+            const url = addVideoUrlInput.value;
+            const thumb = getYoutubeThumbnail(url);
+            
+            if (thumb) {
+                if (videoPreviewImg) {
+                    videoPreviewImg.src = thumb;
                     videoPreviewImg.style.display = 'block';
-                    videoPreviewPlaceholder.style.display = 'none';
                 }
+                if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'none';
             } else {
-                setMicrolinkStatus('error', `❌ Không tìm thấy ảnh. Status: ${json.status}. Thử URL khác.`);
+                if (videoPreviewImg) videoPreviewImg.style.display = 'none';
+                if (videoPreviewPlaceholder) videoPreviewPlaceholder.style.display = 'flex';
             }
-        } catch (err) {
-            setMicrolinkStatus('error', `❌ Lỗi kết nối Microlink: ${err.message}`);
-        } finally {
-            btnMicrolinkFetch.disabled = false;
-            btnMicrolinkFetch.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> LẤY ẢNH`;
-        }
-    });
+        });
+    }
 
-    btnCopyMicrolink?.addEventListener('click', async () => {
-        const url = microlinkImageUrl?.textContent?.trim();
-        if (!url) return;
-        try {
-            await navigator.clipboard.writeText(url);
-            const orig = btnCopyMicrolink.innerHTML;
-            btnCopyMicrolink.textContent = '✓ COPIED!';
-            btnCopyMicrolink.classList.add('copied');
-            setTimeout(() => {
-                btnCopyMicrolink.innerHTML = orig;
-                btnCopyMicrolink.classList.remove('copied');
-            }, 2000);
-        } catch (err) {
-            alert('Không thể copy. URL: ' + url);
-        }
-    });
+    // --- PROJECT LOGIC ---
 
-    // Preview R2 URL in thumbnail slot
-    addVideoThumbnail?.addEventListener('input', (e) => {
-        const r2Url = e.target.value.trim();
-        if (r2Url && videoPreviewImg && videoPreviewPlaceholder) {
-            videoPreviewImg.src = r2Url;
-            videoPreviewImg.style.display = 'block';
-            videoPreviewPlaceholder.style.display = 'none';
-        }
-    });
 
-    btnPreviewR2?.addEventListener('click', () => {
-        const r2Url = addVideoThumbnail?.value.trim();
-        if (!r2Url) {
-            alert('Vui lòng nhập URL R2 trước.');
-            return;
-        }
-        if (videoPreviewImg && videoPreviewPlaceholder) {
-            videoPreviewImg.src = r2Url;
-            videoPreviewImg.style.display = 'block';
-            videoPreviewPlaceholder.style.display = 'none';
-        }
-    });
 
     // --- PROFILE LOGIC ---
     // Thu thập dữ liệu từ các ô nhập hiện tại (để không bị mất khi render lại)
     const collectProfileInputs = () => {
-        // Bio
-        profile.bio = bioTextarea.value;
+        if (bioTextarea) profile.bio = bioTextarea.value;
 
         // Skills
         const skillItems = document.querySelectorAll('.skill-edit-item');
-        profile.skills = Array.from(skillItems).map(item => ({
-            name: item.querySelector('.skill-name').value,
-            level: parseInt(item.querySelector('.skill-range').value)
-        }));
+        profile.skills = Array.from(skillItems).map(item => {
+            const nameEl = item.querySelector('.skill-name');
+            const iconEl = item.querySelector('.skill-icon-url');
+            return {
+                name: nameEl ? nameEl.value : '',
+                icon: iconEl ? iconEl.value : '',
+                level: 100
+            };
+        });
 
         // Experience
         const expItems = document.querySelectorAll('#experience-list .exp-edit-item');
-        profile.experience = Array.from(expItems).map(item => ({
-            year: item.querySelector('.exp-year').value,
-            role: item.querySelector('.exp-role').value,
-            company: item.querySelector('.exp-company').value
-        }));
+        profile.experience = Array.from(expItems).map(item => {
+            const yearEl = item.querySelector('.exp-year');
+            const roleEl = item.querySelector('.exp-role');
+            const companyEl = item.querySelector('.exp-company');
+            return {
+                year: yearEl ? yearEl.value : '',
+                role: roleEl ? roleEl.value : '',
+                company: companyEl ? companyEl.value : ''
+            };
+        });
 
         // Education
         const eduItems = document.querySelectorAll('#education-list .exp-edit-item');
-        profile.education = Array.from(eduItems).map(item => ({
-            startYear: item.querySelector('.edu-start').value,
-            endYear: item.querySelector('.edu-end').value,
-            company: item.querySelector('.exp-company').value,
-            degree: item.querySelector('.exp-role').value
-        }));
+        profile.education = Array.from(eduItems).map(item => {
+            const startEl = item.querySelector('.edu-start');
+            const endEl = item.querySelector('.edu-end');
+            const companyEl = item.querySelector('.exp-company');
+            const degreeEl = item.querySelector('.exp-role');
+            return {
+                startYear: startEl ? startEl.value : '',
+                endYear: endEl ? endEl.value : '',
+                company: companyEl ? companyEl.value : '',
+                degree: degreeEl ? degreeEl.value : ''
+            };
+        });
     };
 
     const renderProfile = () => {
-        if (!profile.skills) profile.skills = [];
-        if (!profile.experience) profile.experience = [];
-        if (!profile.education) profile.education = [];
+        try {
+            if (!profile.skills) profile.skills = [];
+            if (!profile.experience) profile.experience = [];
+            if (!profile.education) profile.education = [];
 
-        bioTextarea.value = profile.bio || '';
+            if (bioTextarea) bioTextarea.value = profile.bio || '';
 
-        skillsList.innerHTML = profile.skills.map((s, i) => `
-            <div class="skill-edit-item" data-index="${i}">
-                <input type="text" value="${s.name}" class="admin-input skill-name" placeholder="TÊN KỸ NĂNG">
-                <input type="range" value="${s.level}" class="skill-range" min="0" max="100">
-                <div class="flex justify-between">
-                    <span class="level-val">${s.level}%</span>
-                    <button class="btn-icon delete btn-sm btn-remove-skill">XÓA</button>
-                </div>
-            </div>
-        `).join('');
+            if (skillsList) {
+                skillsList.innerHTML = profile.skills.map((s, i) => `
+                    <div class="skill-edit-item" data-index="${i}">
+                        <div class="skill-top-row">
+                            <div class="skill-icon-preview">
+                                ${s.icon ? `<img src="${s.icon}" alt="Icon">` : `<span class="no-icon">NO IMG</span>`}
+                            </div>
+                            <div class="skill-inputs">
+                                <input type="text" value="${s.name}" class="admin-input skill-name" placeholder="TÊN PHẦN MỀM">
+                                <input type="text" value="${s.icon || ''}" class="admin-input skill-icon-url" placeholder="URL LOGO (R2)">
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button class="btn-icon delete btn-sm btn-remove-skill" title="Xóa phần mềm">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
 
-        experienceList.innerHTML = profile.experience.map((e, i) => `
-            <div class="exp-edit-item" data-index="${i}">
-                <input type="text" value="${e.year}" class="admin-input exp-year" placeholder="NĂM (VD: 2021-2024)">
-                <input type="text" value="${e.role}" class="admin-input exp-role" placeholder="VỊ TRÍ">
-                <input type="text" value="${e.company}" class="admin-input exp-company" placeholder="CÔNG TY">
-                <button class="btn-icon delete btn-remove-exp">XÓA</button>
-            </div>
-        `).join('');
+            if (experienceList) {
+                experienceList.innerHTML = profile.experience.map((e, i) => `
+                    <div class="exp-edit-item" data-index="${i}">
+                        <input type="text" value="${e.year}" class="admin-input exp-year" placeholder="NĂM (VD: 2021-2024)">
+                        <input type="text" value="${e.role}" class="admin-input exp-role" placeholder="VỊ TRÍ">
+                        <input type="text" value="${e.company}" class="admin-input exp-company" placeholder="CÔNG TY">
+                        <button class="btn-icon delete btn-remove-exp" title="Xóa">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
+                `).join('');
+            }
 
-        educationList.innerHTML = profile.education.map((e, i) => `
-            <div class="exp-edit-item" data-index="${i}">
-                <div class="year-range-inputs">
-                    <input type="text" value="${e.startYear || ''}" class="admin-input edu-start" placeholder="BẮT ĐẦU">
-                    <span class="year-separator">—</span>
-                    <input type="text" value="${e.endYear || ''}" class="admin-input edu-end" placeholder="KẾT THÚC">
-                </div>
-                <input type="text" value="${e.degree || ''}" class="admin-input exp-role" placeholder="CHUYÊN NGÀNH">
-                <input type="text" value="${e.company || ''}" class="admin-input exp-company" placeholder="TRƯỜNG HỌC">
-                <button class="btn-icon delete btn-remove-edu">XÓA</button>
-            </div>
-        `).join('');
+            if (educationList) {
+                educationList.innerHTML = profile.education.map((e, i) => `
+                    <div class="exp-edit-item" data-index="${i}">
+                        <div class="year-range-inputs">
+                            <input type="text" value="${e.startYear || ''}" class="admin-input edu-start" placeholder="BẮT ĐẦU">
+                            <span class="year-separator">—</span>
+                            <input type="text" value="${e.endYear || ''}" class="admin-input edu-end" placeholder="KẾT THÚC">
+                        </div>
+                        <input type="text" value="${e.degree || ''}" class="admin-input exp-role" placeholder="CHUYÊN NGÀNH">
+                        <input type="text" value="${e.company || ''}" class="admin-input exp-company" placeholder="TRƯỜNG HỌC">
+                        <button class="btn-icon delete btn-remove-edu" title="Xóa">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        } catch (err) {
+            console.error('Error rendering profile:', err);
+        }
     };
 
-    btnAddSkill.addEventListener('click', () => {
+    btnAddSkill?.addEventListener('click', () => {
         collectProfileInputs();
-        profile.skills.push({ name: 'KỸ NĂNG MỚI', level: 50 });
+        profile.skills.push({ name: 'KỸ NĂNG MỚI', icon: '', level: 50 });
         renderProfile();
     });
 
-    btnAddExp.addEventListener('click', () => {
+    btnAddExp?.addEventListener('click', () => {
         collectProfileInputs();
         profile.experience.push({ year: '2024', role: 'VỊ TRÍ', company: 'CÔNG TY' });
         renderProfile();
     });
 
-    btnAddEdu.addEventListener('click', () => {
+    btnAddEdu?.addEventListener('click', () => {
         collectProfileInputs();
         profile.education.push({ startYear: '2020', endYear: '2024', degree: 'CHUYÊN NGÀNH', company: 'TRƯỜNG HỌC' });
         renderProfile();
     });
 
     skillsList?.addEventListener('click', e => {
-        if (e.target.classList.contains('btn-remove-skill')) {
+        const removeBtn = e.target.closest('.btn-remove-skill');
+        if (removeBtn) {
             collectProfileInputs();
-            const index = parseInt(e.target.closest('.skill-edit-item').dataset.index, 10);
+            const index = parseInt(removeBtn.closest('.skill-edit-item').dataset.index, 10);
             profile.skills.splice(index, 1);
             renderProfile();
         }
     });
 
     experienceList?.addEventListener('click', e => {
-        if (e.target.classList.contains('btn-remove-exp')) {
+        const removeBtn = e.target.closest('.btn-remove-exp');
+        if (removeBtn) {
             collectProfileInputs();
-            const index = parseInt(e.target.closest('.exp-edit-item').dataset.index, 10);
+            const index = parseInt(removeBtn.closest('.exp-edit-item').dataset.index, 10);
             profile.experience.splice(index, 1);
             renderProfile();
         }
     });
 
     educationList?.addEventListener('click', e => {
-        if (e.target.classList.contains('btn-remove-edu')) {
+        const removeBtn = e.target.closest('.btn-remove-edu');
+        if (removeBtn) {
             collectProfileInputs();
-            const index = parseInt(e.target.closest('.exp-edit-item').dataset.index, 10);
+            const index = parseInt(removeBtn.closest('.exp-edit-item').dataset.index, 10);
             profile.education.splice(index, 1);
             renderProfile();
         }
     });
 
-    // Cập nhật giá trị % của thanh skill ngay lập tức
+    // --- REAL-TIME SKILL PREVIEW ---
     skillsList?.addEventListener('input', (e) => {
-        if (e.target.classList.contains('skill-range')) {
-            const levelDisplay = e.target.nextElementSibling.querySelector('.level-val');
-            if (levelDisplay) {
-                levelDisplay.textContent = `${e.target.value}%`;
+        const item = e.target.closest('.skill-edit-item');
+        if (item) {
+            const nameInput = item.querySelector('.skill-name');
+            const iconInput = item.querySelector('.skill-icon-url');
+            const preview = item.querySelector('.skill-icon-preview');
+            
+            const name = nameInput.value.toLowerCase();
+            const customIcon = iconInput.value.trim();
+            
+            const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+            const mapping = {
+                'premiere': 'adobepremierepro', 'premierepro': 'adobepremierepro',
+                'aftereffects': 'adobeaftereffects', 'photoshop': 'adobephotoshop',
+                'audition': 'adobeaudition', 'illustrator': 'adobeillustrator',
+                'davinci': 'davinciresolve', 'davinciresolve': 'davinciresolve',
+                'capcut': 'capcut'
+            };
+            const slug = mapping[normalized] || normalized;
+            const iconSrc = customIcon || `https://cdn.simpleicons.org/${slug}`;
+
+            if (preview) {
+                preview.innerHTML = `<img src="${iconSrc}" alt="Preview" onerror="this.parentElement.innerHTML='<span class=\'no-icon\'>NO IMG</span>'">`;
             }
         }
     });
+
+
 
     btnSaveProfile?.addEventListener('click', async () => {
         collectProfileInputs();
@@ -588,53 +613,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- AVATAR UPLOAD LOGIC (WITH COMPRESSION) ---
-    const handleAvatarFile = (file) => {
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    // Create canvas for compression
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-
-                    // Max dimensions 400x400 for avatar
-                    const MAX_SIZE = 400;
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Export as compressed WebP (supports transparency)
-                    const compressedBase64 = canvas.toDataURL('image/webp', 0.8);
-                    
-                    // Check size (approximate for base64)
-                    if (compressedBase64.length > 800000) { // ~800KB
-                        alert('Ảnh sau khi nén vẫn quá lớn. Vui lòng chọn ảnh khác hoặc dùng Link URL.');
-                        return;
-                    }
-
-                    avatarPreview.src = compressedBase64;
-                    inputUserAvatar.value = compressedBase64;
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
+    const handleAvatarFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
             alert('Vui lòng chọn file hình ảnh hợp lệ.');
+            return;
+        }
+
+        const dropzoneContent = avatarDropzone.querySelector('.dropzone-content');
+        const originalHTML = dropzoneContent.innerHTML;
+        dropzoneContent.innerHTML = '<p>ĐANG TẢI LÊN R2...</p>';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${WORKER_URL}/api/upload-thumbnail`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Upload to R2 failed');
+            const data = await response.json();
+
+            if (data.url) {
+                inputUserAvatar.value = data.url;
+                avatarPreview.src = data.url;
+                dropzoneContent.innerHTML = '<p style="color: #4ade80;">TẢI LÊN THÀNH CÔNG!</p>';
+                setTimeout(() => { dropzoneContent.innerHTML = originalHTML; }, 2000);
+            }
+        } catch (err) {
+            console.error('Avatar upload failed:', err);
+            alert('Lỗi khi tải ảnh lên R2. Vui lòng thử lại.');
+            dropzoneContent.innerHTML = originalHTML;
         }
     };
 
