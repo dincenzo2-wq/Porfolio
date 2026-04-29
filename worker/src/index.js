@@ -16,6 +16,18 @@ export default {
                 throw new Error("D1 Database binding 'DB' not found. Check your wrangler.toml");
             }
 
+            // AUTO-MIGRATION: Force ensure all columns exist on production
+            const columns = [
+                "categories", "footerSubHeader", "footerMainTitle", "footerEmail", 
+                "footerPhone", "footerLocation", "footerCoords", "footerVimeo", 
+                "footerBehance", "footerYoutube"
+            ];
+            for (const col of columns) {
+                try {
+                    await env.DB.prepare(`ALTER TABLE settings ADD COLUMN ${col} TEXT`).run();
+                } catch (e) { /* Column likely exists */ }
+            }
+
             // GET ALL DATA
             if (url.pathname === '/api/all-data') {
                 const projects = await env.DB.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
@@ -33,27 +45,6 @@ export default {
                     profile: profile,
                     settings: settingsRow || {}
                 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            // DROPBOX TOKEN
-            if (url.pathname === '/api/dropbox-token' && request.method === 'POST') {
-                const DROPBOX_APP_KEY = env.DROPBOX_APP_KEY || "m9sugup87hekz3d";
-                const DROPBOX_APP_SECRET = env.DROPBOX_APP_SECRET || "bkzjbiikhirweaf";
-                const DROPBOX_REFRESH_TOKEN = env.DROPBOX_REFRESH_TOKEN || "mPd5-2m8NqwAAAAAAAAAAaQnYG84WFDUrfsblY_xK6N_Q8TfZvv99JXvV2aTzKqI";
-
-                const response = await fetch('https://api.dropbox.com/oauth2/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        grant_type: 'refresh_token',
-                        refresh_token: DROPBOX_REFRESH_TOKEN,
-                        client_id: DROPBOX_APP_KEY,
-                        client_secret: DROPBOX_APP_SECRET
-                    })
-                });
-
-                const data = await response.json();
-                return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             // SAVE PROJECTS
@@ -82,30 +73,57 @@ export default {
             // SAVE SETTINGS
             if (url.pathname === '/api/settings' && request.method === 'POST') {
                 const s = await request.json();
-                await env.DB.prepare('INSERT OR REPLACE INTO settings (id, name, profession, slogan, avatar, accentColor, categories) VALUES (1, ?, ?, ?, ?, ?, ?)')
-                    .bind(s.name, s.profession, s.slogan, s.avatar, s.accentColor, JSON.stringify(s.categories || []))
-                    .run();
+                // Using explicit columns to avoid any mapping issues
+                const sql = `UPDATE settings SET 
+                    name = ?, profession = ?, slogan = ?, avatar = ?, accentColor = ?, 
+                    categories = ?, footerSubHeader = ?, footerMainTitle = ?, 
+                    footerEmail = ?, footerPhone = ?, footerLocation = ?, 
+                    footerCoords = ?, footerVimeo = ?, footerBehance = ?, 
+                    footerYoutube = ? 
+                    WHERE id = 1`;
+                
+                await env.DB.prepare(sql).bind(
+                    s.name || '', s.profession || '', s.slogan || '', s.avatar || '', s.accentColor || '#F59E0B', 
+                    JSON.stringify(s.categories || []), 
+                    s.footerSubHeader || '', s.footerMainTitle || '', s.footerEmail || '', s.footerPhone || '',
+                    s.footerLocation || '', s.footerCoords || '', s.footerVimeo || '', s.footerBehance || '', s.footerYoutube || ''
+                ).run();
+                
                 return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+            }
+
+            // DROPBOX TOKEN PROXY
+            if (url.pathname === '/api/dropbox-token' && request.method === 'POST') {
+                const DROPBOX_APP_KEY = env.DROPBOX_APP_KEY || "m9sugup87hekz3d";
+                const DROPBOX_APP_SECRET = env.DROPBOX_APP_SECRET || "bkzjbiikhirweaf";
+                const DROPBOX_REFRESH_TOKEN = env.DROPBOX_REFRESH_TOKEN || "mPd5-2m8NqwAAAAAAAAAAaQnYG84WFDUrfsblY_xK6N_Q8TfZvv99JXvV2aTzKqI";
+
+                const response = await fetch('https://api.dropbox.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'refresh_token',
+                        refresh_token: DROPBOX_REFRESH_TOKEN,
+                        client_id: DROPBOX_APP_KEY,
+                        client_secret: DROPBOX_APP_SECRET
+                    })
+                });
+
+                const data = await response.json();
+                return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             // UPLOAD THUMBNAIL TO R2
             if (url.pathname === '/api/upload-thumbnail' && request.method === 'POST') {
                 if (!env.BUCKET) throw new Error("R2 Bucket binding 'BUCKET' not found.");
-                
                 const formData = await request.formData();
                 const file = formData.get('file');
                 if (!file) return new Response('No file uploaded', { status: 400, headers: corsHeaders });
-
-                const filename = `${Date.now()}_${file.name}`;
-                await env.BUCKET.put(filename, file.stream(), {
-                    httpMetadata: { contentType: file.type }
-                });
-
-                // Return the local proxy URL since we don't know if they have a public R2 domain
-                const publicUrl = `${url.origin}/api/media/${filename}`;
-                return new Response(JSON.stringify({ url: publicUrl }), { 
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-                });
+                const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+                const filename = `${Date.now()}_${safeName}`;
+                await env.BUCKET.put(filename, file.stream(), { httpMetadata: { contentType: file.type } });
+                let publicUrl = env.R2_PUBLIC_DOMAIN ? `${env.R2_PUBLIC_DOMAIN}/${filename}` : `${url.origin}/api/media/${filename}`;
+                return new Response(JSON.stringify({ url: publicUrl }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             // SERVE MEDIA FROM R2
@@ -113,16 +131,11 @@ export default {
                 if (!env.BUCKET) throw new Error("R2 Bucket binding 'BUCKET' not found.");
                 const filename = url.pathname.replace('/api/media/', '');
                 const object = await env.BUCKET.get(filename);
-
-                if (object === null) {
-                    return new Response('Object Not Found', { status: 404, headers: corsHeaders });
-                }
-
+                if (object === null) return new Response('Object Not Found', { status: 404, headers: corsHeaders });
                 const headers = new Headers();
                 object.writeHttpMetadata(headers);
                 headers.set('etag', object.httpEtag);
                 headers.set('Access-Control-Allow-Origin', '*');
-
                 return new Response(object.body, { headers });
             }
 

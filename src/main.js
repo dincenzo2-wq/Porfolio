@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DATA HANDLING ---
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
     // --- SMART CONFIG ---
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const WORKER_URL = isLocal ? 'http://localhost:8787' : 'https://portfolio-api.dincenzo2.workers.dev';
+    // Always use production URL to avoid confusion with local data
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};
@@ -255,6 +255,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateProjectDisplay();
             });
         }
+
+        // 9. Footer Data
+        const fSub = document.getElementById('footer-sub-header');
+        const fMain = document.getElementById('footer-main-title');
+        const fEmailLink = document.getElementById('footer-email-link');
+        const fPhoneLink = document.getElementById('footer-phone-link');
+        const fLocText = document.getElementById('footer-location-text');
+        const fVimeo = document.getElementById('footer-vimeo-link');
+        const fBehance = document.getElementById('footer-behance-link');
+        const fYoutube = document.getElementById('footer-youtube-link');
+
+        if (fSub && settings.footerSubHeader) fSub.textContent = settings.footerSubHeader;
+        if (fMain && settings.footerMainTitle) fMain.textContent = settings.footerMainTitle;
+        if (fEmailLink && settings.footerEmail) {
+            fEmailLink.href = `mailto:${settings.footerEmail}`;
+            fEmailLink.textContent = settings.footerEmail;
+        }
+        if (fPhoneLink && settings.footerPhone) {
+            fPhoneLink.href = `tel:${settings.footerPhone}`;
+            fPhoneLink.textContent = settings.footerPhone;
+        }
+        if (fLocText && settings.footerLocation) fLocText.textContent = settings.footerLocation;
+        if (fVimeo && settings.footerVimeo) fVimeo.href = settings.footerVimeo;
+        if (fBehance && settings.footerBehance) fBehance.href = settings.footerBehance;
+        if (fYoutube && settings.footerYoutube) fYoutube.href = settings.footerYoutube;
     };
 
     const updateProjectDisplay = () => {

@@ -17,6 +17,7 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="/src/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body class="minimalist-dark">
@@ -28,7 +29,15 @@
 
 
     <nav id="main-nav">
-        <div class="logo">TV</div>
+        <div class="brand-logo" id="main-logo">
+            <div class="logo-vortex">
+                <img src="https://pub-867e178d79cb43208b64caed0a8a61c8.r2.dev/1777440847282_adobe_express_2026_04_29_12.18.24.svg" alt="ZV FILM Logo" class="brand-icon-img">
+            </div>
+            <div class="logo-text">
+                <span class="brand-name">ZV</span>
+                <span class="brand-suffix">FILM</span>
+            </div>
+        </div>
         <ul class="nav-links">
             <li><a href="#premiere">TRANG CHỦ</a></li>
             <li><a href="#behind-lens">GIỚI THIỆU VỀ TÔI</a></li>
@@ -83,7 +92,7 @@
             <div class="container">
                 <!-- Section Header -->
                 <div class="section-header-v2 fade-in">
-                    <span class="header-label">THE VISIONARY</span>
+                    <span class="header-label">A PERSONAL ODYSSEY</span>
                     <h2 class="header-title-v2">GIỚI THIỆU VỀ TÔI</h2>
                 </div>
 
@@ -177,7 +186,7 @@
             <div class="container">
                 <!-- Section Header -->
                 <div class="section-header-v2 fade-in">
-                    <span class="header-label">THE DIRECTOR'S CUT</span>
+                    <span class="header-label">FRAMES OF ARTISTRY</span>
                     <h2 class="header-title-v2">SẢN PHẨM</h2>
                 </div>
 
@@ -213,43 +222,90 @@
         </section>
     </main>
 
-    <!-- Footer -->
-    <footer id="contact">
+    <!-- Cinematic Footer Redesign -->
+    <footer id="contact" class="modern-footer">
+        <div class="footer-bg-watermark">ZV FILM</div>
+        
         <div class="container">
-            <div class="footer-premium fade-in">
-                <!-- Left: Brand Identity -->
-                <div class="footer-main-brand">
-                    <div class="brand-signature">
-                        <span class="signature-label">MÃ BIÊN TẬP</span>
-                        <div class="footer-logo-impeccable">TV</div>
-                    </div>
-                    <h2 class="footer-mega-slogan">HÃY CÙNG<br>SÁNG TẠO</h2>
+            <!-- 1. CTA Section -->
+            <div class="footer-cta-modern fade-in">
+                <div class="cta-content">
+                    <h2 class="cta-title" id="footer-main-title">MỖI CÂU CHUYỆN ĐỀU CẦN MỘT ĐIỂM CHẠM</h2>
+                    <p class="cta-desc" id="footer-sub-header">Nơi những rung cảm tìm thấy được hình hài.</p>
                 </div>
-                
-                <!-- Right: Contact & Metadata -->
-                <div class="footer-details-zone">
-                    <div class="footer-metadata-strip">
+            </div>
 
-                        <div class="meta-block">
-                            <span class="meta-label">VỊ TRÍ</span>
-                            <span class="meta-value">SÀI GÒN_VN [GMT+7]</span>
+            <!-- 2. Main Footer Box -->
+            <div class="footer-glass-box fade-in">
+                <div class="footer-main-grid">
+                    <!-- Brand Column -->
+                    <div class="footer-col-brand">
+                        <div class="footer-logo">
+                            <div class="logo-vortex">
+                                <img src="https://pub-867e178d79cb43208b64caed0a8a61c8.r2.dev/1777440847282_adobe_express_2026_04_29_12.18.24.svg" alt="ZV FILM Logo" class="brand-icon-img">
+                            </div>
+                            <div class="logo-text">
+                                <span class="brand-name" style="font-family: var(--font-heading); font-weight: 800; font-size: 1.5rem; letter-spacing: 0.1em;">ZV </span>
+                                <span class="brand-suffix" style="font-family: var(--font-heading); font-weight: 300; font-size: 1.2rem; letter-spacing: 0.2em;">FILM</span>
+                            </div>
+                        </div>
+                        <p class="brand-bio">Cinematic Video Editor chuyên nghiệp, mang đến những thước phim đầy cảm xúc và chiều sâu kỹ thuật.</p>
+                        <div class="footer-socials">
+                            <a href="#" id="footer-vimeo-link" class="social-circle" target="_blank" aria-label="Vimeo"><i class="fab fa-vimeo-v"></i></a>
+                            <a href="#" id="footer-behance-link" class="social-circle" target="_blank" aria-label="Behance"><i class="fab fa-behance"></i></a>
+                            <a href="#" id="footer-youtube-link" class="social-circle" target="_blank" aria-label="Youtube"><i class="fab fa-youtube"></i></a>
                         </div>
                     </div>
 
-                    <div class="footer-cta-box">
-                        <span class="cta-label">GỬI LỜI MỜI HỢP TÁC</span>
-                        <a href="mailto:vinh.tran@example.com" class="footer-email-link">vinh.tran@example.com</a>
-                        <div class="cta-line"></div>
+                    <!-- Links Columns -->
+                    <div class="footer-col-links">
+                        <h4 class="footer-label">SẢN PHẨM</h4>
+                        <ul class="footer-links-list">
+                            <li><a href="#">Phim Thương Mại</a></li>
+                            <li><a href="#">Music Video</a></li>
+                            <li><a href="#">Travel Story</a></li>
+                            <li><a href="#">Wedding Film</a></li>
+                        </ul>
                     </div>
 
-                    <div class="footer-legal-impeccable">
-                        <p class="copyright-v4">&copy; 2026 TRAN QUOC VINH — THE ART OF EDITING.</p>
-                        <span class="legal-id">REF_0293_MN</span>
+                    <div class="footer-col-links">
+                        <h4 class="footer-label">LIÊN HỆ</h4>
+                        <ul class="footer-links-list">
+                            <li><a href="mailto:contact@zinhvisuals.com" id="footer-email-link">contact@zinhvisuals.com</a></li>
+                            <li><a href="tel:+84123456789" id="footer-phone-link">+84 123 456 789</a></li>
+                            <li class="location-item">
+                                <span id="footer-location-text" style="display: block; margin-bottom: 5px; color: #fff;">Ho Chi Minh City, VN</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col-links">
+                        <h4 class="footer-label">THÔNG TIN</h4>
+                        <ul class="footer-links-list">
+                            <li><a href="#behind-lens">Về Tôi</a></li>
+                            <li><a href="#director-cut">Quy trình làm việc</a></li>
+                            <li><a href="#">Bảng giá</a></li>
+                            <li><a href="#">Blog</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bottom Bar -->
+                <div class="footer-bottom-modern">
+                    <div class="copyright-section">
+                        <p>© 2026 ZV FILM — ALL FRAMES RESERVED.</p>
+                    </div>
+                    <div class="legal-links">
+                        <a href="#">Quyền riêng tư</a>
+                        <a href="#">Điều khoản</a>
+                        <a href="#">Cookies</a>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="footer-light-leak"></div>
+
+        <!-- Film Grain Texture -->
+        <div class="film-grain"></div>
     </footer>
 
     <!-- Plyr Library -->

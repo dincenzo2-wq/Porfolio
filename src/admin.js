@@ -34,7 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSaveSettings = document.getElementById('btn-save-settings');
     const avatarDropzone = document.getElementById('avatar-dropzone');
     const avatarFileInput = document.getElementById('avatar-file-input');
+    const colorPreviewDot = document.getElementById('color-preview-dot');
     const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+
+    // Footer Settings Elements
+    const inputFooterSubHeader = document.getElementById('set-footer-sub-header');
+    const inputFooterMainTitle = document.getElementById('set-footer-main-title');
+    const inputFooterEmail = document.getElementById('set-footer-email');
+    const inputFooterPhone = document.getElementById('set-footer-phone');
+    const inputFooterLocation = document.getElementById('set-footer-location');
+    const inputFooterCoords = document.getElementById('set-footer-coords');
+    const inputFooterVimeo = document.getElementById('set-footer-vimeo');
+    const inputFooterBehance = document.getElementById('set-footer-behance');
+    const inputFooterYoutube = document.getElementById('set-footer-youtube');
 
     // Live preview for Video
     const addVideoUrlInput = document.getElementById('add-video-url');
@@ -47,8 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveStorage = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
     // --- SMART CONFIG ---
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const WORKER_URL = isLocal ? 'http://localhost:8787' : 'https://portfolio-api.dincenzo2.workers.dev';
+    // Always use production URL to avoid confusion with local data
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};
@@ -94,7 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error(`Save failed: ${response.statusText}`);
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(`Save failed: ${errData.error || response.statusText}`);
+        }
         return response.json();
     };
 
@@ -729,43 +745,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+        if (colorPreviewDot) colorPreviewDot.style.background = settings.accentColor;
         syncSidebar(settings);
 
-        // Render categories in settings
-        const settingsCategoriesList = document.getElementById('settings-categories-list');
-        if (settingsCategoriesList) {
-            settingsCategoriesList.innerHTML = (settings.categories || []).map((cat, idx) => `
-                <div class="admin-tag">
-                    <span>${cat}</span>
-                    <button type="button" class="btn-remove-category btn-remove-tag" data-index="${idx}">&times;</button>
-                </div>
-            `).join('');
-
-            // Add remove listener
-            settingsCategoriesList.querySelectorAll('.btn-remove-category').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const idx = parseInt(btn.dataset.index);
-                    settings.categories.splice(idx, 1);
-                    renderSettings();
-                    renderCategoryChipsInForm();
-                });
-            });
-        }
+        // Footer Data
+        if (inputFooterSubHeader) inputFooterSubHeader.value = settings.footerSubHeader || '';
+        if (inputFooterMainTitle) inputFooterMainTitle.value = settings.footerMainTitle || '';
+        if (inputFooterEmail) inputFooterEmail.value = settings.footerEmail || '';
+        if (inputFooterPhone) inputFooterPhone.value = settings.footerPhone || '';
+        if (inputFooterLocation) inputFooterLocation.value = settings.footerLocation || '';
+        if (inputFooterCoords) inputFooterCoords.value = settings.footerCoords || '';
+        if (inputFooterVimeo) inputFooterVimeo.value = settings.footerVimeo || '';
+        if (inputFooterBehance) inputFooterBehance.value = settings.footerBehance || '';
+        if (inputFooterYoutube) inputFooterYoutube.value = settings.footerYoutube || '';
     };
 
-    // Add category in settings
-    const addSettingCategoryInput = document.getElementById('add-setting-category-input');
-    const btnAddSettingCategory = document.getElementById('btn-add-setting-category');
-
-    btnAddSettingCategory?.addEventListener('click', () => {
-        const newCat = addSettingCategoryInput.value.trim().toUpperCase();
-        if (newCat && !settings.categories.includes(newCat)) {
-            settings.categories.push(newCat);
-            addSettingCategoryInput.value = '';
-            renderSettings();
-            renderCategoryChipsInForm();
-        }
-    });
 
     function renderCategoryChipsInForm() {
         const chipContainer = document.getElementById('add-video-category-chips');
@@ -804,7 +798,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     renderCategoryChipsInForm();
-                    renderSettings();
                     renderProjects();
                 }
             });
@@ -825,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const catToRemove = btn.getAttribute('data-category');
                 settings.categories = settings.categories.filter(c => c !== catToRemove);
                 renderCategoryChipsInForm();
-                renderSettings(); // Sync with settings tab
+                // Sync with settings tab
             });
         });
     }
@@ -851,6 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
     colorPicker.addEventListener('input', (e) => {
         const color = e.target.value.toUpperCase();
         colorHex.textContent = color;
+        if (colorPreviewDot) colorPreviewDot.style.background = color;
         document.documentElement.style.setProperty('--accent-color', color);
     });
 
@@ -860,6 +854,17 @@ document.addEventListener('DOMContentLoaded', () => {
         settings.slogan = inputUserSlogan.value;
         settings.avatar = inputUserAvatar.value || 'assets/avatar.jpg';
         settings.accentColor = colorPicker.value;
+
+        // Save Footer Data
+        settings.footerSubHeader = inputFooterSubHeader.value;
+        settings.footerMainTitle = inputFooterMainTitle.value;
+        settings.footerEmail = inputFooterEmail.value;
+        settings.footerPhone = inputFooterPhone.value;
+        settings.footerLocation = inputFooterLocation.value;
+        settings.footerCoords = inputFooterCoords.value;
+        settings.footerVimeo = inputFooterVimeo.value;
+        settings.footerBehance = inputFooterBehance.value;
+        settings.footerYoutube = inputFooterYoutube.value;
 
         await showToast('Cài đặt đã lưu!', btnSaveSettings, async () => {
             await apiSave('/api/settings', settings);

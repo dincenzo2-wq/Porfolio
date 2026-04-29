@@ -11,3 +11,6 @@ database_id = "7a39a7f5-3be9-42d3-b61b-a7c1040e60a2"
 binding = "BUCKET"
 bucket_name = "portfolio-assets"
 
+[vars]
+R2_PUBLIC_DOMAIN = "https://pub-867e178d79cb43208b64caed0a8a61c8.r2.dev"
+

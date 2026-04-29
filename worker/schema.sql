@@ -28,7 +28,17 @@ CREATE TABLE settings (
     profession TEXT,
     slogan TEXT,
     avatar TEXT,
-    accentColor TEXT
+    accentColor TEXT,
+    categories TEXT, -- JSON string
+    footerSubHeader TEXT,
+    footerMainTitle TEXT,
+    footerEmail TEXT,
+    footerPhone TEXT,
+    footerLocation TEXT,
+    footerCoords TEXT,
+    footerVimeo TEXT,
+    footerBehance TEXT,
+    footerYoutube TEXT
 );
 
 -- Table for old config (cleanup)

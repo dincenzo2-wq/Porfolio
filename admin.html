@@ -281,88 +281,169 @@
                             </div>
                         </div>
 
-                        <div class="admin-panel-footer">
                             <span class="save-status" id="profile-save-status">Dữ liệu được lưu cục bộ</span>
-                            <button class="btn-primary" id="btn-save-profile">Cập Nhật Hồ Sơ</button>
+                            <button class="btn-primary" id="btn-save-profile">CẬP NHẬT HỒ SƠ</button>
                         </div>
-
                     </div>
                 </div>
             </section>
 
             <!-- SYSTEM SETTINGS (CÀI ĐẶT TRANG CHỦ) -->
             <section id="settings" class="admin-section">
-                <div class="admin-panel">
-                    <div class="panel-header">
+                <!-- PANEL 1: IDENTITY -->
+                <div class="admin-panel technical-dossier">
+                    <div class="panel-header dossier-header">
                         <div class="header-group">
-                            <h2 class="section-heading">CÀI ĐẶT TRANG CHỦ</h2>
-                            <span class="panel-subtitle">Thay đổi nhận diện thương hiệu và thông tin chính</span>
+                            <div class="dossier-tag">SYS.CONFIG // 001</div>
+                            <h2 class="section-heading">THIẾT LẬP NHẬN DIỆN</h2>
+                            <span class="panel-subtitle">Cấu hình tham số cốt lõi của thương hiệu</span>
                         </div>
                     </div>
                     <div class="panel-body">
-                        <div class="settings-grid-v2">
-                            <!-- Cài đặt cơ bản -->
-                            <div class="settings-column">
-                                <div class="setting-card">
-                                    <label class="setting-label">Tên Hiển Thị</label>
-                                    <input type="text" id="set-user-name" class="admin-input"
-                                        placeholder="TRẦN QUỐC VINH">
+                        <div class="settings-grid-optimized">
+                            <!-- Left Column: Identity Info -->
+                            <div class="settings-group identity-group">
+                                <div class="group-header">
+                                    <span class="group-title">IDENTITY_DATA</span>
+                                    <div class="group-line"></div>
                                 </div>
-                                <div class="setting-card">
-                                    <label class="setting-label">Nghề Nghiệp Chính</label>
-                                    <input type="text" id="set-user-profession" class="admin-input"
-                                        placeholder="SENIOR VIDEO EDITOR">
+                                <div class="setting-card technical-card">
+                                    <div class="card-corner tl"></div>
+                                    <label class="setting-label-tech">DISPLAY_NAME</label>
+                                    <input type="text" id="set-user-name" class="admin-input-tech" placeholder="TRẦN QUỐC VINH">
                                 </div>
-                                <div class="setting-card">
-                                    <label class="setting-label">Slogan / Khẩu Hiệu</label>
-                                    <textarea id="set-user-slogan" class="admin-textarea-sm"
-                                        placeholder="Kể chuyện qua từng khung hình..."></textarea>
+                                <div class="setting-card technical-card">
+                                    <div class="card-corner tl"></div>
+                                    <label class="setting-label-tech">PRIMARY_ROLE</label>
+                                    <input type="text" id="set-user-profession" class="admin-input-tech" placeholder="SENIOR VIDEO EDITOR">
+                                </div>
+                                <div class="setting-card technical-card">
+                                    <div class="card-corner tl"></div>
+                                    <label class="setting-label-tech">MISSION_STATEMENT</label>
+                                    <textarea id="set-user-slogan" class="admin-textarea-tech" placeholder="Kể chuyện qua từng khung hình..."></textarea>
                                 </div>
                             </div>
 
-                            <div class="settings-column">
-                                <div class="setting-card">
-                                    <label class="setting-label">Màu Nhấn Hệ Thống</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" id="set-system-color" class="admin-color-picker"
-                                            value="#F59E0B">
-                                        <span class="color-hex" id="color-hex-value">#F59E0B</span>
-                                    </div>
+                            <!-- Right Column: Visual Brand -->
+                            <div class="settings-group visual-group">
+                                <div class="group-header">
+                                    <span class="group-title">VISUAL_PARAMETERS</span>
+                                    <div class="group-line"></div>
                                 </div>
-                                <div class="setting-card full-width">
-                                    <label class="setting-label">Ảnh Đại Diện</label>
-                                    <div class="avatar-upload-wrapper">
-                                        <div class="avatar-preview-container">
-                                            <img id="setting-avatar-preview" src="assets/avatar.jpg" alt="Preview">
-                                        </div>
-                                        <div id="avatar-dropzone" class="avatar-dropzone">
-                                            <input type="file" id="avatar-file-input" accept="image/*" hidden>
-                                            <div class="dropzone-content">
-                                                <p><strong>Kéo thả ảnh vào đây</strong></p>
-                                                <span>hoặc dán URL bên dưới</span>
+                                <div class="brand-config-row">
+                                    <div class="setting-card technical-card color-config">
+                                        <div class="card-corner tl"></div>
+                                        <label class="setting-label-tech">ACCENT_CHROMA</label>
+                                        <div class="color-picker-technical">
+                                            <div class="color-preview-box" id="color-preview-dot"></div>
+                                            <div class="color-data">
+                                                <span class="color-hex-tech" id="color-hex-value">#F59E0B</span>
+                                                <input type="color" id="set-system-color" value="#F59E0B">
                                             </div>
                                         </div>
                                     </div>
-                                    <input type="text" id="setting-avatar" class="admin-input mt-15"
-                                        placeholder="Hoặc dán URL ảnh tại đây">
-                                </div>
-                                <div class="setting-card full-width">
-                                    <label class="setting-label">Danh Mục Phân Loại <span class="label-optional">(Quản lý các loại sản phẩm)</span></label>
-                                    <div class="categories-manager">
-                                        <div id="settings-categories-list" class="tags-container">
-                                            <!-- Categories injected via JS -->
-                                        </div>
-                                        <div class="microlink-input-row mt-15">
-                                            <input type="text" id="add-setting-category-input" class="admin-input" placeholder="Thêm phân loại mới (VD: PHIM CƯỚI)...">
-                                            <button class="btn-microlink" id="btn-add-setting-category">THÊM</button>
+
+                                    <div class="setting-card technical-card avatar-config">
+                                        <div class="card-corner tr"></div>
+                                        <label class="setting-label-tech">SUBJECT_IDENTIFIER</label>
+                                        <div class="avatar-technical-layout">
+                                            <div class="avatar-scanner-box">
+                                                <div class="scanner-line"></div>
+                                                <img id="setting-avatar-preview" src="/src/assets/avatar.jpg" alt="Preview">
+                                            </div>
+                                            <div class="avatar-actions">
+                                                <div id="avatar-dropzone" class="dropzone-minimal">
+                                                    <input type="file" id="avatar-file-input" accept="image/*" hidden>
+                                                    <span class="drop-text">UPLOAD_NEW</span>
+                                                </div>
+                                                <input type="text" id="setting-avatar" class="admin-input-tiny" placeholder="EXTERNAL_URL">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="admin-panel-footer">
-                            <button class="btn-primary" id="btn-save-settings">Áp Dụng Thay Đổi</button>
+                <!-- PANEL 2: FOOTER -->
+                <div class="admin-panel technical-dossier" style="margin-top: 40px;">
+                    <div class="panel-header dossier-header">
+                        <div class="header-group">
+                            <div class="dossier-tag">FOOTER_DATA // 002</div>
+                            <h2 class="section-heading">THÔNG TIN CHÂN TRANG</h2>
+                            <span class="panel-subtitle">Quản lý nội dung CTA và thông tin liên hệ</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="settings-grid-optimized">
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <span class="group-title">CTA_CONTENT</span>
+                                    <div class="group-line"></div>
+                                </div>
+                                <div class="setting-card technical-card">
+                                    <div class="card-corner tl"></div>
+                                    <label class="setting-label-tech">TITLE (TRẮNG)</label>
+                                    <input type="text" id="set-footer-main-title" class="admin-input-tech" placeholder="MỖI CÂU CHUYỆN ĐỀU CẦN MỘT ĐIỂM CHẠM">
+                                </div>
+                                <div class="setting-card technical-card">
+                                    <div class="card-corner tl"></div>
+                                    <label class="setting-label-tech">SUB_HEADER (AMBER)</label>
+                                    <input type="text" id="set-footer-sub-header" class="admin-input-tech" placeholder="Nơi những rung cảm tìm thấy được hình hài.">
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="group-header">
+                                    <span class="group-title">CONTACT_RESOURCES</span>
+                                    <div class="group-line"></div>
+                                </div>
+                                <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+                                    <div class="setting-card technical-card">
+                                        <label class="setting-label-tech">EMAIL</label>
+                                        <input type="text" id="set-footer-email" class="admin-input-tech" placeholder="vinh.tran@example.com">
+                                    </div>
+                                    <div class="setting-card technical-card">
+                                        <label class="setting-label-tech">PHONE</label>
+                                        <input type="text" id="set-footer-phone" class="admin-input-tech" placeholder="+84 900 000 000">
+                                    </div>
+                                </div>
+                                <div class="setting-card technical-card">
+                                    <label class="setting-label-tech">LOCATION_TEXT</label>
+                                    <input type="text" id="set-footer-location" class="admin-input-tech" placeholder="HO CHI MINH CITY, VN">
+                                    <input type="hidden" id="set-footer-coords" value=""> <!-- Coords removed from UI -->
+                                </div>
+                            </div>
+
+                            <div class="settings-group full-width" style="grid-column: span 2;">
+                                <div class="group-header">
+                                    <span class="group-title">SOCIAL_CHANNELS</span>
+                                    <div class="group-line"></div>
+                                </div>
+                                <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                                    <div class="setting-card technical-card">
+                                        <label class="setting-label-tech">VIMEO_URL</label>
+                                        <input type="text" id="set-footer-vimeo" class="admin-input-tech" placeholder="https://vimeo.com/...">
+                                    </div>
+                                    <div class="setting-card technical-card">
+                                        <label class="setting-label-tech">BEHANCE_URL</label>
+                                        <input type="text" id="set-footer-behance" class="admin-input-tech" placeholder="https://behance.net/...">
+                                    </div>
+                                    <div class="setting-card technical-card">
+                                        <label class="setting-label-tech">YOUTUBE_URL</label>
+                                        <input type="text" id="set-footer-youtube" class="admin-input-tech" placeholder="https://youtube.com/...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="admin-panel-footer dossier-footer">
+                            <div class="footer-status-line">
+                                <span class="blink-dot"></span>
+                                <span class="status-code">SYSTEM_READY</span>
+                            </div>
+                            <button class="btn-primary-tech" id="btn-save-settings">Ghi Đè Tham Số [CTRL+S]</button>
                         </div>
                     </div>
                 </div>
