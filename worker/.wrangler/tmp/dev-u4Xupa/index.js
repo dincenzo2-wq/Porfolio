@@ -97,8 +97,7 @@ var src_default = {
                     name = ?, profession = ?, slogan = ?, avatar = ?, accentColor = ?, 
                     categories = ?, footerSubHeader = ?, footerMainTitle = ?, 
                     footerEmail = ?, footerPhone = ?, footerLocation = ?, 
-                    footerCoords = ?, footerVimeo = ?, footerBehance = ?, 
-                    footerYoutube = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
+                    footerCoords = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
                     WHERE id = 1`;
         await env.DB.prepare(sql).bind(
           s.name || "",
@@ -113,9 +112,6 @@ var src_default = {
           s.footerPhone || "",
           s.footerLocation || "",
           s.footerCoords || "",
-          s.footerVimeo || "",
-          s.footerBehance || "",
-          s.footerYoutube || "",
           s.footerFacebook || "",
           s.footerInstagram || "",
           s.footerTiktok || ""

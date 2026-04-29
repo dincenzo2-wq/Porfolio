@@ -78,16 +78,15 @@ export default {
                     name = ?, profession = ?, slogan = ?, avatar = ?, accentColor = ?, 
                     categories = ?, footerSubHeader = ?, footerMainTitle = ?, 
                     footerEmail = ?, footerPhone = ?, footerLocation = ?, 
-                    footerCoords = ?, footerVimeo = ?, footerBehance = ?, 
-                    footerYoutube = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
+                    footerCoords = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
                     WHERE id = 1`;
                 
                 await env.DB.prepare(sql).bind(
                     s.name || '', s.profession || '', s.slogan || '', s.avatar || '', s.accentColor || '#F59E0B', 
                     JSON.stringify(s.categories || []), 
                     s.footerSubHeader || '', s.footerMainTitle || '', s.footerEmail || '', s.footerPhone || '',
-                    s.footerLocation || '', s.footerCoords || '', s.footerVimeo || '', s.footerBehance || '', 
-                    s.footerYoutube || '', s.footerFacebook || '', s.footerInstagram || '', s.footerTiktok || ''
+                    s.footerLocation || '', s.footerCoords || '', 
+                    s.footerFacebook || '', s.footerInstagram || '', s.footerTiktok || ''
                 ).run();
                 
                 return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
