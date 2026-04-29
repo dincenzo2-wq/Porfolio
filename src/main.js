@@ -123,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const heroAvatar = document.getElementById('hero-avatar');
         if (heroAvatar && settings && settings.avatar) {
             heroAvatar.src = settings.avatar;
-            heroAvatar.style.opacity = '1';
         }
 
         // Force Amber if legacy red or missing
@@ -439,6 +438,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- STARTUP ---
     const init = async () => {
+        // 1. Show cached data immediately to prevent layout shift/placeholders
+        projects = getStorage('tv_projects', []);
+        profile = getStorage('tv_profile', {});
+        settings = getStorage('tv_settings', {});
+        renderApp();
+
+        // 2. Fetch fresh data from D1 and update UI silently
         await fetchData();
         renderApp();
         document.body.classList.add('loaded');
