@@ -274,7 +274,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (fPhoneLink && settings.footerPhone) {
             fPhoneLink.href = `tel:${settings.footerPhone}`;
-            fPhoneLink.textContent = settings.footerPhone;
+            // Format: 0xxx xxx xxx or similar
+            const raw = settings.footerPhone.replace(/\D/g, '');
+            let formatted = raw;
+            if (raw.length === 10) {
+                formatted = `${raw.slice(0, 4)} ${raw.slice(4, 7)} ${raw.slice(7)}`;
+            } else if (raw.length === 11) {
+                formatted = `${raw.slice(0, 5)} ${raw.slice(5, 8)} ${raw.slice(8)}`;
+            }
+            fPhoneLink.textContent = formatted;
         }
         if (fLocText && settings.footerLocation) fLocText.textContent = settings.footerLocation;
         if (fVimeo && settings.footerVimeo) fVimeo.href = settings.footerVimeo;
