@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:worker": "cd worker && npx wrangler dev --remote",
     "build": "vite build",
     "preview": "vite preview"
   },

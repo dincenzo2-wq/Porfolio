@@ -60,7 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SMART CONFIG ---
     // Always use production URL to avoid confusion with local data
-    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
+    const WORKER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8787'
+        : 'https://portfolio-api.dincenzo2.workers.dev';
 
     let projects = [];
     let profile = {};
