@@ -47,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputFooterVimeo = document.getElementById('set-footer-vimeo');
     const inputFooterBehance = document.getElementById('set-footer-behance');
     const inputFooterYoutube = document.getElementById('set-footer-youtube');
+    const inputFooterFacebook = document.getElementById('set-footer-facebook');
+    const inputFooterInstagram = document.getElementById('set-footer-instagram');
+    const inputFooterTiktok = document.getElementById('set-footer-tiktok');
 
     // Live preview for Video
     const addVideoUrlInput = document.getElementById('add-video-url');
@@ -758,6 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputFooterVimeo) inputFooterVimeo.value = settings.footerVimeo || '';
         if (inputFooterBehance) inputFooterBehance.value = settings.footerBehance || '';
         if (inputFooterYoutube) inputFooterYoutube.value = settings.footerYoutube || '';
+        if (inputFooterFacebook) inputFooterFacebook.value = settings.footerFacebook || '';
+        if (inputFooterInstagram) inputFooterInstagram.value = settings.footerInstagram || '';
+        if (inputFooterTiktok) inputFooterTiktok.value = settings.footerTiktok || '';
     };
 
 
@@ -865,6 +871,9 @@ document.addEventListener('DOMContentLoaded', () => {
         settings.footerVimeo = inputFooterVimeo.value;
         settings.footerBehance = inputFooterBehance.value;
         settings.footerYoutube = inputFooterYoutube.value;
+        settings.footerFacebook = inputFooterFacebook.value;
+        settings.footerInstagram = inputFooterInstagram.value;
+        settings.footerTiktok = inputFooterTiktok.value;
 
         await showToast('Cài đặt đã lưu!', btnSaveSettings, async () => {
             await apiSave('/api/settings', settings);

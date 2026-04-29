@@ -265,6 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const fVimeo = document.getElementById('footer-vimeo-link');
         const fBehance = document.getElementById('footer-behance-link');
         const fYoutube = document.getElementById('footer-youtube-link');
+        const fFacebook = document.getElementById('footer-facebook-link');
+        const fInstagram = document.getElementById('footer-instagram-link');
+        const fTiktok = document.getElementById('footer-tiktok-link');
 
         if (fSub && settings.footerSubHeader) fSub.textContent = settings.footerSubHeader;
         if (fMain && settings.footerMainTitle) fMain.textContent = settings.footerMainTitle;
@@ -288,6 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fVimeo && settings.footerVimeo) fVimeo.href = settings.footerVimeo;
         if (fBehance && settings.footerBehance) fBehance.href = settings.footerBehance;
         if (fYoutube && settings.footerYoutube) fYoutube.href = settings.footerYoutube;
+        if (fFacebook && settings.footerFacebook) fFacebook.href = settings.footerFacebook;
+        if (fInstagram && settings.footerInstagram) fInstagram.href = settings.footerInstagram;
+        if (fTiktok && settings.footerTiktok) fTiktok.href = settings.footerTiktok;
     };
 
     const updateProjectDisplay = () => {

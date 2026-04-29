@@ -98,7 +98,7 @@ var src_default = {
                     categories = ?, footerSubHeader = ?, footerMainTitle = ?, 
                     footerEmail = ?, footerPhone = ?, footerLocation = ?, 
                     footerCoords = ?, footerVimeo = ?, footerBehance = ?, 
-                    footerYoutube = ? 
+                    footerYoutube = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
                     WHERE id = 1`;
         await env.DB.prepare(sql).bind(
           s.name || "",
@@ -115,7 +115,10 @@ var src_default = {
           s.footerCoords || "",
           s.footerVimeo || "",
           s.footerBehance || "",
-          s.footerYoutube || ""
+          s.footerYoutube || "",
+          s.footerFacebook || "",
+          s.footerInstagram || "",
+          s.footerTiktok || ""
         ).run();
         return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
       }
