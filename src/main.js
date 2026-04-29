@@ -3,9 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const getStorage = (key, defaultVal) => JSON.parse(localStorage.getItem(key)) || defaultVal;
     // --- SMART CONFIG ---
     // Always use production URL to avoid confusion with local data
-    const WORKER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:8787'
-        : 'https://portfolio-api.dincenzo2.workers.dev';
+    // Priority: Production Worker (Remote Data) as default
+    const WORKER_URL = 'https://portfolio-api.dincenzo2.workers.dev';
+    const LOCAL_WORKER_URL = 'http://localhost:8787';
 
     let projects = [];
     let profile = {};
