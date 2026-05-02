@@ -3798,21 +3798,45 @@ body.loaded .hero-side-content {
     }
 
     .id-profession-wrap {
-        margin-top: 10px;
-        gap: 10px;
+        margin-top: 20px;
+        gap: 0;
+        justify-content: center;
+    }
+
+    .id-line-sm {
+        display: none; /* Simplify on mobile for the badge look */
     }
 
     .id-profession {
         font-size: 0.65rem;
-        letter-spacing: 0.3em;
+        letter-spacing: 0.2em;
+        background: rgba(245, 158, 11, 0.05);
+        color: var(--accent);
+        padding: 6px 16px;
+        border-radius: 100px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
     }
 
     .hero-logos {
-        gap: 1.2rem;
+        gap: 10px;
         flex-wrap: wrap;
-        margin-top: 0.5rem;
-        font-size: 0.65rem;
-        padding: 0 10vw;
+        margin-top: 30px;
+        font-size: 0.7rem;
+        padding: 0 5vw;
+        justify-content: center;
+    }
+
+    .logo-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 16px;
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        backdrop-filter: blur(4px);
     }
 
     .marquee-content span {
@@ -4996,7 +5020,7 @@ body.loaded .hero-side-content {
 .film-grain {
     position: absolute;
     inset: 0;
-    background-image: url('https://grainy-gradients.vercel.app/noise.svg');
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     opacity: 0.02;
     pointer-events: none;
     mix-blend-mode: overlay;
