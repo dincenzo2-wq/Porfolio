@@ -19,10 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchData = async () => {
         try {
             const response = await fetch(`${WORKER_URL}/api/all-data`);
-            if (!response.ok) throw new Error('API fetch failed');
             const data = await response.json();
             projects = data.projects || [];
             profile = data.profile || {};
+            if (!profile.skills) profile.skills = [];
+            if (!profile.experience) profile.experience = [];
+            if (!profile.education) profile.education = [];
             settings = data.settings || {};
             try {
                 if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
@@ -39,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('API Fetch failed, using localStorage fallback:', err);
             projects = getStorage('tv_projects', []);
             profile = getStorage('tv_profile', {});
+            if (!profile.skills) profile.skills = [];
+            if (!profile.experience) profile.experience = [];
+            if (!profile.education) profile.education = [];
             settings = getStorage('tv_settings', {});
             try {
                 if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
@@ -142,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Skills
         const skillsContainer = document.getElementById('software-skills-container');
-        if (skillsContainer) {
+        if (skillsContainer && profile && profile.skills) {
             skillsContainer.innerHTML = profile.skills.map(s => {
                 const shortId = s.id || s.name.substring(0, 2).toUpperCase();
                 const nameLower = s.name.toLowerCase();
@@ -226,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 7. Dynamic Category Tabs
         const consoleTabsContainer = document.querySelector('.console-tabs');
-        if (consoleTabsContainer && settings && settings.categories) {
+        if (consoleTabsContainer && settings && Array.isArray(settings.categories)) {
             const currentFilter = 'all'; // Default to all on load
             
             let tabsHtml = `
@@ -441,7 +446,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Show cached data immediately to prevent layout shift/placeholders
         projects = getStorage('tv_projects', []);
         profile = getStorage('tv_profile', {});
+        if (!profile.skills) profile.skills = [];
+        if (!profile.experience) profile.experience = [];
+        if (!profile.education) profile.education = [];
         settings = getStorage('tv_settings', {});
+        
+        // Ensure categories are parsed if they come from localStorage as string
+        try {
+            if (typeof settings.categories === 'string') settings.categories = JSON.parse(settings.categories);
+        } catch(e) { settings.categories = ["COMMERCIAL", "TRAVEL", "WEDDING", "MUSIC VIDEO"]; }
+        
         renderApp();
 
         // 2. Fetch fresh data from D1 and update UI silently
