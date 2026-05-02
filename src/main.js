@@ -130,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
             heroAvatar.src = settings.avatar;
         }
 
+        const heroSoftwareContainer = document.getElementById('hero-software-list');
+        if (heroSoftwareContainer && settings && settings.heroSoftware) {
+            const softwares = settings.heroSoftware.split(',').map(s => s.trim()).filter(s => s !== '');
+            if (softwares.length > 0) {
+                heroSoftwareContainer.innerHTML = softwares.map(s => `<div class="logo-item">${s}</div>`).join('');
+            }
+        }
+
         // Force Amber if legacy red or missing
         if (!settings.accentColor || settings.accentColor.toLowerCase() === '#e21d1d') {
             settings.accentColor = '#F59E0B';

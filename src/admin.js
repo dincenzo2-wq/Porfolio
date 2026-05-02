@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputUserProfession = document.getElementById('set-user-profession');
     const inputUserSlogan = document.getElementById('set-user-slogan');
     const inputUserAvatar = document.getElementById('setting-avatar');
+    const inputHeroSoftware = document.getElementById('set-hero-software');
     const avatarPreview = document.getElementById('setting-avatar-preview');
     const colorPicker = document.getElementById('set-system-color');
     const colorHex = document.getElementById('color-hex-value');
@@ -741,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarPreview.src = settings.avatar || 'assets/avatar.jpg';
         colorPicker.value = settings.accentColor;
         colorHex.textContent = settings.accentColor.toUpperCase();
+        if (inputHeroSoftware) inputHeroSoftware.value = settings.heroSoftware || 'Premiere Pro, DaVinci Resolve, After Effects, Photoshop, Audition';
         // Force Amber if legacy red or missing
         if (!settings.accentColor || settings.accentColor.toLowerCase() === '#e21d1d') {
             settings.accentColor = '#F59E0B';
@@ -856,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         settings.slogan = inputUserSlogan.value;
         settings.avatar = inputUserAvatar.value || 'assets/avatar.jpg';
         settings.accentColor = colorPicker.value;
+        settings.heroSoftware = inputHeroSoftware.value;
 
         // Save Footer Data
         settings.footerSubHeader = inputFooterSubHeader.value;

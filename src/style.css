@@ -5056,3 +5056,105 @@ body.loaded .hero-side-content {
     }
     .legal-links { gap: 20px; }
 }
+@media (max-width: 768px) {
+    .admin-wrapper {
+        padding-top: 85px; /* Less space for mobile dock */
+    }
+
+    .admin-nav-pill {
+        top: 12px;
+        width: 94%;
+        padding: 4px;
+        gap: 2px;
+        background: rgba(10, 10, 10, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .nav-pill-identity {
+        padding-right: 8px;
+        margin-right: 4px;
+    }
+
+    .nav-pill-name {
+        display: none; /* Hide name to save space */
+    }
+
+    .nav-pill-avatar {
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-tab {
+        padding: 10px;
+        min-width: 42px;
+        justify-content: center;
+        gap: 0;
+    }
+
+    .nav-tab .tab-text {
+        display: none; /* Use icons only on mobile */
+    }
+
+    /* Active tab shows text for context */
+    .nav-tab.active {
+        padding: 10px 16px;
+        border-radius: 20px;
+    }
+
+    .nav-tab.active .tab-text {
+        display: block;
+        font-size: 0.65rem;
+        margin-left: 6px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .nav-pill-divider {
+        height: 14px;
+        margin: 0 2px;
+    }
+
+    .back-to-site {
+        padding: 10px;
+    }
+
+    .back-to-site .tab-text {
+        display: none;
+    }
+
+    /* Admin Header Mobile Polish */
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 20px 0;
+        margin-bottom: 24px;
+    }
+
+    .header-info {
+        gap: 2px;
+    }
+
+    .admin-title {
+        font-size: 1.25rem;
+    }
+
+    .status-pulse {
+        width: 100%;
+        justify-content: center;
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+
+    /* Stats Mobile Polish */
+    .stats-grid {
+        grid-template-columns: 1fr; /* Stack on mobile */
+        gap: 16px;
+    }
+
+    .stat-card.accent {
+        padding: 24px;
+    }
+}
