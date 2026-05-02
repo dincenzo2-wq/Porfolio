@@ -400,21 +400,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPrev = document.getElementById('reel-prev');
 
     if (btnNext && btnPrev && reelContainer) {
+        const updateActiveReel = () => {
+            const cards = reelContainer.querySelectorAll('.reel-card');
+            let closest = null;
+            let minDistance = Infinity;
+            const containerCenter = reelContainer.scrollLeft + reelContainer.offsetWidth / 2;
+
+            cards.forEach(card => {
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const distance = Math.abs(containerCenter - cardCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closest = card;
+                }
+            });
+
+            if (closest && !closest.classList.contains('active-reel')) {
+                cards.forEach(c => c.classList.remove('active-reel'));
+                closest.classList.add('active-reel');
+            }
+        };
+
+        reelContainer.addEventListener('scroll', () => {
+            // Debounce or throttle could be added if needed
+            updateActiveReel();
+        });
+
         btnNext.addEventListener('click', () => {
             const active = reelContainer.querySelector('.active-reel');
             const next = active?.nextElementSibling;
             if (next) {
-                active.classList.remove('active-reel');
-                next.classList.add('active-reel');
                 next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                // active-reel class will be updated by scroll listener
             }
         });
         btnPrev.addEventListener('click', () => {
             const active = reelContainer.querySelector('.active-reel');
             const prev = active?.previousElementSibling;
             if (prev) {
-                active.classList.remove('active-reel');
-                prev.classList.add('active-reel');
                 prev.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
         });
