@@ -20,7 +20,10 @@ export default {
             const columns = [
                 "categories", "footerSubHeader", "footerMainTitle", "footerEmail", 
                 "footerPhone", "footerLocation", "footerCoords", "footerVimeo", 
-                "footerBehance", "footerYoutube"
+                "footerBehance", "footerYoutube",
+                "aboutQuote", "aboutTagline", "aboutTitle", "aboutStillImage",
+                "aboutStatusText", "aboutStatusLabel",
+                "aboutClients", "aboutProjects", "aboutExperience"
             ];
             for (const col of columns) {
                 try {
@@ -175,8 +178,8 @@ export default {
             // SAVE PROFILE
             if (url.pathname === '/api/profile' && request.method === 'POST') {
                 const p = await request.json();
-                await env.DB.prepare('INSERT OR REPLACE INTO profile (id, bio, skills, experience, education) VALUES (1, ?, ?, ?, ?)')
-                    .bind(p.bio, JSON.stringify(p.skills || []), JSON.stringify(p.experience || []), JSON.stringify(p.education || []))
+                await env.DB.prepare('INSERT OR REPLACE INTO profile (id, skills, experience, education) VALUES (1, ?, ?, ?)')
+                    .bind(JSON.stringify(p.skills || []), JSON.stringify(p.experience || []), JSON.stringify(p.education || []))
                     .run();
                 return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
             }
@@ -187,7 +190,10 @@ export default {
                 // Using explicit columns to avoid any mapping issues
                 const sql = `UPDATE settings SET 
                     name = ?, profession = ?, slogan = ?, avatar = ?, accentColor = ?, 
-                    categories = ?, footerSubHeader = ?, footerMainTitle = ?, 
+                    categories = ?, aboutQuote = ?, aboutTagline = ?, aboutTitle = ?,
+                    aboutStillImage = ?, aboutStatusText = ?, aboutStatusLabel = ?,
+                    aboutClients = ?, aboutProjects = ?, aboutExperience = ?,
+                    footerSubHeader = ?, footerMainTitle = ?, 
                     footerEmail = ?, footerPhone = ?, footerLocation = ?, 
                     footerCoords = ?, footerFacebook = ?, footerInstagram = ?, footerTiktok = ?
                     WHERE id = 1`;
@@ -195,6 +201,9 @@ export default {
                 await env.DB.prepare(sql).bind(
                     s.name || '', s.profession || '', s.slogan || '', s.avatar || '', s.accentColor || '#F59E0B', 
                     JSON.stringify(s.categories || []), 
+                    s.aboutQuote || '', s.aboutTagline || '', s.aboutTitle || '',
+                    s.aboutStillImage || '', s.aboutStatusText || '', s.aboutStatusLabel || '',
+                    s.aboutClients || '4+', s.aboutProjects || '10+', s.aboutExperience || '4+',
                     s.footerSubHeader || '', s.footerMainTitle || '', s.footerEmail || '', s.footerPhone || '',
                     s.footerLocation || '', s.footerCoords || '', 
                     s.footerFacebook || '', s.footerInstagram || '', s.footerTiktok || ''
