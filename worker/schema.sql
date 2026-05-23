@@ -7,6 +7,13 @@ CREATE TABLE projects (
     year TEXT,
     videoUrl TEXT,
     thumbnail TEXT,
+    tags TEXT,
+    duration TEXT,
+    resolution TEXT,
+    role TEXT,
+    description TEXT,
+    client TEXT,
+    platform TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

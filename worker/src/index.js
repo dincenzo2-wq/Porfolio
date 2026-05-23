@@ -28,6 +28,103 @@ export default {
                 } catch (e) { /* Column likely exists */ }
             }
 
+            // AUTO-MIGRATION: Force ensure all projects columns exist on production
+            const projectColumns = ["duration", "resolution", "role", "description", "client", "platform"];
+            for (const col of projectColumns) {
+                try {
+                    await env.DB.prepare(`ALTER TABLE projects ADD COLUMN ${col} TEXT`).run();
+                } catch (e) { /* Column likely exists */ }
+            }
+
+            // GET YOUTUBE INFO
+            if (url.pathname === '/api/youtube-info') {
+                const queryUrl = url.searchParams.get('url');
+                if (!queryUrl) {
+                    return new Response(JSON.stringify({ error: "Missing 'url' query parameter." }), {
+                        status: 400,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                    });
+                }
+
+                const ytId = extractYouTubeId(queryUrl);
+                if (!ytId) {
+                    return new Response(JSON.stringify({ error: "Invalid YouTube URL or Video ID." }), {
+                        status: 400,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                    });
+                }
+
+                const targetUrl = `https://www.youtube.com/watch?v=${ytId}`;
+                const response = await fetch(targetUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    return new Response(JSON.stringify({ error: `Failed to fetch YouTube page. Status code: ${response.status}` }), {
+                        status: 502,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                    });
+                }
+
+                const html = await response.text();
+
+                // 1. Extract duration
+                let durationSeconds = null;
+                const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
+                if (playerResponseMatch) {
+                    try {
+                        const lengthSecondsMatch = playerResponseMatch[1].match(/"lengthSeconds"\s*:\s*"(\d+)"/);
+                        if (lengthSecondsMatch) {
+                            durationSeconds = parseInt(lengthSecondsMatch[1], 10);
+                        }
+                    } catch (e) {}
+                }
+
+                if (durationSeconds === null) {
+                    const itemPropMatch = html.match(/<meta\s+itemprop="duration"\s+content="([^"]+)"/i) ||
+                                          html.match(/<meta\s+content="([^"]+)"\s+itemprop="duration"/i);
+                    if (itemPropMatch) {
+                        const isoDuration = itemPropMatch[1];
+                        const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                        if (match) {
+                            const hours = parseInt(match[1] || "0", 10);
+                            const minutes = parseInt(match[2] || "0", 10);
+                            const seconds = parseInt(match[3] || "0", 10);
+                            durationSeconds = hours * 3600 + minutes * 60 + seconds;
+                        }
+                    }
+                }
+
+                // Convert to timecode (MM:SS or HH:MM:SS)
+                let durationFormatted = "";
+                if (durationSeconds !== null) {
+                    const hours = Math.floor(durationSeconds / 3600);
+                    const minutes = Math.floor((durationSeconds % 3600) / 60);
+                    const seconds = durationSeconds % 60;
+                    const pad = (num) => String(num).padStart(2, "0");
+                    if (hours > 0) {
+                        durationFormatted = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                    } else {
+                        durationFormatted = `${pad(minutes)}:${pad(seconds)}`;
+                    }
+                }
+
+                // 2. Extract title (optional bonus!)
+                const titleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i) ||
+                                   html.match(/<meta\s+content="([^"]+)"\s+property="og:title"/i);
+                const title = titleMatch ? titleMatch[1] : null;
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    videoId: ytId,
+                    title: title ? title.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'") : null,
+                    durationSeconds,
+                    duration: durationFormatted
+                }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
             // GET ALL DATA
             if (url.pathname === '/api/all-data') {
                 const projects = await env.DB.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
@@ -53,8 +150,22 @@ export default {
                 await env.DB.prepare('DELETE FROM projects').run();
                 if (body && body.length > 0) {
                     const statements = body.map(p => 
-                        env.DB.prepare('INSERT INTO projects (id, title, category, year, videoUrl, thumbnail, tags) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                           .bind(String(p.id), p.title, p.category, p.year, p.videoUrl, p.thumbnail || null, JSON.stringify(p.tags || []))
+                        env.DB.prepare('INSERT INTO projects (id, title, category, year, videoUrl, thumbnail, tags, duration, resolution, role, description, client, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                           .bind(
+                               String(p.id), 
+                               p.title, 
+                               p.category, 
+                               p.year, 
+                               p.videoUrl, 
+                               p.thumbnail || null, 
+                               JSON.stringify(p.tags || []),
+                               p.duration || '',
+                               p.resolution || '',
+                               p.role || '',
+                               p.description || '',
+                               p.client || '',
+                               p.platform || ''
+                           )
                     );
                     await env.DB.batch(statements);
                 }
@@ -148,3 +259,50 @@ export default {
         }
     },
 };
+
+function extractYouTubeId(url) {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+
+    // If it's just an 11-char alphanumeric string, it's already an ID
+    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+        return trimmed;
+    }
+
+    try {
+        if (trimmed.includes("youtube.com/shorts/")) {
+            const parts = trimmed.split("youtube.com/shorts/");
+            if (parts[1]) {
+                const id = parts[1].split(/[?&#]/)[0];
+                if (id.length === 11) return id;
+            }
+        }
+        if (trimmed.includes("youtube.com/embed/")) {
+            const parts = trimmed.split("youtube.com/embed/");
+            if (parts[1]) {
+                const id = parts[1].split(/[?&#]/)[0];
+                if (id.length === 11) return id;
+            }
+        }
+        if (trimmed.includes("youtu.be/")) {
+            const parts = trimmed.split("youtu.be/");
+            if (parts[1]) {
+                const id = parts[1].split(/[?&#]/)[0];
+                if (id.length === 11) return id;
+            }
+        }
+        if (trimmed.includes("v=")) {
+            const urlObj = new URL(trimmed);
+            const id = urlObj.searchParams.get("v");
+            if (id && id.length === 11) return id;
+        }
+    } catch (e) {}
+
+    const regExp = /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = trimmed.match(regExp);
+    if (match && match[1] && match[1].length === 11) {
+        return match[1];
+    }
+
+    return null;
+}
