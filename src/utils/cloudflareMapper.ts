@@ -324,7 +324,7 @@ export function mapToCloudflareSettingsPayload(profile: UserProfile, currentThem
   return {
     name: profile.name,
     profession: profile.role,
-    slogan: profile.slogan || profile.role,
+    slogan: profile.subtitle,
     accentColor: currentTheme || "cinema",
     categories: Array.from(new Set(profile.projects.map((p) => (p.category || "General").toUpperCase()))),
     aboutQuote: profile.aboutMini,
