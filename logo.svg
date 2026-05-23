@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" fill="none">
+  <!-- Icon mark: film frame with ZV -->
+  <g transform="translate(0, 0)">
+    <!-- Frame background -->
+    <rect x="2" y="2" width="44" height="44" rx="12" stroke="currentColor" stroke-width="3.5"/>
+    <!-- Z top bar -->
+    <line x1="14" y1="17" x2="34" y2="17" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    <!-- Z diagonal - with slight angle that also forms V negative space -->
+    <line x1="32" y1="19" x2="14" y2="31" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    <!-- Z bottom bar -->
+    <line x1="14" y1="33" x2="34" y2="33" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    <!-- Accent dot (record indicator / lens reference) -->
+    <circle cx="36" cy="36" r="3" fill="currentColor" opacity="0.5"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(58, 0)">
+    <!-- ZV -->
+    <text x="0" y="30" font-family="'Space Grotesk', sans-serif" font-size="25" font-weight="700" letter-spacing="-1.5" fill="currentColor">ZV</text>
+    <!-- FILM -->
+    <text x="0" y="46" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="400" letter-spacing="4" fill="currentColor" opacity="0.6">FILM</text>
+  </g>
+</svg>

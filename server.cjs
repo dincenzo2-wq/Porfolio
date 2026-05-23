@@ -151,7 +151,6 @@ app.post("/api/chat", async (req, res) => {
     const userProfile = profile || {
       name: "TR\u1EA6N QU\u1ED0C VINH",
       role: "Editor & Videographer",
-      bio: "Freelance Videographer & Film Editor",
       location: "H\xE0 N\u1ED9i, Vi\u1EC7t Nam",
       skills: [],
       projects: [],
@@ -171,7 +170,6 @@ Vai tr\xF2 c\u1EE7a b\u1EA1n: Tr\u1EA3 l\u1EDDi m\u1ECDi c\xE2u h\u1ECFi c\u1EE7
 H\u1ED3 s\u01A1 c\xE1 nh\xE2n c\u1EE7a ${userProfile.name}:
 - Ch\u1EE9c danh/Vai tr\xF2: ${userProfile.role}
 - Slogan/M\xF4 t\u1EA3 ng\u1EAFn: ${userProfile.subtitle}
-- Ti\u1EC3u s\u1EED chi ti\u1EBFt: ${userProfile.bio}
 - T\xF3m t\u1EAFt v\u1EC1 t\xF4i: ${userProfile.aboutMini}
 - \u0110\u1ECBa \u0111i\u1EC3m: ${userProfile.location}
 - Email: ${userProfile.email}
