@@ -198,7 +198,7 @@ export default function ExperienceTimeline({ workExperienceData, educationData, 
 
   return (
     <section id="experience-section" className="py-24 border-t border-slate-200 px-4 bg-slate-50/50">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[82rem] mx-auto">
         
         {/* Section title header */}
         <div className="text-left mb-16 select-none max-w-xl">

@@ -161,7 +161,6 @@ app.post("/api/chat", async (req, res) => {
     const userProfile = profile || {
       name: "TRẦN QUỐC VINH",
       role: "Editor & Videographer",
-      bio: "Freelance Videographer & Film Editor",
       location: "Hà Nội, Việt Nam",
       skills: [],
       projects: [],
@@ -186,7 +185,6 @@ Vai trò của bạn: Trả lời mọi câu hỏi của nhà tuyển dụng, đ
 Hồ sơ cá nhân của ${userProfile.name}:
 - Chức danh/Vai trò: ${userProfile.role}
 - Slogan/Mô tả ngắn: ${userProfile.subtitle}
-- Tiểu sử chi tiết: ${userProfile.bio}
 - Tóm tắt về tôi: ${userProfile.aboutMini}
 - Địa điểm: ${userProfile.location}
 - Email: ${userProfile.email}

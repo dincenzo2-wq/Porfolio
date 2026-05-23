@@ -52,7 +52,7 @@ interface AdminDashboardProps {
   onLogout?: () => void;
 }
 
-type TabType = "general" | "skills" | "projects" | "experience" | "theme" | "cloudflare" | "export";
+type TabType = "general" | "skills" | "projects" | "experience" | "about" | "theme" | "cloudflare" | "export";
 
 export function extractYouTubeId(url: string): string | null {
   if (!url || typeof url !== "string") return null;
@@ -213,7 +213,10 @@ export default function AdminDashboard({
           headers,
           body: JSON.stringify(settingsPayload),
         });
-        if (!sRes.ok) throw new Error(`Lỗi cập nhật settings: API trả lỗi ${sRes.status}`);
+        if (!sRes.ok) {
+          const sErrorText = await sRes.text().catch(() => '');
+          throw new Error(`Lỗi cập nhật settings: API trả lỗi ${sRes.status} — ${sErrorText.slice(0, 300)}`);
+        }
 
         // Push profile
         const profilePayload = mapToCloudflareProfilePayload(profile);
@@ -222,7 +225,10 @@ export default function AdminDashboard({
           headers,
           body: JSON.stringify(profilePayload),
         });
-        if (!pRes.ok) throw new Error(`Lỗi cập nhật profile: API trả lỗi ${pRes.status}`);
+        if (!pRes.ok) {
+          const errorText = await pRes.text().catch(() => '');
+          throw new Error(`Lỗi cập nhật profile: API trả lỗi ${pRes.status} — ${errorText.slice(0, 300)}`);
+        }
 
         // Push projects
         const projectsPayload = mapToCloudflareProjectsPayload(profile.projects);
@@ -624,7 +630,7 @@ export default function AdminDashboard({
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto flex flex-col gap-5">
+      <div className="max-w-[70%] min-w-[1024px] mx-auto flex flex-col gap-5">
         
         {/* TOP COMPONENT: Media Portfolio Workspace Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-lg select-none relative">
@@ -799,6 +805,21 @@ export default function AdminDashboard({
             </button>
 
             <button
+              onClick={() => { setActiveTab("about"); setJsonError(null); }}
+              className={`w-full px-3 py-2 rounded text-left text-[13px] font-medium flex items-center justify-between transition-all cursor-pointer ${
+                activeTab === "about"
+                  ? "bg-slate-200/60 text-slate-900 border-l-2 border-slate-800 pl-2.5 font-bold"
+                  : "text-slate-800 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Info className="h-3.5 w-3.5" />
+                Giới thiệu (About)
+              </span>
+              {activeTab !== "about" && <span className="h-1 w-1 rounded-full bg-slate-300" />}
+            </button>
+
+            <button
               onClick={() => { setActiveTab("theme"); setJsonError(null); }}
               className={`w-full px-3 py-2 rounded text-left text-[13px] font-medium flex items-center justify-between transition-all cursor-pointer ${
                 activeTab === "theme"
@@ -956,15 +977,6 @@ export default function AdminDashboard({
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Tiếu thuyết ngắn / Giới thiệu tinh gọn (about mini)</label>
-                      <textarea
-                        rows={2}
-                        value={profile.aboutMini}
-                        onChange={(e) => handleFieldChange("aboutMini", e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg resize-none leading-relaxed"
-                      />
-                    </div>
                   </div>
 
                   {/* RIGHT COLUMN: SERVICES & CONNECTIVITY */}
@@ -1040,16 +1052,6 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
-                {/* BIO - SPANS BOTH COLUMNS */}
-                <div className="pt-4 border-t border-slate-200">
-                  <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">Tiểu sử nghệ thuật chuyên sâu (profile bio)</label>
-                  <textarea
-                    rows={4}
-                    value={profile.bio}
-                    onChange={(e) => handleFieldChange("bio", e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg resize-none leading-relaxed"
-                  />
-                </div>
               </div>
             )}
 
@@ -1240,89 +1242,82 @@ export default function AdminDashboard({
                               placeholder="Nhập tên thước phim/dự án..."
                             />
                           </div>
-                          <div className="sm:col-span-3">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <label className="block text-[13px] font-mono text-slate-500 uppercase tracking-wider">THỂ LOẠI (CATEGORY)</label>
-                              {!showNewCategoryInput[index] && (
-                                <button
-                                  type="button"
-                                  onClick={() => setIsCategoryManagerOpen(true)}
-                                  className="text-[13px] font-mono text-sky-600 hover:text-sky-700 font-bold transition-all duration-150 cursor-pointer select-none flex items-center gap-1 active:scale-95 shrink-0"
-                                  title="Quản lý thể loại (Thêm, Xóa, Sửa...)"
+                           <div className="sm:col-span-3">
+                             <div className="flex items-center justify-between mb-1.5">
+                               <label className="block text-[13px] font-mono text-slate-500 uppercase tracking-wider">THỂ LOẠI (CATEGORY)</label>
+                               <button
+                                 type="button"
+                                 onClick={() => setIsCategoryManagerOpen(true)}
+                                 className="text-[13px] font-mono text-sky-600 hover:text-sky-700 font-bold transition-all duration-150 cursor-pointer select-none flex items-center gap-1 active:scale-95 shrink-0"
+                                 title="Quản lý thể loại (Thêm, Xóa, Sửa...)"
+                               >
+                                 <SlidersHorizontal className="h-2.5 w-2.5" /> Quản lý
+                               </button>
+                             </div>
+                             {showNewCategoryInput[index] ? (
+                               <div className="flex gap-1.5">
+                                 <input
+                                   type="text"
+                                   placeholder="e.g. TVC, Wedding..."
+                                   className="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg font-medium"
+                                   onBlur={(e) => {
+                                     const val = e.target.value.trim();
+                                     if (val) {
+                                       handleProjectChange(index, "category", val.toUpperCase());
+                                     }
+                                     setShowNewCategoryInput(prev => ({ ...prev, [index]: false }));
+                                   }}
+                                   onKeyDown={(e) => {
+                                     if (e.key === "Enter") {
+                                       const val = e.currentTarget.value.trim();
+                                       if (val) {
+                                         handleProjectChange(index, "category", val.toUpperCase());
+                                       }
+                                       setShowNewCategoryInput(prev => ({ ...prev, [index]: false }));
+                                     }
+                                   }}
+                                   autoFocus
+                                 />
+                                 <button
+                                   type="button"
+                                   onClick={() => setShowNewCategoryInput(prev => ({ ...prev, [index]: false }))}
+                                   className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-550 hover:text-slate-700 px-3 rounded-lg text-[13px] cursor-pointer select-none transition-colors"
+                                 >
+                                   Hủy
+                                 </button>
+                               </div>
+                              ) : (
+                                <select
+                                  value={project.category ? project.category.trim().toUpperCase() : "COMMERCIAL"}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "CREATE_NEW") {
+                                      setShowNewCategoryInput(prev => ({ ...prev, [index]: true }));
+                                    } else {
+                                      handleProjectChange(index, "category", val);
+                                    }
+                                  }}
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg cursor-pointer font-medium"
                                 >
-                                  <SlidersHorizontal className="h-2.5 w-2.5" /> Quản lý
-                                </button>
+                                  {(() => {
+                                    const activeCats = Array.from(new Set(profile.projects.map(p => p.category ? p.category.trim().toUpperCase() : "").filter(Boolean)));
+                                    const currentCat = project.category ? project.category.trim().toUpperCase() : "";
+                                    if (currentCat && !activeCats.includes(currentCat)) {
+                                      activeCats.push(currentCat);
+                                    }
+                                    if (activeCats.length === 0) {
+                                      activeCats.push("COMMERCIAL");
+                                    }
+                                    return activeCats.map((cat) => (
+                                      <option key={cat} value={cat}>
+                                        {cat === "TRAVEL" ? "Travel" : cat === "COMMERCIAL" ? "Commercial" : cat === "SOCIAL" ? "Social / Review" : cat}
+                                      </option>
+                                    ));
+                                  })()}
+                                  <option value="CREATE_NEW" className="text-sky-600 font-semibold">+ Thêm thể loại mới...</option>
+                                </select>
                               )}
-                            </div>
-                            {showNewCategoryInput[index] ? (
-                              <div className="flex gap-1.5">
-                                <input
-                                  type="text"
-                                  placeholder="e.g. TVC, Wedding..."
-                                  className="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg font-medium"
-                                  onBlur={(e) => {
-                                    const val = e.target.value.trim();
-                                    if (val) {
-                                      handleProjectChange(index, "category", val.toUpperCase());
-                                    }
-                                    setShowNewCategoryInput(prev => ({ ...prev, [index]: false }));
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      const val = e.currentTarget.value.trim();
-                                      if (val) {
-                                        handleProjectChange(index, "category", val.toUpperCase());
-                                      }
-                                      setShowNewCategoryInput(prev => ({ ...prev, [index]: false }));
-                                    }
-                                  }}
-                                  autoFocus
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowNewCategoryInput(prev => ({ ...prev, [index]: false }))}
-                                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-550 hover:text-slate-700 px-3 rounded-lg text-[13px] cursor-pointer select-none transition-colors"
-                                >
-                                  Hủy
-                                </button>
-                              </div>
-                            ) : (
-                              <select
-                                value={project.category ? project.category.trim().toUpperCase() : "COMMERCIAL"}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === "CREATE_NEW") {
-                                    setShowNewCategoryInput(prev => ({ ...prev, [index]: true }));
-                                  } else {
-                                    handleProjectChange(index, "category", val);
-                                  }
-                                }}
-                                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg cursor-pointer font-medium"
-                              >
-                                {(() => {
-                                  // Trích xuất các danh mục thực tế đang được sử dụng trong các tác phẩm hiện tại
-                                  const activeCats = Array.from(new Set(profile.projects.map(p => p.category ? p.category.trim().toUpperCase() : "").filter(Boolean)));
-                                  
-                                  // Luôn đảm bảo danh mục hiện tại của tác phẩm có mặt trong danh sách lựa chọn
-                                  const currentCat = project.category ? project.category.trim().toUpperCase() : "";
-                                  if (currentCat && !activeCats.includes(currentCat)) {
-                                    activeCats.push(currentCat);
-                                  }
-                                  
-                                  if (activeCats.length === 0) {
-                                    activeCats.push("COMMERCIAL");
-                                  }
-                                  
-                                  return activeCats.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                      {formatCategory(cat)}
-                                    </option>
-                                  ));
-                                })()}
-                                <option value="CREATE_NEW" className="text-sky-600 font-semibold">+ Thêm thể loại mới...</option>
-                              </select>
-                            )}
-                          </div>
+                             </div>
                           <div className="sm:col-span-2">
                             <label className="block text-[13px] font-mono text-slate-500 mb-1.5 uppercase tracking-wider">NĂM SẢN XUẤT (YEAR)</label>
                             <input
@@ -1359,7 +1354,7 @@ export default function AdminDashboard({
                                   value={project.resolution || ""}
                                   onChange={(e) => handleProjectChange(index, "resolution", e.target.value)}
                                   placeholder="e.g. 4K UHD"
-                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg"
                                 />
                               </div>
                               <div className="col-span-1">
@@ -1369,8 +1364,8 @@ export default function AdminDashboard({
                                     type="text"
                                     value={project.duration || ""}
                                     onChange={(e) => handleProjectChange(index, "duration", e.target.value)}
-                                    placeholder="e.g. 00:30, 05:12"
-                                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none pl-3 pr-14 py-1.5 transition-colors duration-150 rounded-lg"
+                                  placeholder="e.g. 00:30, 05:12"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none pl-3 pr-14 py-2 transition-colors duration-150 rounded-lg"
                                   />
                                   {(project.link || project.youtubeEmbedUrl) && (
                                     <button
@@ -1419,7 +1414,7 @@ export default function AdminDashboard({
                                   type="text"
                                   value={project.thumbnailUrl || ""}
                                   onChange={(e) => handleProjectChange(index, "thumbnailUrl", e.target.value)}
-                                  className="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-2.5 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-2.5 py-2 transition-colors duration-150 rounded-lg"
                                   placeholder="https://..."
                                 />
                                 {cfBaseUrl && (
@@ -1493,7 +1488,7 @@ export default function AdminDashboard({
                                   value={project.link || ""}
                                   onChange={(e) => handleProjectChange(index, "link", e.target.value)}
                                   placeholder="https://vimeo.com/..."
-                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg"
                                 />
                               </div>
                               <div>
@@ -1503,7 +1498,7 @@ export default function AdminDashboard({
                                   value={project.youtubeEmbedUrl || ""}
                                   onChange={(e) => handleProjectChange(index, "youtubeEmbedUrl", e.target.value)}
                                   placeholder="https://www.youtube.com/embed/..."
-                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg"
                                 />
                               </div>
                             </div>
@@ -1520,7 +1515,7 @@ export default function AdminDashboard({
                                   value={project.client || ""}
                                   onChange={(e) => handleProjectChange(index, "client", e.target.value)}
                                   placeholder="e.g. Nha khoa Sài Gòn"
-                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg"
                                 />
                               </div>
                               <div>
@@ -1530,7 +1525,7 @@ export default function AdminDashboard({
                                   value={project.platform || ""}
                                   onChange={(e) => handleProjectChange(index, "platform", e.target.value)}
                                   placeholder="e.g. Facebook, YouTube Shorts"
-                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-1.5 transition-colors duration-150 rounded-lg"
+                                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2 transition-colors duration-150 rounded-lg"
                                 />
                               </div>
                             </div>
@@ -1777,7 +1772,188 @@ export default function AdminDashboard({
               </div>
             )}
 
-            {/* TAB 5: Themes fine-tuning configuration */}
+            {/* TAB 5: About Section Editor */}
+            {activeTab === "about" && (
+              <div className="space-y-6">
+                <div className="border-b border-slate-200 pb-3">
+                  <h2 className="text-[13px] font-semibold text-slate-900 flex items-center gap-2 uppercase font-mono tracking-wider">
+                    <Info className="h-4 w-4 text-sky-600" /> Giới thiệu (About Section)
+                  </h2>
+                  <p className="text-[13px] text-slate-500 mt-0.5">Chỉnh sửa nội dung phần giới thiệu, still image và trạng thái hợp tác.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* LEFT: About Content */}
+                  <div className="space-y-4">
+                    <div className="border-b border-slate-200 pb-1.5">
+                      <span className="text-[13px] font-mono text-sky-600 uppercase tracking-widest font-bold">NỘI DUNG GIỚI THIỆU</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Tagline (mono label)</label>
+                      <input
+                        type="text"
+                        value={profile.aboutTagline}
+                        onChange={(e) => handleFieldChange("aboutTagline", e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                        placeholder="NỔI BẬT & CHUYÊN NGHIỆP"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Tiêu đề chính (heading)</label>
+                      <textarea
+                        rows={2}
+                        value={profile.aboutTitle}
+                        onChange={(e) => handleFieldChange("aboutTitle", e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg resize-none leading-relaxed"
+                        placeholder="Kể những câu chuyện độc bản bằng ngôn ngữ hình ảnh..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Still image URL</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={profile.aboutStillImage}
+                          onChange={(e) => handleFieldChange("aboutStillImage", e.target.value)}
+                          className="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                        {cfBaseUrl && (
+                          <label className="bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-700 px-3 flex items-center justify-center text-[13px] font-mono font-bold cursor-pointer shrink-0 rounded transition-colors select-none">
+                            ⚡ R2
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  showNotification("Đang tải ảnh still lên R2...");
+                                  const cleanUrl = cfBaseUrl.replace(/\/$/, "");
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+                                  const headers: Record<string, string> = {};
+                                  if (cfAuthKey) {
+                                    headers["Authorization"] = cfAuthKey.startsWith("Bearer ") ? cfAuthKey : `Bearer ${cfAuthKey}`;
+                                  }
+                                  const res = await fetch(`${cleanUrl}/api/upload-thumbnail`, {
+                                    method: "POST",
+                                    headers,
+                                    body: formData,
+                                  });
+                                  if (res.ok) {
+                                    const dat = await res.json();
+                                    if (dat.url) {
+                                      handleFieldChange("aboutStillImage", dat.url);
+                                      showNotification("✅ Đã tải ảnh still lên R2 thành công!");
+                                    }
+                                  } else {
+                                    showNotification(`❌ Lỗi upload R2: Code ${res.status}`);
+                                  }
+                                } catch (err: any) {
+                                  showNotification(`❌ Lỗi: ${err?.message}`);
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                      {profile.aboutStillImage && (
+                        <div className="mt-2 aspect-video w-full max-w-[240px] rounded overflow-hidden border border-slate-200 bg-slate-100">
+                          <img
+                            src={profile.aboutStillImage}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget).style.display = "none"; }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Quote (aboutMini)</label>
+                      <textarea
+                        rows={2}
+                        value={profile.aboutMini}
+                        onChange={(e) => handleFieldChange("aboutMini", e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg resize-none leading-relaxed"
+                      />
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Status & Contact Info */}
+                  <div className="space-y-4">
+                    <div className="border-b border-slate-200 pb-1.5">
+                      <span className="text-[13px] font-mono text-emerald-700 uppercase tracking-widest font-bold">TRẠNG THÁI & LIÊN KẾT</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Trạng thái (status text)</label>
+                      <input
+                        type="text"
+                        value={profile.aboutStatusText}
+                        onChange={(e) => handleFieldChange("aboutStatusText", e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                        placeholder="SẴN SÀNG HỢP TÁC"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Mô tả trạng thái</label>
+                      <textarea
+                        rows={3}
+                        value={profile.aboutStatusLabel}
+                        onChange={(e) => handleFieldChange("aboutStatusLabel", e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg resize-none leading-relaxed"
+                      />
+                    </div>
+
+                    <div className="border-b border-slate-200 pb-1.5 pt-4">
+                      <span className="text-[13px] font-mono text-sky-600 uppercase tracking-widest font-bold">THỐNG KÊ NHANH</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Khách hàng</label>
+                        <input
+                          type="text"
+                          value={profile.aboutClients}
+                          onChange={(e) => handleFieldChange("aboutClients", e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                          placeholder="4+"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Dự án</label>
+                        <input
+                          type="text"
+                          value={profile.aboutProjects}
+                          onChange={(e) => handleFieldChange("aboutProjects", e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                          placeholder="10+"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Kinh nghiệm</label>
+                        <input
+                          type="text"
+                          value={profile.aboutExperience}
+                          onChange={(e) => handleFieldChange("aboutExperience", e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none px-3 py-2.5 transition-colors duration-150 rounded-lg"
+                          placeholder="4+"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 6: Themes fine-tuning configuration */}
             {activeTab === "theme" && (
               <div className="space-y-6">
                 <div className="border-b border-slate-200 pb-3">
@@ -2101,7 +2277,7 @@ export default function AdminDashboard({
                       <h4 className="text-[13px] font-bold text-slate-800 font-mono">BẢN ĐỒ CHEAT-SHEET KIỂU BẢNG:</h4>
                       <div className="text-[13px] text-slate-500 leading-relaxed font-mono">
                         <div>• <span className="text-slate-700">Bảng settings</span>: id, name, profession, slogan, avatar, accentColor, categories, footerEmail...</div>
-                        <div>• <span className="text-slate-700">Bảng profile</span>: id, bio, skills (JSON), experience (JSON), education (JSON)</div>
+                        <div>• <span className="text-slate-700">Bảng profile</span>: id, skills (JSON), experience (JSON), education (JSON)</div>
                         <div>• <span className="text-slate-700">Bảng projects</span>: id, title, category, year, videoUrl, thumbnail, tags (JSON)</div>
                       </div>
                     </div>

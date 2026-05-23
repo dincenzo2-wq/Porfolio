@@ -21,7 +21,6 @@ CREATE TABLE projects (
 DROP TABLE IF EXISTS profile;
 CREATE TABLE profile (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    bio TEXT,
     skills TEXT, -- JSON string
     experience TEXT, -- JSON string
     education TEXT -- JSON string
@@ -37,6 +36,15 @@ CREATE TABLE settings (
     avatar TEXT,
     accentColor TEXT,
     categories TEXT, -- JSON string
+    aboutQuote TEXT,
+    aboutTagline TEXT,
+    aboutTitle TEXT,
+    aboutStillImage TEXT,
+    aboutStatusText TEXT,
+    aboutStatusLabel TEXT,
+    aboutClients TEXT,
+    aboutProjects TEXT,
+    aboutExperience TEXT,
     footerSubHeader TEXT,
     footerMainTitle TEXT,
     footerEmail TEXT,

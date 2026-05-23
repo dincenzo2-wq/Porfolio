@@ -11,20 +11,22 @@ INSERT INTO projects (id, title, category, year, videoUrl) VALUES ('177730751644
 INSERT INTO projects (id, title, category, year, videoUrl) VALUES ('1777198252992', 'VŨNG TÀU', 'TRAVEL', '2024', 'https://www.youtube.com/watch?v=i5RUPZWOVZ4');
 
 -- Insert profile data
-INSERT INTO profile (id, bio, skills, experience, education) VALUES (
+INSERT INTO profile (id, skills, experience, education) VALUES (
     1,
-    'Director & Editor',
     '[{"name": "davinci resolve", "icon": "", "level": 100}, {"name": "adobe premier pro", "icon": "", "level": 100}, {"name": "adobe photoshop", "icon": "", "level": 100}]',
     '[{"year": "2024", "role": "VỊ TRÍ", "company": "CÔNG TY"}]',
     '[{"startYear": "2013", "endYear": "2017", "company": "thpt thanh đa", "degree": ""}, {"startYear": "2017", "endYear": "2024", "company": "trường đại học công nghệ tp.hcm", "degree": "CHUYÊN NGÀNH marketing"}]'
 );
 
 -- Insert settings data
-INSERT INTO settings (id, name, profession, slogan, avatar, accentColor) VALUES (
+INSERT INTO settings (id, name, profession, slogan, avatar, accentColor, aboutClients, aboutProjects, aboutExperience) VALUES (
     1,
     'TRẦN QUỐC VINH',
     'JUNIOR EDITOR /VIDEO GRAPHER',
     'undefined',
     'assets/avatar.jpg',
-    '#F59E0B'
+    '#F59E0B',
+    '4+',
+    '10+',
+    '4+'
 );

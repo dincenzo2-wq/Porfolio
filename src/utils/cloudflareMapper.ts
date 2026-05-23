@@ -45,7 +45,6 @@ export interface CloudflareD1DataResponse {
   projects: CloudflareD1Project[];
   profile: {
     id: number;
-    bio: string;
     skills: string | CloudflareD1Skill[];
     experience: string | CloudflareD1Experience[];
     education: string | CloudflareD1Education[];
@@ -231,8 +230,15 @@ export function mapCloudflareToProfile(cfData: CloudflareD1DataResponse): UserPr
     name: settings.name || "TRẦN QUỐC VINH",
     role: settings.profession || "Junior Editor & Videographer",
     subtitle: settings.slogan || "Kể câu chuyện của bạn qua những khung hình chuyển động.",
-    bio: cfProfile.bio || "Tôi là một Videographer và Video Editor tự do...",
-    aboutMini: settings.slogan || "Không có set quay nào quá nhỏ, không có dự án nào quá lớn — chỉ có câu chuyện đáng được kể.",
+    aboutMini: settings.aboutQuote || settings.slogan || "Không có set quay nào quá nhỏ, không có dự án nào quá lớn — chỉ có câu chuyện đáng được kể.",
+    aboutTagline: settings.aboutTagline || "NỔI BẬT & CHUYÊN NGHIỆP",
+    aboutTitle: settings.aboutTitle || "Kể những câu chuyện độc bản bằng ngôn ngữ hình ảnh và nhịp điệu chuyển động.",
+    aboutStillImage: settings.aboutStillImage || "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200",
+    aboutStatusText: settings.aboutStatusText || "SẴN SÀNG HỢP TÁC",
+    aboutStatusLabel: settings.aboutStatusLabel || "Đang nhận các dự án biên tập video thương hiệu, lookbook cinematic reels, TVC quảng cáo và làm việc dài hạn cùng các đơn vị chuyên nghiệp.",
+    aboutClients: settings.aboutClients || "4+",
+    aboutProjects: settings.aboutProjects || "10+",
+    aboutExperience: settings.aboutExperience || "4+",
     location: settings.footerLocation || "Hà Nội, Việt Nam",
     email: settings.footerEmail || "tranquocvinh.media@gmail.com",
     phone: settings.footerPhone || "+84 345 678 910",
@@ -277,7 +283,6 @@ function getEmbedUrlOfVideo(url: string = ""): string {
  */
 export function mapToCloudflareProfilePayload(profile: UserProfile): any {
   return {
-    bio: profile.bio || "",
     skills: profile.skills.map((s) => ({
       name: s.name,
       icon: s.name.toLowerCase().includes("premiere")
@@ -319,8 +324,18 @@ export function mapToCloudflareSettingsPayload(profile: UserProfile, currentThem
   return {
     name: profile.name,
     profession: profile.role,
+    slogan: profile.slogan || profile.role,
     accentColor: currentTheme || "cinema",
     categories: Array.from(new Set(profile.projects.map((p) => (p.category || "General").toUpperCase()))),
+    aboutQuote: profile.aboutMini,
+    aboutTagline: profile.aboutTagline,
+    aboutTitle: profile.aboutTitle,
+    aboutStillImage: profile.aboutStillImage,
+    aboutStatusText: profile.aboutStatusText,
+    aboutStatusLabel: profile.aboutStatusLabel,
+    aboutClients: profile.aboutClients,
+    aboutProjects: profile.aboutProjects,
+    aboutExperience: profile.aboutExperience,
     footerSubHeader: "READY TO CREATE?",
     footerMainTitle: "Let's Collaborate",
     footerEmail: profile.email,

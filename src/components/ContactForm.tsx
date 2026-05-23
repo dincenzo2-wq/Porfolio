@@ -87,7 +87,7 @@ export default function ContactForm() {
 
   return (
     <section id="contact-section" className="py-24 border-t border-slate-200 px-4 bg-slate-50">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-[82rem] mx-auto">
         <div className="text-left mb-16 select-none max-w-xl">
           <p className="text-[13px] font-bold text-sky-650 font-mono uppercase tracking-[0.2em] mb-3">SECURE CONNECTION</p>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold font-display tracking-[-0.05em] leading-none text-slate-900">

@@ -77,10 +77,9 @@ export default function Hero({ profile, theme, onOpenCustomizer }: HeroProps) {
       <div className={`absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-gradient-to-tl ${getLightLeakColor(theme.id)} blur-3xl opacity-60 animate-pulse pointer-events-none`} style={{ animationDuration: "12s" }} />
 
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center justify-center">
-        
-        {/* Centered Content Container */}
-        <div className="w-full max-w-5xl text-center flex flex-col items-center justify-center space-y-14 md:space-y-20">
+<div className="relative z-10 w-full max-w-[82rem] mx-auto flex flex-col items-center justify-center">
+
+        <div className="w-full text-center flex flex-col items-center justify-center space-y-14 md:space-y-20">
           
           {/* 1. THÊM ẢNH ĐẠI DIỆN CĂN GIỮA - NÂNG KÍCH THƯỚC TO HƠN & TỰ ĐỘNG KHỚP THEME */}
           <motion.div 
@@ -90,12 +89,14 @@ export default function Hero({ profile, theme, onOpenCustomizer }: HeroProps) {
             className="relative select-none"
           >
             <div className={`relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full p-1.5 bg-white border-2 ${avatarStyle.border} shadow-md flex items-center justify-center overflow-hidden transition-all duration-300`}>
-              <img 
-                src={profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300"}
-                alt={displayName}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-full"
-              />
+              {profile.avatarUrl && (
+                <img 
+                  src={profile.avatarUrl}
+                  alt={displayName}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              )}
             </div>
             {/* Soft dynamic decorative glow */}
             <div className={`absolute inset-0 -z-10 ${avatarStyle.glow} blur-2xl rounded-full transition-all duration-300`} />

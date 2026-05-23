@@ -39,8 +39,15 @@ export interface UserProfile {
   name: string;
   role: string;
   subtitle: string;
-  bio: string;
   aboutMini: string;
+  aboutTagline: string;
+  aboutTitle: string;
+  aboutStillImage: string;
+  aboutStatusText: string;
+  aboutStatusLabel: string;
+  aboutClients: string;
+  aboutProjects: string;
+  aboutExperience: string;
   location: string;
   email: string;
   phone: string;
@@ -133,8 +140,15 @@ export const DEFAULT_PROFILE: UserProfile = {
   name: "TRẦN QUỐC VINH - Editor & Videographer",
   role: "Junior Editor & Videographer",
   subtitle: "Kể câu chuyện của bạn qua những khung hình chuyển động. Chuyên hậu kỳ, dựng phim và sản xuất hình ảnh thương mại chất lượng cao.",
-  bio: "Tôi là một Videographer và Video Editor trẻ đầy nhiệt huyết đang hoạt động tự do. Đam mê nghệ thuật kể chuyện bằng hình ảnh, tôi biến những chất liệu quay thô thành những thước phim hoàn chỉnh mang đậm chiều sâu cảm xúc, góc quay sáng tạo và nhịp điệu lôi cuốn. Tôi thích sử dụng các công nghệ AI và quy trình làm việc hiện đại để tối ưu năng suất thiết kế và liên tục đổi mới phong cách.",
   aboutMini: "Không có set quay nào quá nhỏ, không có dự án nào quá lớn — chỉ có câu chuyện đáng được kể.",
+  aboutTagline: "NỔI BẬT & CHUYÊN NGHIỆP",
+  aboutTitle: "Kể những câu chuyện độc bản bằng ngôn ngữ hình ảnh và nhịp điệu chuyển động.",
+  aboutStillImage: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200",
+  aboutStatusText: "SẴN SÀNG HỢP TÁC",
+  aboutStatusLabel: "Đang nhận các dự án biên tập video thương hiệu, lookbook cinematic reels, TVC quảng cáo và làm việc dài hạn cùng các đơn vị chuyên nghiệp.",
+  aboutClients: "4+",
+  aboutProjects: "10+",
+  aboutExperience: "4+",
   location: "Hà Nội, Việt Nam",
   email: "tranquocvinh.media@gmail.com",
   phone: "+84 345 678 910",

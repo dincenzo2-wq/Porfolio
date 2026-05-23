@@ -24,7 +24,7 @@ export default function About({ profile, theme }: AboutProps) {
       {/* Light leak accents */}
       <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-[82rem] mx-auto relative z-10">
 
         <div className="text-left mb-16 select-none max-w-2xl">
           <p className="text-[13px] font-bold text-sky-600 font-mono uppercase tracking-[0.2em] mb-3">CONCEPTS & CREATIVITY</p>
@@ -42,32 +42,32 @@ export default function About({ profile, theme }: AboutProps) {
             {/* Still frame / moodboard */}
             <div className="relative w-full aspect-[16/9] overflow-hidden bg-slate-100">
               <img
-                src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200"
+                src={profile.aboutStillImage || "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200"}
                 alt="Cinematic moodboard"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-white/70 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-5">
                 <span className="text-[11px] font-bold font-mono text-slate-500/70 uppercase tracking-[0.15em] bg-white/70 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/50">
-                  Cinematic Still
+                  {profile.aboutStillImage ? "Cinematic Still" : "Moodboard"}
                 </span>
               </div>
             </div>
             <div className="p-8 md:p-10">
               <div className="flex items-center gap-2 mb-6 text-[13px] font-semibold text-slate-500 font-mono">
                 <Sparkles className="h-4 w-4 text-sky-500" />
-                <span>NỔI BẬT & CHUYÊN NGHIỆP</span>
+                <span>{profile.aboutTagline || "NỔI BẬT & CHUYÊN NGHIỆP"}</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-[-0.03em] mb-8 leading-tight">
-                Kể những câu chuyện độc bản bằng ngôn ngữ hình ảnh và nhịp điệu chuyển động.
+                {profile.aboutTitle || "Kể những câu chuyện độc bản bằng ngôn ngữ hình ảnh và nhịp điệu chuyển động."}
               </h3>
 
               <div className="grid grid-cols-3 gap-4 mt-8">
                 {[
-                  { value: `${profile.workExperienceData.length}+`, label: "Khách hàng" },
-                  { value: `${profile.projects.length}+`, label: "Dự án đã thực hiện" },
-                  { value: `${(() => { const years = profile.workExperienceData.map(e => { const s = e.period.match(/(\d{4})/); return s ? parseInt(s[1]) : 2022; }); const min = Math.min(...years); const max = Math.max(...years, new Date().getFullYear()); return max - min; })()}+`, label: "Năm kinh nghiệm" }
-                ].map((stat, i) => (
+                  { value: profile.aboutClients || `${profile.workExperienceData.length}+`, label: "Khách hàng" },
+                  { value: profile.aboutProjects || `${profile.projects.length}+`, label: "Dự án đã thực hiện" },
+                  { value: profile.aboutExperience || `${(() => { const years = profile.workExperienceData.map(e => { const s = e.period.match(/(\d{4})/); return s ? parseInt(s[1]) : 2022; }); const min = Math.min(...years); const max = Math.max(...years, new Date().getFullYear()); return max - min; })()}+`, label: "Năm kinh nghiệm" }
+                ].map((stat) => (
                   <div key={stat.label} className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 border border-slate-200">
                     <span className="text-2xl sm:text-3xl font-bold font-display text-sky-600 tracking-[-0.02em]">{stat.value}</span>
                     <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mt-1 text-center">{stat.label}</span>
@@ -152,10 +152,10 @@ export default function About({ profile, theme }: AboutProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[13px] font-bold font-mono tracking-widest text-emerald-600 uppercase">SẴN SÀNG HỢP TÁC</span>
+                <span className="text-[13px] font-bold font-mono tracking-widest text-emerald-600 uppercase">{profile.aboutStatusText || "SẴN SÀNG HỢP TÁC"}</span>
               </div>
               <p className="text-[13px] text-slate-500 leading-relaxed">
-                Đang nhận các dự án biên tập video thương hiệu, lookbook cinematic reels, TVC quảng cáo và làm việc dài hạn cùng các đơn vị chuyên nghiệp.
+                {profile.aboutStatusLabel || "Đang nhận các dự án biên tập video thương hiệu, lookbook cinematic reels, TVC quảng cáo và làm việc dài hạn cùng các đơn vị chuyên nghiệp."}
               </p>
               <a
                 href="#contact-section"

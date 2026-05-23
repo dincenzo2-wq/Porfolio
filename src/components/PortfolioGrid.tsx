@@ -90,7 +90,7 @@ export default function PortfolioGrid({ projects, theme }: PortfolioGridProps) {
 
   return (
     <section id="projects-section" className="py-24 border-t border-slate-200 px-4 bg-slate-50">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[82rem] mx-auto">
         
         {/* Header Elements */}
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 mb-16 select-none">
