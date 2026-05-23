@@ -5,7 +5,6 @@ import About from "./components/About";
 import PortfolioGrid from "./components/PortfolioGrid";
 import ExperienceTimeline from "./components/ExperienceTimeline";
 import ContactForm from "./components/ContactForm";
-import InteractiveChatbot from "./components/InteractiveChatbot";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminLogin from "./components/AdminLogin";
 import { Settings, Sparkles, MapPin, Layers, Briefcase, FileText } from "lucide-react";
@@ -225,6 +224,22 @@ export default function App() {
 
   const themeVals = THEMES[currentTheme];
 
+  const getThemeColorClass = (themeId: string) => {
+    switch (themeId) {
+      case "emerald":
+        return "bg-emerald-600";
+      case "coral":
+        return "bg-rose-500";
+      case "violet":
+        return "bg-violet-600";
+      case "nord":
+        return "bg-sky-500";
+      case "cinema":
+      default:
+        return "bg-sky-600";
+    }
+  };
+
   if (currentPage === "admin") {
     if (!isLoggedIn) {
       return (
@@ -256,13 +271,26 @@ export default function App() {
       <header className="fixed top-0 inset-x-0 z-30 bg-white/75 backdrop-blur-md border-b border-slate-200/60 px-4 md:px-8 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           
-          {/* Brand Logo with dynamic style */}
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-sky-500 animate-pulse" />
-            <span className="font-mono text-[13px] font-bold tracking-wider uppercase text-slate-800">
-              TRẦN QUỐC VINH • MEDIA PORTFOLIO
-            </span>
-          </div>
+          <a href="#hero-section" className="flex items-center gap-2.5 group select-none">
+            <div className="relative flex items-center justify-center">
+              <img 
+                src="/favicon.svg" 
+                alt="ZV FILM" 
+                className="h-9 w-9 opacity-90 group-hover:opacity-100 transition-all duration-300" 
+                style={{ filter: 'invert(44%) sepia(87%) saturate(1478%) hue-rotate(174deg) brightness(96%) contrast(98%)' }}
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-sky-500 scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_6px_rgba(14,165,233,0.6)]" />
+            </div>
+            <div className="flex items-center gap-2 leading-none">
+              <span className="font-display text-xl font-black tracking-[-0.06em] text-slate-800 group-hover:text-sky-600 transition-colors uppercase">
+                ZV
+              </span>
+              <span className="h-3 w-[1px] bg-slate-200 group-hover:bg-sky-200 transition-colors" />
+              <span className="font-mono text-[9px] font-bold tracking-[0.3em] text-slate-400 group-hover:text-slate-500 transition-colors uppercase pl-0.5">
+                FILM
+              </span>
+            </div>
+          </a>
 
           {/* Nav Items menu (desktop) */}
           <nav className="hidden md:flex items-center gap-6 text-[13px] font-semibold text-slate-600 select-none">
@@ -273,14 +301,16 @@ export default function App() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <button
-              id="admin-dashboard-btn"
-              onClick={() => navigateTo("admin")}
-              className="inline-flex items-center gap-1.5 text-[13px] font-bold font-mono bg-sky-50 border border-sky-200 hover:bg-sky-100/80 hover:border-sky-300 text-sky-650 rounded-full px-4 py-2 cursor-pointer shadow-1 transition-all duration-300"
-            >
-              <Settings className="h-3.5 w-3.5" />
-              Admin Dashboard
-            </button>
+            {isLoggedIn && (
+              <button
+                id="admin-dashboard-btn"
+                onClick={() => navigateTo("admin")}
+                className="inline-flex items-center gap-1.5 text-[13px] font-bold font-mono bg-sky-50 border border-sky-200 hover:bg-sky-100/80 hover:border-sky-300 text-sky-650 rounded-full px-4 py-2 cursor-pointer shadow-1 transition-all duration-300"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Admin Dashboard
+              </button>
+            )}
           </div>
 
         </div>
@@ -324,9 +354,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-
-      {/* Interactive Representative Chatbot */}
-      <InteractiveChatbot profile={profile} />
 
     </div>
   );

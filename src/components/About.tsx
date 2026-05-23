@@ -26,12 +26,14 @@ export default function About({ profile, theme }: AboutProps) {
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
       <div className="max-w-[82rem] mx-auto relative z-10">
 
-        <div className="text-left mb-16 select-none max-w-2xl">
-          <p className="text-[13px] font-bold text-sky-600 font-mono uppercase tracking-[0.2em] mb-3">CONCEPTS & CREATIVITY</p>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold font-display tracking-[-0.05em] leading-none text-slate-900">
-            Nhãn quan điện ảnh & Câu chuyện của tôi.
+        <div className="mb-16 select-none border-b border-slate-200/60 pb-8 w-full">
+          <p className="text-[13px] font-bold text-sky-600 font-mono uppercase tracking-[0.2em] mb-3">
+            CONCEPTS & CREATIVITY
+          </p>
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold font-display tracking-[-0.05em] leading-[0.95] text-slate-900 max-w-none whitespace-normal md:whitespace-nowrap mb-4">
+            Nhãn quan điện ảnh &amp; Câu chuyện của tôi.
           </h2>
-          <p className="text-slate-500 text-[14px] sm:text-sm md:text-md mt-4 leading-relaxed max-w-md">
+          <p className="text-slate-500 text-[14px] sm:text-sm md:text-md leading-relaxed max-w-none whitespace-normal md:whitespace-nowrap shrink-0">
             Biến từng thước phim thô thành tác phẩm nghệ thuật có nhịp điệu và cảm xúc lôi cuốn.
           </p>
         </div>

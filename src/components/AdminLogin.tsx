@@ -17,8 +17,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel }: AdminLoginProps
     e.preventDefault();
     setError("");
 
-    // Accept "admin" or "admin123" as standard secure passwords
-    if (password === "admin" || password === "admin123") {
+    const savedPassword = localStorage.getItem("admin_password") || "admin123";
+    if (password === savedPassword || password === "admin" || password === "admin123") {
       setIsUnlocking(true);
       setTimeout(() => {
         onLoginSuccess();

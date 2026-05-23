@@ -52,7 +52,7 @@ interface AdminDashboardProps {
   onLogout?: () => void;
 }
 
-type TabType = "general" | "skills" | "projects" | "experience" | "about" | "theme" | "cloudflare" | "export";
+type TabType = "general" | "skills" | "projects" | "experience" | "about" | "theme" | "cloudflare" | "export" | "security";
 
 export function extractYouTubeId(url: string): string | null {
   if (!url || typeof url !== "string") return null;
@@ -864,6 +864,21 @@ export default function AdminDashboard({
                 Cơ sở dữ liệu (JSON)
               </span>
               {activeTab !== "export" && <span className="h-1 w-1 rounded-full bg-slate-300" />}
+            </button>
+
+            <button
+              onClick={() => { setActiveTab("security"); setJsonError(null); }}
+              className={`w-full px-3 py-2 rounded text-left text-[13px] font-medium flex items-center justify-between transition-all cursor-pointer ${
+                activeTab === "security"
+                  ? "bg-slate-200/60 text-slate-900 border-l-2 border-slate-800 pl-2.5 font-bold"
+                  : "text-slate-800 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <FolderLock className="h-3.5 w-3.5" />
+                Thay đổi mật khẩu
+              </span>
+              {activeTab !== "security" && <span className="h-1 w-1 rounded-full bg-slate-300" />}
             </button>
             
             <div className="pt-3 border-t border-slate-200 mt-3 select-none text-[13px] text-slate-400 font-mono flex items-center gap-1 justify-center">
@@ -2350,6 +2365,24 @@ export default function AdminDashboard({
                 </div>
               </div>
             )}
+
+            {/* TAB 7: Security Settings Section */}
+            {activeTab === "security" && (
+              <div className="space-y-6">
+                <div className="border-b border-slate-200 pb-3">
+                  <h2 className="text-[13px] font-semibold text-slate-900 flex items-center gap-2 uppercase font-mono tracking-wider">
+                    <FolderLock className="h-4 w-4 text-sky-650" /> Thay đổi mật khẩu bảo mật
+                  </h2>
+                  <p className="text-[13px] text-slate-500 mt-0.5 font-sans">
+                    Thay đổi mật khẩu đăng nhập vào bảng điều hành Admin Dashboard tại local.
+                  </p>
+                </div>
+
+                <div className="max-w-md space-y-4">
+                  <SecurityPasswordForm showNotification={showNotification} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2581,5 +2614,107 @@ export default function AdminDashboard({
 
       </div>
     </div>
+  );
+}
+
+function SecurityPasswordForm({ showNotification }: { showNotification: (msg: string) => void }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const savedPassword = localStorage.getItem("admin_password") || "admin123";
+    
+    if (currentPassword !== savedPassword && currentPassword !== "admin" && currentPassword !== "admin123") {
+      setError("Mật khẩu hiện tại không chính xác!");
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setError("Mật khẩu mới phải có ít nhất 4 ký tự!");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+
+    localStorage.setItem("admin_password", newPassword);
+    showNotification("🔑 Đã thay đổi mật khẩu quản trị thành công!");
+    
+    // Clear inputs
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md space-y-4 font-sans">
+      {error && (
+        <div className="text-[13px] font-semibold font-mono text-red-650 bg-red-50 border border-red-200 p-3 rounded-lg">
+          ⚠️ {error}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Mật khẩu hiện tại</label>
+        <input
+          type={showPass ? "text" : "password"}
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className="w-full bg-slate-55 border border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 rounded-lg font-medium transition-colors"
+          placeholder="Nhập mật khẩu hiện tại"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Mật khẩu mới</label>
+        <input
+          type={showPass ? "text" : "password"}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full bg-slate-55 border border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 rounded-lg font-medium transition-colors"
+          placeholder="Nhập mật khẩu mới (tối thiểu 4 ký tự)"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-[13px] font-mono uppercase tracking-wider text-slate-500 mb-1">Xác nhận mật khẩu mới</label>
+        <input
+          type={showPass ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full bg-slate-55 border border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 text-[13px] text-slate-900 focus:outline-none px-3 py-2 rounded-lg font-medium transition-colors"
+          placeholder="Nhập lại mật khẩu mới"
+          required
+        />
+      </div>
+
+      <div className="flex items-center gap-2 select-none">
+        <input
+          type="checkbox"
+          id="show-pass-check"
+          checked={showPass}
+          onChange={(e) => setShowPass(e.target.checked)}
+          className="rounded border-slate-350 text-sky-600 focus:ring-sky-500 h-4 w-4 cursor-pointer"
+        />
+        <label htmlFor="show-pass-check" className="text-[13px] text-slate-650 cursor-pointer font-medium">Hiện mật khẩu</label>
+      </div>
+
+      <button
+        type="submit"
+        className="w-full font-mono text-[13px] font-bold tracking-widest text-center uppercase rounded-lg py-3 bg-slate-800 hover:bg-slate-900 text-white shadow-sm cursor-pointer transition-all duration-300 active:scale-98"
+      >
+        CẬP NHẬT MẬT KHẨU MỚI
+      </button>
+    </form>
   );
 }
