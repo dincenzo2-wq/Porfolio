@@ -59,6 +59,13 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const [posterCaptureError, setPosterCaptureError] = useState<string | null>(null);
   const posterFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Hero Video File Upload State (< 15MB to Cloudflare R2)
+  const heroVideoFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingHeroVideo, setUploadingHeroVideo] = useState(false);
+  const [heroVideoUploadProgress, setHeroVideoUploadProgress] = useState<string | null>(null);
+  const [heroVideoUploadError, setHeroVideoUploadError] = useState<string | null>(null);
+  const [heroVideoUploadSuccess, setHeroVideoUploadSuccess] = useState<string | null>(null);
+
   // Brand Logos & Marquee State
   const brandLogoFileInputRef = useRef<HTMLInputElement>(null);
   const [processingLogos, setProcessingLogos] = useState(false);
@@ -176,6 +183,79 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
 
   const handleResetMarqueeBrands = () => {
     onChange({ collaboratorsText: DEFAULT_BRAND_MARQUEE.map((b) => b.replace(/LOUTUS/i, 'LOTUS')).join(' · ') });
+  };
+
+  // Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
+  const handleUploadHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Kiểm tra định dạng video (.mp4 hoặc .webm)
+    const lowerName = file.name.toLowerCase();
+    const isVideo =
+      lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || file.type.startsWith('video/');
+    if (!isVideo) {
+      setHeroVideoUploadError('Vui lòng chọn file video định dạng .mp4 hoặc .webm');
+      setHeroVideoUploadSuccess(null);
+      if (heroVideoFileInputRef.current) heroVideoFileInputRef.current.value = '';
+      return;
+    }
+
+    // 2. Kiểm tra giới hạn dung lượng < 15MB (để không vượt giới hạn API Worker và không làm đầy R2)
+    const MAX_VIDEO_BYTES = 15 * 1024 * 1024; // 15MB
+    if (file.size > MAX_VIDEO_BYTES) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setHeroVideoUploadError(
+        `File video vượt quá 15MB (${sizeMB}MB). Vui lòng nén video dưới 15MB để đảm bảo tải mượt mà và không làm đầy bộ nhớ Cloudflare R2.`
+      );
+      setHeroVideoUploadSuccess(null);
+      if (heroVideoFileInputRef.current) heroVideoFileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setUploadingHeroVideo(true);
+      setHeroVideoUploadError(null);
+      setHeroVideoUploadSuccess(null);
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setHeroVideoUploadProgress(`${sizeMB}MB`);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(data.error || 'Lỗi khi tải video lên Cloudflare R2');
+      }
+
+      const uploadedUrl = data.url;
+      onChange({
+        showreelUrl: uploadedUrl,
+        heroBgUrl: uploadedUrl,
+        heroBgType: 'video',
+        heroVideoStart: 0,
+        heroVideoEnd: 15,
+      });
+
+      setHeroVideoUploadSuccess(
+        `Đã tải video nền lên Cloudflare R2 thành công (${sizeMB}MB)! Video đã được gắn cache CDN 1 năm (immutable) để chạy lặp tức thì không tốn lượt đọc R2.`
+      );
+    } catch (err: unknown) {
+      console.error('Failed to upload hero video to R2:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setHeroVideoUploadError(`Lỗi tải video lên R2: ${errMsg}`);
+    } finally {
+      setUploadingHeroVideo(false);
+      setHeroVideoUploadProgress(null);
+      if (heroVideoFileInputRef.current) {
+        heroVideoFileInputRef.current.value = '';
+      }
+    }
   };
 
   const handlePosterFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -538,20 +618,66 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   )}
               </div>
 
-              <input
-                type="text"
-                value={profile.showreelUrl || profile.heroBgUrl || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  onChange({
-                    showreelUrl: val,
-                    heroBgUrl: val,
-                    heroBgType: 'video',
-                  });
-                }}
-                className={inputClass}
-                placeholder="VD: https://youtu.be/... hoặc Dropbox MP4 hoặc /videos/dem-khong-ngu.mp4"
-              />
+              {/* Input URL + Nút Tải Video lên R2 (< 15MB) */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <input
+                  type="text"
+                  value={profile.showreelUrl || profile.heroBgUrl || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onChange({
+                      showreelUrl: val,
+                      heroBgUrl: val,
+                      heroBgType: 'video',
+                    });
+                  }}
+                  className={`flex-1 ${inputClass}`}
+                  placeholder="VD: https://youtu.be/... hoặc /media/uploads/... hoặc /videos/dem-khong-ngu.mp4"
+                />
+
+                <input
+                  ref={heroVideoFileInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  className="hidden"
+                  onChange={handleUploadHeroVideo}
+                />
+
+                <button
+                  type="button"
+                  disabled={uploadingHeroVideo}
+                  onClick={() => heroVideoFileInputRef.current?.click()}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-98 shrink-0"
+                  title="Chọn file video MP4 hoặc WebM dưới 15MB tải trực tiếp lên Cloudflare R2"
+                >
+                  {uploadingHeroVideo ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Đang tải lên R2 ({heroVideoUploadProgress})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-white" />
+                      <span>📁 Tải Video nền lên R2 (&lt; 15MB)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Status messages for video upload */}
+              {heroVideoUploadSuccess && (
+                <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">{heroVideoUploadSuccess}</span>
+                </div>
+              )}
+
+              {heroVideoUploadError && (
+                <div className="flex items-center gap-2.5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span className="font-medium">{heroVideoUploadError}</span>
+                </div>
+              )}
 
               {/* TỰ ĐỘNG NHẬN DIỆN NỀN TẢNG VIDEO (AUTO-DETECTION BADGE) */}
               <div className="p-3.5 rounded-xl border bg-[#F9F9FB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">

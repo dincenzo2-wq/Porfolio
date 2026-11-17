@@ -18,10 +18,23 @@ function cloudflareDevApiPlugin(): Plugin {
         if (url.startsWith('/media/')) {
           try {
             const remoteMediaUrl = `${CF_REMOTE_ORIGIN}${url}`;
-            const mediaRes = await fetch(remoteMediaUrl);
+            const fetchHeaders: Record<string, string> = {};
+            if (req.headers['range']) {
+              fetchHeaders['range'] = req.headers['range'] as string;
+            }
+            const mediaRes = await fetch(remoteMediaUrl, {
+              headers: Object.keys(fetchHeaders).length ? fetchHeaders : undefined,
+            });
             res.statusCode = mediaRes.status;
             res.setHeader('Access-Control-Allow-Origin', '*');
-            const copyHeaders = ['content-type', 'content-length', 'etag', 'cache-control'];
+            const copyHeaders = [
+              'content-type',
+              'content-length',
+              'etag',
+              'cache-control',
+              'accept-ranges',
+              'content-range',
+            ];
             copyHeaders.forEach((h) => {
               const val = mediaRes.headers.get(h);
               if (val) res.setHeader(h, val);
@@ -146,6 +159,20 @@ function cloudflareDevApiPlugin(): Plugin {
           req.on('end', async () => {
             const buffer = Buffer.concat(chunks);
             const contentType = req.headers['content-type'] || 'application/octet-stream';
+
+            // Enforce 15MB upload limit
+            const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+            if (buffer.length > MAX_UPLOAD_BYTES) {
+              const sizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  success: false,
+                  error: `Dung lượng file vượt quá giới hạn 15MB (${sizeMB}MB). Vui lòng nén video dưới 15MB.`,
+                })
+              );
+            }
 
             try {
               // Forward multipart upload directly to Cloudflare Pages /api/upload (which puts to R2)

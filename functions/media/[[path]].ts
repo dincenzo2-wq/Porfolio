@@ -26,7 +26,11 @@ export async function onRequestGet(context: {
   }
 
   try {
-    const object = await bucket.get(key);
+    const rangeHeader = context.request.headers.get('range');
+    const object = await bucket.get(
+      key,
+      rangeHeader ? { range: context.request.headers } : undefined
+    );
     if (!object) {
       return new Response('File not found in R2', { status: 404 });
     }
@@ -40,8 +44,19 @@ export async function onRequestGet(context: {
     }
     headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Accept-Ranges', 'bytes');
 
-    return new Response(object.body, { headers });
+    if (object.range) {
+      headers.set(
+        'Content-Range',
+        `bytes ${object.range.offset}-${object.range.offset + object.range.length - 1}/${object.size}`
+      );
+    }
+
+    return new Response(object.body, {
+      status: object.range ? 206 : 200,
+      headers,
+    });
   } catch (err: any) {
     return new Response('Error retrieving from R2: ' + (err?.message || 'unknown'), {
       status: 500,

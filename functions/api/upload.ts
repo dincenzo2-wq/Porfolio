@@ -8,7 +8,7 @@ interface Env {
     put: (
       key: string,
       value: ArrayBuffer | ReadableStream,
-      options?: { httpMetadata?: { contentType?: string } }
+      options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }
     ) => Promise<any>;
     get?: (key: string) => Promise<any>;
     delete?: (key: string) => Promise<any>;
@@ -17,7 +17,7 @@ interface Env {
     put: (
       key: string,
       value: ArrayBuffer | ReadableStream,
-      options?: { httpMetadata?: { contentType?: string } }
+      options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }
     ) => Promise<any>;
     get?: (key: string) => Promise<any>;
     delete?: (key: string) => Promise<any>;
@@ -68,7 +68,35 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       );
     }
 
-    // Key format: uploads/YYYY/MM/timestamp-random.webp
+    // Enforce 15MB limit for uploads (to protect Worker CPU and R2 storage)
+    const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+    if (fileBuffer.byteLength > MAX_UPLOAD_BYTES) {
+      const sizeMB = (fileBuffer.byteLength / (1024 * 1024)).toFixed(2);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Dung lượng file vượt quá giới hạn 15MB (${sizeMB}MB). Vui lòng nén video dưới 15MB.`,
+        }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Detect proper content type
+    let mimeType = 'image/webp';
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith('.mp4')) {
+      mimeType = 'video/mp4';
+    } else if (lowerName.endsWith('.webm')) {
+      mimeType = 'video/webm';
+    } else if (lowerName.endsWith('.png')) {
+      mimeType = 'image/png';
+    } else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+      mimeType = 'image/jpeg';
+    } else if (lowerName.endsWith('.svg')) {
+      mimeType = 'image/svg+xml';
+    }
+
+    // Key format: uploads/YYYY/MM/timestamp-random.ext
     const dateStr = new Date().toISOString().slice(0, 7); // e.g. 2026-11
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const cleanName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -79,7 +107,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     if (r2Bucket) {
       await r2Bucket.put(r2Key, fileBuffer, {
         httpMetadata: {
-          contentType: 'image/webp',
+          contentType: mimeType,
+          cacheControl: 'public, max-age=31536000, immutable',
         },
       });
 
@@ -95,6 +124,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
           key: r2Key,
           sizeBytes: fileBuffer.byteLength,
           source: 'Cloudflare R2',
+          cacheControl: 'public, max-age=31536000, immutable',
         }),
         { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
