@@ -45,24 +45,39 @@ export async function onRequestGet(context: { env: Env }) {
       );
     }
 
-    // Try reading from portfolio_content table
+    // Ensure table exists
+    try {
+      await env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS portfolio_content (
+          id TEXT PRIMARY KEY DEFAULT 'main',
+          data_json TEXT,
+          payload TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`
+      ).bind().run();
+    } catch {}
+
+    // Try reading from portfolio_content table using SELECT * to support both data_json and payload
     const record = await env.DB.prepare(
-      'SELECT data_json, updated_at FROM portfolio_content WHERE id = ?'
+      'SELECT * FROM portfolio_content WHERE id = ?'
     )
       .bind('main')
-      .first<{ data_json: string; updated_at: string }>();
+      .first<any>();
 
-    if (record && record.data_json) {
-      const data = JSON.parse(record.data_json);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          data,
-          updated_at: record.updated_at,
-          source: 'Cloudflare D1',
-        }),
-        { status: 200, headers: CORS_HEADERS }
-      );
+    const raw = record?.data_json || record?.payload;
+    if (raw) {
+      try {
+        const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data,
+            updated_at: record.updated_at,
+            source: 'Cloudflare D1',
+          }),
+          { status: 200, headers: CORS_HEADERS }
+        );
+      } catch {}
     }
 
     return new Response(
@@ -111,23 +126,34 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const now = new Date().toISOString();
 
     // Ensure table exists
-    await env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS portfolio_content (
-        id TEXT PRIMARY KEY DEFAULT 'main',
-        data_json TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`
-    ).bind().run();
+    try {
+      await env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS portfolio_content (
+          id TEXT PRIMARY KEY DEFAULT 'main',
+          data_json TEXT,
+          payload TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`
+      ).bind().run();
+    } catch {}
 
-    // Upsert payload into D1
+    try {
+      await env.DB.prepare('ALTER TABLE portfolio_content ADD COLUMN data_json TEXT').bind().run();
+    } catch {}
+    try {
+      await env.DB.prepare('ALTER TABLE portfolio_content ADD COLUMN payload TEXT').bind().run();
+    } catch {}
+
+    // Upsert payload into D1 supporting both column conventions
     await env.DB.prepare(
-      `INSERT INTO portfolio_content (id, data_json, updated_at)
-       VALUES ('main', ?, ?)
+      `INSERT INTO portfolio_content (id, data_json, payload, updated_at)
+       VALUES ('main', ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          data_json = excluded.data_json,
+         payload = excluded.payload,
          updated_at = excluded.updated_at`
     )
-      .bind(jsonString, now)
+      .bind(jsonString, jsonString, now)
       .run();
 
     return new Response(
