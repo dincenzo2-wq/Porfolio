@@ -331,6 +331,52 @@ test('extractUniqueBrands extracts de-duplicated brands and handles customText',
 
   const filteredBrands = extractUniqueBrands(genericProjects);
   assert.deepEqual(filteredBrands, ['Studio 09', 'T&A Ogilvy', "L'OFFICIEL Vietnam"]);
+
+  // Filters out Wedding and independent clients from commercial Brand Marquee
+  const weddingAndCommercialProjects: PortfolioProject[] = [
+    {
+      id: 'w1',
+      title: 'Tuấn & Linh Wedding Story',
+      clientOrAgency: 'Wedding · Cặp đôi',
+      category: 'Wedding',
+      aspectRatio: '16:9',
+      gridSpan: 'col-span-12',
+      year: '2025',
+      duration: '04:15',
+      deliverableRole: 'Videographer',
+      coverImage: '',
+      agencyBrief: '',
+    },
+    {
+      id: 'w2',
+      title: 'Đám Cưới Phương & Duy',
+      clientOrAgency: 'Khách lẻ / Cá nhân',
+      category: 'Wedding',
+      aspectRatio: '16:9',
+      gridSpan: 'col-span-12',
+      year: '2025',
+      duration: '03:40',
+      deliverableRole: 'Editor',
+      coverImage: '',
+      agencyBrief: '',
+    },
+    {
+      id: 'c1',
+      title: 'Pepsi Refresh',
+      clientOrAgency: 'PepsiCo Vietnam',
+      category: 'TVC',
+      aspectRatio: '16:9',
+      gridSpan: 'col-span-12',
+      year: '2025',
+      duration: '00:30',
+      deliverableRole: 'Editor',
+      coverImage: '',
+      agencyBrief: '',
+    },
+  ];
+
+  const extractedCommercialOnly = extractUniqueBrands(weddingAndCommercialProjects);
+  assert.deepEqual(extractedCommercialOnly, ['PepsiCo Vietnam']);
 });
 
 test('isAgencyOrProduction correctly distinguishes agencies from brands', () => {
@@ -428,10 +474,11 @@ test('suggestAspectRatioForCategory returns 9:16 for vertical categories and 16:
 });
 
 test('isPillActive detects active pills and empty state', () => {
-  // Empty text -> "Không hiển thị tên khách" is active
+  // Empty text -> "Không hiển thị tên khách" or "Không hiển thị Brand (Khách lẻ / Đám cưới)" is active
   assert.equal(isPillActive('', 'Không hiển thị tên khách'), true);
-  assert.equal(isPillActive('   ', 'Không hiển thị tên khách'), true);
-  assert.equal(isPillActive(null, 'Không hiển thị tên khách'), true);
+  assert.equal(isPillActive('', 'Không hiển thị Brand (Khách lẻ / Đám cưới)'), true);
+  assert.equal(isPillActive('   ', 'Không hiển thị Brand (Khách lẻ / Đám cưới)'), true);
+  assert.equal(isPillActive(null, 'Không hiển thị Brand (Khách lẻ / Đám cưới)'), true);
   assert.equal(isPillActive('', 'Khách lẻ / Cá nhân'), false);
 
   // Single brand
@@ -442,6 +489,7 @@ test('isPillActive detects active pills and empty state', () => {
   assert.equal(isPillActive('Dentsu Redder · PepsiCo Vietnam', 'Dentsu Redder'), true);
   assert.equal(isPillActive('Dentsu Redder · PepsiCo Vietnam', 'PepsiCo Vietnam'), true);
   assert.equal(isPillActive('Dentsu Redder · PepsiCo Vietnam', 'Không hiển thị tên khách'), false);
+  assert.equal(isPillActive('Dentsu Redder · PepsiCo Vietnam', 'Không hiển thị Brand (Khách lẻ / Đám cưới)'), false);
 
   // Khách lẻ with custom bride/groom names
   assert.equal(isPillActive('Khách lẻ / Cá nhân · Thanh Thúy & Minh Khang', 'Khách lẻ / Cá nhân'), true);
@@ -460,8 +508,9 @@ test('toggleClientOrAgency handles intelligent combination and toggling', () => 
   const toggledOff = toggleClientOrAgency('Dentsu Redder · PepsiCo', 'Dentsu Redder');
   assert.equal(toggledOff, 'PepsiCo');
 
-  // 4. Clicking "Không hiển thị tên khách" clears everything
+  // 4. Clicking "Không hiển thị tên khách" or "Không hiển thị Brand..." clears everything
   assert.equal(toggleClientOrAgency('Dentsu Redder · PepsiCo', 'Không hiển thị tên khách'), '');
+  assert.equal(toggleClientOrAgency('Dentsu Redder · PepsiCo', 'Không hiển thị Brand (Khách lẻ / Đám cưới)'), '');
 
   // 5. Khách lẻ preset with custom text replacement
   const initialWedding = toggleClientOrAgency('', 'Wedding · Cặp đôi');

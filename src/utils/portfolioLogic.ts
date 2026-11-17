@@ -135,6 +135,19 @@ const GENERIC_BRAND_BLACKLIST = new Set([
   'marketing campaign',
   'personal project',
   'dự án cá nhân',
+  'dự án độc lập',
+  'khách lẻ / cá nhân',
+  'khách lẻ',
+  'cá nhân',
+  'wedding · cặp đôi',
+  'wedding',
+  'cặp đôi',
+  'đám cưới',
+  'cô dâu & chú rể',
+  'cô dâu',
+  'chú rể',
+  'không hiển thị brand',
+  'không hiển thị tên khách',
 ]);
 
 /**
@@ -143,7 +156,10 @@ const GENERIC_BRAND_BLACKLIST = new Set([
 export function isGenericBrandDescription(text: string): boolean {
   const lower = text.toLowerCase().trim();
   if (!lower) return true;
+  if (lower.startsWith('không hiển thị')) return true;
   if (GENERIC_BRAND_BLACKLIST.has(lower)) return true;
+  if (isIndependentClientPreset(text)) return true;
+  if (/^(wedding|đám cưới|cặp đôi|khách lẻ|cá nhân|dự án cá nhân|dự án độc lập|personal|independent)/i.test(lower)) return true;
   if (/^thương hiệu\s+(thủ công|thời trang|mỹ nghệ|truyền thống|nội thất|địa phương|mỹ phẩm)/i.test(lower)) return true;
   if (/\b(tourism campaign|fashion house|brand campaign|commercial campaign)$/i.test(lower)) return true;
   return false;
@@ -152,7 +168,7 @@ export function isGenericBrandDescription(text: string): boolean {
 /**
  * Trích xuất danh sách các Thương hiệu & Agency duy nhất (không trùng lặp)
  * từ các dự án đang hiển thị, hoặc từ chuỗi cấu hình tùy chỉnh.
- * Tự động loại bỏ các cụm mô tả chung chung.
+ * Tự động loại bỏ các cụm mô tả chung chung và các dự án đám cưới / khách lẻ.
  */
 export function extractUniqueBrands(
   projects: PortfolioProject[],
@@ -171,6 +187,20 @@ export function extractUniqueBrands(
   for (const project of projects) {
     if (project.hidden) continue;
     if (!project.clientOrAgency || !project.clientOrAgency.trim()) continue;
+
+    const categoryLower = (project.category || '').toLowerCase();
+    const clientLower = project.clientOrAgency.toLowerCase().trim();
+
+    // Dự án Đám cưới hoặc Khách lẻ / Độc lập không đưa vào thanh Brand Marquee thương mại
+    if (
+      categoryLower.includes('wedding') ||
+      categoryLower.includes('đám cưới') ||
+      isIndependentClientPreset(project.clientOrAgency) ||
+      clientLower.startsWith('không hiển thị') ||
+      /^(wedding|đám cưới|khách lẻ|cá nhân|dự án độc lập)/i.test(clientLower)
+    ) {
+      continue;
+    }
 
     // Phân tách nếu chuỗi chứa dấu phân cách · hoặc • hoặc , hoặc & giữa 2 thương hiệu
     const parts = project.clientOrAgency.split(/\s*·\s*|\s*•\s*|,\s*|\s+&\s+/);
@@ -192,8 +222,9 @@ export function extractUniqueBrands(
  * Danh sách các preset mặc định cho nhóm Khách lẻ / Độc lập
  */
 export const INDEPENDENT_CLIENT_PRESETS = [
-  'Khách lẻ / Cá nhân',
+  'Không hiển thị Brand (Khách lẻ / Đám cưới)',
   'Wedding · Cặp đôi',
+  'Khách lẻ / Cá nhân',
   'Dự án độc lập',
   'Không hiển thị tên khách',
 ] as const;
@@ -229,7 +260,7 @@ export function isPillActive(currentValue: string | undefined | null, pill: stri
   const trimmed = (currentValue || '').trim();
   const lowerPill = pill.trim().toLowerCase();
 
-  if (lowerPill === 'không hiển thị tên khách') {
+  if (lowerPill === 'không hiển thị tên khách' || lowerPill.startsWith('không hiển thị brand')) {
     return !trimmed;
   }
 
@@ -256,8 +287,8 @@ export function toggleClientOrAgency(
   const trimmedPill = pill.trim();
   if (!trimmedPill) return currentValue || '';
 
-  // 1. Nếu bấm "Không hiển thị tên khách" -> xóa trắng
-  if (trimmedPill.toLowerCase() === 'không hiển thị tên khách') {
+  // 1. Nếu bấm "Không hiển thị tên khách" hoặc "Không hiển thị Brand..." -> xóa trắng
+  if (trimmedPill.toLowerCase() === 'không hiển thị tên khách' || trimmedPill.toLowerCase().startsWith('không hiển thị brand')) {
     return '';
   }
 

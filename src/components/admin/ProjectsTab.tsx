@@ -1105,11 +1105,11 @@ export function ProjectsTab({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <label className="block font-semibold text-[#111111]">
-                        Khách hàng / Agency{' '}
-                        <span className="text-[11px] font-normal text-black/50">(Tùy chọn)</span>
+                        Khách hàng / Brand / Agency{' '}
+                        <span className="text-[11px] font-normal text-black/50">(Tùy chọn — Chỉ điền cho Commercial/TVC)</span>
                       </label>
                       <span className="text-[11px] text-black/50 font-medium">
-                        Bấm chọn nhanh thẻ mẫu hoặc gõ nối thêm tên riêng vào ô bên dưới
+                        Dự án Đám cưới / Khách lẻ / Độc lập: để trống (web tự ẩn Brand). Chỉ điền Brand khi làm dự án Commercial.
                       </span>
                     </div>
                     <button
@@ -1122,7 +1122,7 @@ export function ProjectsTab({
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-black/60 hover:text-[#111111] transition-colors cursor-pointer shrink-0"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>Quản lý khách hàng / Brand</span>
+                      <span>Quản lý Brand / Agency</span>
                     </button>
                   </div>
 
@@ -1133,19 +1133,19 @@ export function ProjectsTab({
                     onChange={(e) =>
                       setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
                     }
-                    placeholder="VD: Khách lẻ · Thanh Thúy & Minh Khang hoặc Dentsu Redder · PepsiCo"
+                    placeholder="Để trống nếu là Đám cưới / Khách lẻ, hoặc điền Brand (VD: PepsiCo, VinFast, Dentsu...)"
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
                   />
 
-                  {/* Nhóm 1: Khách lẻ / Độc lập */}
+                  {/* Nhóm 1: Khách lẻ / Độc lập / Đám cưới */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
-                      Khách lẻ / Độc lập
+                      Khách lẻ / Đám cưới / Độc lập
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       {INDEPENDENT_CLIENT_PRESETS.map((preset) => {
                         const isActive = isPillActive(editingProject.clientOrAgency, preset);
-                        const isClearOption = preset === 'Không hiển thị tên khách';
+                        const isClearOption = preset.startsWith('Không hiển thị');
                         return (
                           <button
                             key={preset}
@@ -1173,7 +1173,7 @@ export function ProjectsTab({
                   {/* Nhóm 2: Thương hiệu & Agency đối tác */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
-                      Thương hiệu &amp; Agency đối tác (Bấm để kết hợp Agency + Brand)
+                      Thương hiệu &amp; Agency đối tác (Dành cho Commercial / TVC — Bấm để kết hợp Agency + Brand)
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       {allBrands.map((brand) => {
