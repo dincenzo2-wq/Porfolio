@@ -895,19 +895,45 @@ export function ProjectsTab({
                 {/* Thumbnail Preview: True 9:16 for vertical or 16:9 for horizontal */}
                 <div
                   className={`relative ${
-                    isVertical ? 'aspect-[9/16] max-h-[380px]' : 'aspect-[16/9]'
-                  } bg-[#141414] overflow-hidden flex items-center justify-center w-full`}
+                    isVertical ? 'h-80 sm:h-96 bg-[#0B0B0D]' : 'aspect-[16/9] bg-[#141414]'
+                  } overflow-hidden flex items-center justify-center w-full group/thumb`}
                 >
-                  {project.coverImage ? (
-                    <img
-                      src={project.coverImage}
-                      alt={project.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  {isVertical ? (
+                    <>
+                      {/* Ambient blur backdrop for 9:16 vertical smartphone frame */}
+                      {project.coverImage && (
+                        <img
+                          src={project.coverImage}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-125 select-none pointer-events-none"
+                        />
+                      )}
+                      {project.coverImage ? (
+                        <img
+                          src={project.coverImage}
+                          alt={project.title}
+                          className="relative z-1 h-full w-auto aspect-[9/16] object-cover rounded-md shadow-2xl border border-white/10 group-hover:scale-[1.02] transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="relative z-1 w-full h-full flex flex-col items-center justify-center text-white/35 text-xs font-medium gap-1">
+                          <Upload className="w-5 h-5 opacity-40" />
+                          <span>Chưa có ảnh bìa</span>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/30 text-xs font-medium">
-                      Chưa có ảnh bìa
-                    </div>
+                    project.coverImage ? (
+                      <img
+                        src={project.coverImage}
+                        alt={project.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/30 text-xs font-medium">
+                        Chưa có ảnh bìa
+                      </div>
+                    )
                   )}
 
                   {/* Top-left Badges: Category & Aspect Ratio */}
@@ -1532,7 +1558,7 @@ export function ProjectsTab({
                               onLoadedData={(e) => setVideoReadyState(e.currentTarget.readyState)}
                               onCanPlay={(e) => setVideoReadyState(e.currentTarget.readyState)}
                               onSeeked={(e) => setVideoReadyState(e.currentTarget.readyState)}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain bg-black"
                             />
                           )}
                         </div>
@@ -1555,9 +1581,9 @@ export function ProjectsTab({
                     <div
                       className={`${
                         editingProject.aspectRatio === '9:16'
-                          ? 'w-20 h-36 aspect-[9/16]'
-                          : 'w-36 h-20 aspect-[16/9]'
-                      } rounded-lg overflow-hidden border border-black/10 bg-black/5 shrink-0 relative flex items-center justify-center shadow-2xs transition-all`}
+                          ? 'w-28 h-48 sm:w-32 sm:h-56 aspect-[9/16]'
+                          : 'w-40 h-24 sm:w-48 sm:h-28 aspect-[16/9]'
+                      } rounded-xl overflow-hidden border border-black/10 bg-black/5 shrink-0 relative flex items-center justify-center shadow-md transition-all`}
                     >
                       {editingProject.coverImage ? (
                         <img
@@ -1570,6 +1596,11 @@ export function ProjectsTab({
                           <Upload className="w-4 h-4 opacity-50" />
                           <span>Chưa có ảnh</span>
                         </div>
+                      )}
+                      {editingProject.aspectRatio === '9:16' && (
+                        <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-[#2563EB]/90 text-white text-[9px] font-bold shadow-xs">
+                          9:16 Dọc
+                        </span>
                       )}
                     </div>
 
