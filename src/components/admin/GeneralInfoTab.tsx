@@ -534,28 +534,14 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
           </div>
 
-          <div>
-            <label className={labelClass}>Dòng mô tả Hero dưới tên QUỐC VINH®</label>
-            <textarea
-              rows={3}
-              value={profile.heroIntro}
-              onChange={(e) => onChange({ heroIntro: e.target.value })}
-              className={textareaClass}
-              placeholder="Trần Quốc Vinh — Videographer, Film Editor & Motion Designer. Chuyên quay dựng phim quảng cáo, video ngắn 9:16 và Motion Graphics tốc độ cao cho Agency & Thương hiệu."
-            />
-            <p className={helperClass}>
-              Khuyên dùng 1–2 câu súc tích nêu rõ dịch vụ cốt lõi dành cho Agency &amp; Brand.
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className={labelClass}>Định vị năng lực (Positioning)</label>
               <textarea
-                rows={4}
+                rows={5}
                 value={profile.positioning}
                 onChange={(e) => onChange({ positioning: e.target.value })}
-                className={textareaClass}
+                className={`${textareaClass} min-h-[135px]`}
                 placeholder="Chuyên quay phim thương mại, dựng hậu kỳ tốc độ cao và motion graphics cho Agency, Brand & Production House."
               />
             </div>
@@ -563,10 +549,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             <div>
               <label className={labelClass}>Cam kết tiến độ (Bio Detail)</label>
               <textarea
-                rows={4}
+                rows={5}
                 value={profile.bioDetail}
                 onChange={(e) => onChange({ bioDetail: e.target.value })}
-                className={textareaClass}
+                className={`${textareaClass} min-h-[135px]`}
                 placeholder="Quy trình làm việc thực chiến, đáp ứng brief chuẩn xác. Nhận brief và xuất bản nháp nhanh trong 24–48h."
               />
             </div>
@@ -805,45 +791,48 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   Hiển thị ngay lập tức trong <strong>0 giây</strong> khi vừa F5 tải lại trang. Loại bỏ 100% hiện tượng màn hình đen trong 1–2 giây lúc trình duyệt chờ kết nối luồng video dung lượng lớn từ Dropbox.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  {/* Nút Chụp trực tiếp từ Video đang phát */}
-                  <button
-                    type="button"
-                    onClick={handleCaptureCurrentFrameAsPoster}
-                    disabled={capturingPoster}
-                    className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0 active:scale-98 disabled:opacity-50"
-                    title="Chụp ngay khung hình đang chiếu ở trình phát bên dưới làm ảnh Poster 0ms mà không cần tải file lên"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-white" />
-                    <span>
-                      {capturingPoster
-                        ? 'Đang chụp...'
-                        : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster`}
-                    </span>
-                  </button>
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Nút Chụp trực tiếp từ Video đang phát */}
+                    <button
+                      type="button"
+                      onClick={handleCaptureCurrentFrameAsPoster}
+                      disabled={capturingPoster}
+                      className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0 active:scale-98 disabled:opacity-50"
+                      title="Chụp ngay khung hình đang chiếu ở trình phát bên dưới làm ảnh Poster 0ms mà không cần tải file lên"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-white" />
+                      <span>
+                        {capturingPoster
+                          ? 'Đang chụp...'
+                          : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster`}
+                      </span>
+                    </button>
 
-                  <input
-                    type="file"
-                    ref={posterFileInputRef}
-                    accept="image/*"
-                    onChange={handlePosterFileUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => posterFileInputRef.current?.click()}
-                    disabled={uploadingPoster}
-                    className="px-3.5 py-2.5 rounded-lg bg-white border border-black/15 hover:border-[#2563EB] hover:text-[#2563EB] text-xs font-semibold text-[#111111] transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
-                    <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải file từ máy'}</span>
-                  </button>
+                    <input
+                      type="file"
+                      ref={posterFileInputRef}
+                      accept="image/*"
+                      onChange={handlePosterFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => posterFileInputRef.current?.click()}
+                      disabled={uploadingPoster}
+                      className="px-3.5 py-2.5 rounded-lg bg-white border border-black/15 hover:border-[#2563EB] hover:text-[#2563EB] text-xs font-semibold text-[#111111] transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải file từ máy'}</span>
+                    </button>
+                  </div>
 
+                  {/* Ô nhập link ảnh bìa frame chiếm trọn 100% bề ngang */}
                   <input
                     type="text"
                     value={profile.heroPosterUrl || ''}
                     onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
-                    className="flex-1 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs text-[#111111] placeholder:text-black/35 focus:outline-none focus:border-[#2563EB]"
+                    className="w-full bg-white border border-black/10 rounded-lg px-3.5 py-2.5 text-xs text-[#111111] placeholder:text-black/35 focus:outline-none focus:border-[#2563EB]"
                     placeholder="Hoặc dán link ảnh bìa frame 00:00:00..."
                   />
                 </div>
@@ -879,10 +868,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
 
             {/* KHỐI CẮT ĐOẠN VIDEO LOOP (IN - OUT TRIMMER - ~15 GIÂY) */}
-            <div className="p-5 rounded-2xl bg-[#F4F4F7] border border-black/10 space-y-5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#F4F4F7] border border-black/10 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center shrink-0">
                     <Scissors className="w-4 h-4" />
                   </div>
                   <div>
@@ -895,7 +884,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                   <span
                     className={`text-xs font-bold px-3 py-1 rounded-full border ${
                       loopDuration === 15
@@ -910,172 +899,82 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 </div>
               </div>
 
-              {/* 1-Click Fast Presets */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-black/60 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                    Chọn nhanh khoảng 15 giây tối ưu:
+              {/* Hàng ngang gọn gàng: Mốc Bắt đầu – Kết thúc & Nút Lấy 15s từ mốc đang phát */}
+              <div className="p-3 bg-white border border-black/10 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#111111]">
+                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
+                    Bắt đầu:
                   </span>
-                  <button
-                    type="button"
-                    onClick={snapTo15Seconds}
-                    className="text-[11px] font-semibold text-[#2563EB] hover:underline cursor-pointer"
-                  >
-                    Khóa đúng 15s từ điểm bắt đầu
-                  </button>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {loopPresets.map((preset) => {
-                    const isActive = startSec === preset.start && endSec === preset.end;
-                    return (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() =>
-                          onChange({
-                            heroVideoStart: preset.start,
-                            heroVideoEnd: preset.end,
-                          })
-                        }
-                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                            : 'bg-white border-black/10 text-black/75 hover:border-black/30'
-                        }`}
-                      >
-                        {isActive ? '✓ ' : ''}
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* In-point and Out-point Fine Tuning Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                {/* IN-POINT (BẮT ĐẦU) */}
-                <div className="p-4 rounded-xl bg-white border border-black/10 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
-                      Mốc Bắt Đầu (In-point)
-                    </span>
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB]">
-                      {formatVideoDuration(startSec)} ({startSec}s)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <input
                       type="number"
                       min={0}
                       max={endSec - 1}
                       value={startSec}
                       onChange={(e) => setInPoint(Number(e.target.value) || 0)}
-                      className="w-24 bg-[#F9F9FB] border border-black/10 rounded-lg px-3 py-2 text-sm font-mono text-center font-bold focus:bg-white focus:outline-none"
+                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
                     />
-                    <div className="flex items-center gap-1 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => setInPoint(startSec - 5)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        -5s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInPoint(startSec - 1)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        -1s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInPoint(startSec + 1)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        +1s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInPoint(startSec + 5)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        +5s
-                      </button>
-                    </div>
+                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(startSec)})</span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={setInFromCurrent}
-                    className="w-full py-1.5 px-3 rounded-lg bg-[#F9F9FB] hover:bg-[#2563EB]/10 border border-black/8 hover:border-[#2563EB]/30 text-xs font-semibold text-black/80 hover:text-[#2563EB] transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <span>📍 Lấy mốc phát hiện tại ({formatVideoDuration(currentTime)})</span>
-                  </button>
-                </div>
+                  <span className="text-black/30 font-bold px-1 select-none">—</span>
 
-                {/* OUT-POINT (KẾT THÚC) */}
-                <div className="p-4 rounded-xl bg-white border border-black/10 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
-                      Mốc Kết Thúc (Out-point)
-                    </span>
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB]">
-                      {formatVideoDuration(endSec)} ({endSec}s)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
+                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
+                    Kết thúc:
+                  </span>
+                  <div className="flex items-center gap-1">
                     <input
                       type="number"
                       min={startSec + 1}
                       value={endSec}
                       onChange={(e) => setOutPoint(Number(e.target.value) || startSec + 15)}
-                      className="w-24 bg-[#F9F9FB] border border-black/10 rounded-lg px-3 py-2 text-sm font-mono text-center font-bold focus:bg-white focus:outline-none"
+                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
                     />
-                    <div className="flex items-center gap-1 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => setOutPoint(endSec - 5)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        -5s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOutPoint(endSec - 1)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        -1s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOutPoint(endSec + 1)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        +1s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOutPoint(endSec + 5)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
-                      >
-                        +5s
-                      </button>
-                    </div>
+                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(endSec)})</span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={setOutFromCurrent}
-                    className="w-full py-1.5 px-3 rounded-lg bg-[#F9F9FB] hover:bg-[#2563EB]/10 border border-black/8 hover:border-[#2563EB]/30 text-xs font-semibold text-black/80 hover:text-[#2563EB] transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <span>🏁 Lấy mốc phát hiện tại ({formatVideoDuration(currentTime)})</span>
-                  </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={set15sFromCurrent}
+                  className="px-3.5 py-2 rounded-lg bg-[#2563EB]/10 hover:bg-[#2563EB] text-[#2563EB] hover:text-white border border-[#2563EB]/25 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-98"
+                  title="Cắt lấy 15 giây phát tiếp theo từ khung hình video hiện tại"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>📍 Lấy 15s từ mốc đang phát ({formatVideoDuration(currentTime)})</span>
+                </button>
+              </div>
+
+              {/* Dãy 5 nút chọn nhanh khoảng 15 giây */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-black/55 flex items-center gap-1.5 mr-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+                  Chọn nhanh khoảng 15s:
+                </span>
+                {loopPresets.map((preset) => {
+                  const isActive = startSec === preset.start && endSec === preset.end;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() =>
+                        onChange({
+                          heroVideoStart: preset.start,
+                          heroVideoEnd: preset.end,
+                        })
+                      }
+                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
+                          : 'bg-white border-black/10 text-black/75 hover:border-black/30 hover:bg-[#F9F9FB]'
+                      }`}
+                    >
+                      {isActive ? '✓ ' : ''}
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
