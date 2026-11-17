@@ -1,0 +1,1073 @@
+import { useState, useRef, useEffect } from 'react';
+import {
+  Camera,
+  CheckCircle2,
+  Clock,
+  Film,
+  Play,
+  RotateCcw,
+  Scissors,
+  Sparkles,
+  Video,
+  Youtube,
+  AlertCircle,
+  ExternalLink,
+  FastForward,
+  Rewind,
+  SlidersHorizontal,
+  Image,
+  Upload,
+  Trash2,
+} from 'lucide-react';
+import type { SiteProfileData } from '../../types/portfolio';
+import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
+import { compressImageToWebP } from '../../utils/imageCompression';
+
+interface GeneralInfoTabProps {
+  profile: SiteProfileData;
+  onChange: (partial: Partial<SiteProfileData>) => void;
+}
+
+export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
+  const currentVideoUrl = profile.showreelUrl || profile.heroBgUrl || '/videos/dem-khong-ngu.mp4';
+  const startSec = Math.max(0, profile.heroVideoStart ?? 0);
+  const endSec = Math.max(startSec + 1, profile.heroVideoEnd ?? (startSec + 15));
+  const loopDuration = endSec - startSec;
+
+  const parsedShowreel = parseVideoUrl(currentVideoUrl, {
+    startSec,
+    endSec,
+    loop: true,
+    muted: true,
+  });
+
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState<number>(startSec);
+  const [totalDuration, setTotalDuration] = useState<number | null>(null);
+
+  // Poster upload & frame capture state
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+  const [capturingPoster, setCapturingPoster] = useState(false);
+  const [posterCaptureSuccess, setPosterCaptureSuccess] = useState<string | null>(null);
+  const [posterCaptureError, setPosterCaptureError] = useState<string | null>(null);
+  const posterFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePosterFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingPoster(true);
+      setPosterCaptureError(null);
+      setPosterCaptureSuccess(null);
+      const res = await compressImageToWebP(file, 1920, 300 * 1024);
+      onChange({
+        heroPosterUrl: res.dataUrl,
+      });
+      setPosterCaptureSuccess('Đã tải và nén ảnh Poster thành công!');
+    } catch (err) {
+      console.error('Failed to compress poster image:', err);
+      setPosterCaptureError('Lỗi tải ảnh poster.');
+    } finally {
+      setUploadingPoster(false);
+      if (posterFileInputRef.current) {
+        posterFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Chụp trực tiếp khung hình đang phát của video làm Poster 0ms (Không cần tải file ảnh lên)
+  const handleCaptureCurrentFrameAsPoster = async () => {
+    const video = previewVideoRef.current;
+    if (!video) return;
+
+    try {
+      setCapturingPoster(true);
+      setPosterCaptureError(null);
+      setPosterCaptureSuccess(null);
+
+      const width = video.videoWidth || 1920;
+      const height = video.videoHeight || 1080;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Không thể khởi tạo Canvas 2D context.');
+      }
+
+      ctx.drawImage(video, 0, 0, width, height);
+
+      const blob = await new Promise<Blob | null>((resolve, reject) => {
+        try {
+          canvas.toBlob((b) => resolve(b), 'image/webp', 0.95);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      if (!blob) {
+        throw new Error('Chụp frame thất bại. Trình duyệt không thể trích xuất dữ liệu ảnh từ video.');
+      }
+
+      const frameTimeStr = formatVideoDuration(video.currentTime);
+      const safeTimeName = frameTimeStr.replace(':', '-');
+      const tempFile = new File([blob], `hero-poster-${safeTimeName}.webp`, { type: 'image/webp' });
+      const compResult = await compressImageToWebP(tempFile, 1920, 400 * 1024);
+
+      let finalUrl = compResult.dataUrl;
+      const formData = new FormData();
+      formData.append('file', compResult.file);
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const uploadRes = await res.json();
+          if (uploadRes && uploadRes.success && uploadRes.url) {
+            finalUrl = uploadRes.url;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Upload notice, using local WebP preview:', uploadErr);
+      }
+
+      onChange({
+        heroPosterUrl: finalUrl,
+      });
+
+      setPosterCaptureSuccess(
+        `Đã chụp thành công khung hình tại ${frameTimeStr} (${width}x${height}, WebP) và lưu làm Poster tức thì!`
+      );
+    } catch (err: unknown) {
+      console.error('Failed to capture frame as poster:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setPosterCaptureError(`Lỗi chụp frame: ${errMsg}`);
+    } finally {
+      setCapturingPoster(false);
+    }
+  };
+
+  // Synchronize preview player and ensure autoplay when video source or startSec/endSec changes
+  useEffect(() => {
+    const video = previewVideoRef.current;
+    if (!video) return;
+
+    video.defaultMuted = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+
+    const tryPlay = () => {
+      video.defaultMuted = true;
+      video.muted = true;
+      const p = video.play();
+      if (p !== undefined) {
+        p.catch(() => {});
+      }
+    };
+
+    if (video.currentTime < startSec || video.currentTime >= endSec) {
+      video.currentTime = startSec;
+    }
+    tryPlay();
+  }, [currentVideoUrl, startSec, endSec]);
+
+  const isLoopSeekingRef = useRef(false);
+
+  const handleTimeUpdate = () => {
+    const video = previewVideoRef.current;
+    if (!video) return;
+    setCurrentTime(video.currentTime);
+
+    if (isLoopSeekingRef.current) return;
+
+    if (video.currentTime >= endSec) {
+      isLoopSeekingRef.current = true;
+      video.currentTime = startSec;
+      return;
+    }
+
+    if (startSec > 0 && video.currentTime < startSec - 0.5) {
+      isLoopSeekingRef.current = true;
+      video.currentTime = startSec;
+    }
+  };
+
+  const handleSeeked = () => {
+    isLoopSeekingRef.current = false;
+    const video = previewVideoRef.current;
+    if (!video) return;
+    video.defaultMuted = true;
+    video.muted = true;
+    video.play().catch(() => {});
+  };
+
+  const handleLoadedMetadata = () => {
+    const video = previewVideoRef.current;
+    if (!video) return;
+    setTotalDuration(video.duration);
+    if (startSec > 0 && video.currentTime < startSec) {
+      video.currentTime = startSec;
+    }
+    video.defaultMuted = true;
+    video.muted = true;
+    video.play().catch(() => {});
+  };
+
+  const setInPoint = (newStart: number) => {
+    const safeStart = Math.max(0, Math.round(newStart));
+    let safeEnd = endSec;
+    if (safeEnd <= safeStart) {
+      safeEnd = safeStart + 15;
+    }
+    onChange({
+      heroVideoStart: safeStart,
+      heroVideoEnd: safeEnd,
+    });
+    if (previewVideoRef.current) {
+      previewVideoRef.current.currentTime = safeStart;
+    }
+  };
+
+  const setOutPoint = (newEnd: number) => {
+    const safeEnd = Math.max(startSec + 1, Math.round(newEnd));
+    onChange({
+      heroVideoEnd: safeEnd,
+    });
+  };
+
+  const snapTo15Seconds = () => {
+    onChange({
+      heroVideoEnd: startSec + 15,
+    });
+  };
+
+  const seekToStart = () => {
+    if (previewVideoRef.current) {
+      previewVideoRef.current.currentTime = startSec;
+      previewVideoRef.current.play().catch(() => {});
+    }
+  };
+
+  const setInFromCurrent = () => {
+    const current = Math.floor(currentTime);
+    setInPoint(current);
+  };
+
+  const setOutFromCurrent = () => {
+    const current = Math.ceil(currentTime);
+    setOutPoint(current);
+  };
+
+  const set15sFromCurrent = () => {
+    const current = Math.floor(currentTime);
+    onChange({
+      heroVideoStart: current,
+      heroVideoEnd: current + 15,
+    });
+    if (previewVideoRef.current) {
+      previewVideoRef.current.currentTime = current;
+    }
+  };
+
+  const loopPresets = [
+    { label: '15s Chuẩn (00:00 – 00:15)', start: 0, end: 15 },
+    { label: '15s Cao trào (00:05 – 00:20)', start: 5, end: 20 },
+    { label: '15s Giữa (00:10 – 00:25)', start: 10, end: 25 },
+    { label: '10s Ngắn (00:00 – 00:10)', start: 0, end: 10 },
+    { label: '20s Mở rộng (00:00 – 00:20)', start: 0, end: 20 },
+  ];
+  const inputClass =
+    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
+  const textareaClass =
+    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] leading-relaxed min-h-[116px] resize-y focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
+  const labelClass = 'block text-xs font-bold uppercase tracking-wider text-[#111111] mb-1.5';
+  const helperClass = 'text-[11px] text-black/55 mt-1.5';
+
+  return (
+    <div className="w-full py-4 space-y-6">
+      {/* 1. HERO & ĐỊNH VỊ THƯƠNG HIỆU */}
+      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Cột trái: Tiêu đề & Vị trí */}
+        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
+          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
+            1. HERO &amp; ĐỊNH VỊ THƯƠNG HIỆU
+          </h2>
+          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
+            Các nội dung xuất hiện nổi bật tại phần đầu trang (Hero Showreel), thanh định danh thương hiệu và phần tóm tắt hồ sơ năng lực.
+          </p>
+        </div>
+
+        {/* Cột phải: Các ô nhập liệu */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={labelClass}>Tên nghệ danh chính (Headline)</label>
+              <input
+                type="text"
+                value={profile.fullName}
+                onChange={(e) => onChange({ fullName: e.target.value })}
+                className={`${inputClass} font-bold`}
+                placeholder="QUỐC VINH®"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Định danh chuyên môn (Role Title)</label>
+              <input
+                type="text"
+                value={profile.roleTitle}
+                onChange={(e) => onChange({ roleTitle: e.target.value })}
+                className={inputClass}
+                placeholder="VIDEOGRAPHER · FILM EDITOR · MOTION DESIGNER"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Dòng mô tả Hero dưới tên QUỐC VINH®</label>
+            <textarea
+              rows={3}
+              value={profile.heroIntro}
+              onChange={(e) => onChange({ heroIntro: e.target.value })}
+              className={textareaClass}
+              placeholder="Trần Quốc Vinh — Videographer, Film Editor & Motion Designer. Chuyên quay dựng phim quảng cáo, video ngắn 9:16 và Motion Graphics tốc độ cao cho Agency & Thương hiệu."
+            />
+            <p className={helperClass}>
+              Khuyên dùng 1–2 câu súc tích nêu rõ dịch vụ cốt lõi dành cho Agency &amp; Brand.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={labelClass}>Định vị năng lực (Positioning)</label>
+              <textarea
+                rows={4}
+                value={profile.positioning}
+                onChange={(e) => onChange({ positioning: e.target.value })}
+                className={textareaClass}
+                placeholder="Chuyên quay phim thương mại, dựng hậu kỳ tốc độ cao và motion graphics cho Agency, Brand & Production House."
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Cam kết tiến độ (Bio Detail)</label>
+              <textarea
+                rows={4}
+                value={profile.bioDetail}
+                onChange={(e) => onChange({ bioDetail: e.target.value })}
+                className={textareaClass}
+                placeholder="Quy trình làm việc thực chiến, đáp ứng brief chuẩn xác. Nhận brief và xuất bản nháp nhanh trong 24–48h."
+              />
+            </div>
+          </div>
+
+          {/* Cụm điều khiển: Video Loop Showreel Nền Hero */}
+          <div className="pt-6 border-t border-black/8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-[#2563EB]" />
+                <h3 className="font-bricolage text-sm font-bold text-[#111111] uppercase tracking-wide">
+                  Video Loop Showreel nền Hero
+                </h3>
+              </div>
+              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB] self-start sm:self-auto">
+                Không dùng ảnh bìa · 100% Video Loop
+              </span>
+            </div>
+
+            <p className="text-xs text-black/60 leading-relaxed">
+              Trang web sử dụng trực tiếp video loop điện ảnh làm nền chuyển động toàn màn hình cho Hero. Bạn có thể dán link YouTube, Vimeo, Dropbox hoặc link file MP4 trực tiếp, hệ thống sẽ tự động nhận diện và cho phép bạn cắt đoạn khoảng 15 giây để video chạy lặp liên tục.
+            </p>
+
+            {/* Video Loop Showreel URL & Reset */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className={labelClass}>
+                  Link Video Loop Showreel (YouTube / Vimeo / Dropbox / Direct MP4)
+                </label>
+                {(profile.showreelUrl || profile.heroBgUrl) &&
+                  ((profile.showreelUrl && profile.showreelUrl !== '/videos/dem-khong-ngu.mp4') ||
+                    (profile.heroBgUrl && profile.heroBgUrl !== '/videos/dem-khong-ngu.mp4')) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange({
+                          showreelUrl: '/videos/dem-khong-ngu.mp4',
+                          heroBgUrl: '/videos/dem-khong-ngu.mp4',
+                          heroBgType: 'video',
+                          heroVideoStart: 0,
+                          heroVideoEnd: 15,
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2563EB] hover:underline font-semibold cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Khôi phục video mặc định</span>
+                    </button>
+                  )}
+              </div>
+
+              <input
+                type="text"
+                value={profile.showreelUrl || profile.heroBgUrl || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onChange({
+                    showreelUrl: val,
+                    heroBgUrl: val,
+                    heroBgType: 'video',
+                  });
+                }}
+                className={inputClass}
+                placeholder="VD: https://youtu.be/... hoặc Dropbox MP4 hoặc /videos/dem-khong-ngu.mp4"
+              />
+
+              {/* TỰ ĐỘNG NHẬN DIỆN NỀN TẢNG VIDEO (AUTO-DETECTION BADGE) */}
+              <div className="p-3.5 rounded-xl border bg-[#F9F9FB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-2.5">
+                  {parsedShowreel.type === 'youtube' ? (
+                    <div className="w-7 h-7 rounded-lg bg-red-600/10 text-red-600 flex items-center justify-center shrink-0">
+                      <Youtube className="w-4 h-4" />
+                    </div>
+                  ) : parsedShowreel.type === 'vimeo' ? (
+                    <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
+                      <Film className="w-4 h-4" />
+                    </div>
+                  ) : parsedShowreel.type === 'gdrive' ? (
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                      <Video className="w-4 h-4" />
+                    </div>
+                  ) : parsedShowreel.isDropbox ? (
+                    <div className="w-7 h-7 rounded-lg bg-blue-600/10 text-[#2563EB] flex items-center justify-center shrink-0">
+                      <Video className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 rounded-lg bg-emerald-600/10 text-emerald-600 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  )}
+
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-[#111111]">
+                        {parsedShowreel.type === 'youtube'
+                          ? 'Đã nhận diện: YouTube Video'
+                          : parsedShowreel.type === 'vimeo'
+                          ? 'Đã nhận diện: Vimeo Video'
+                          : parsedShowreel.type === 'gdrive'
+                          ? 'Đã nhận diện: Google Drive Video'
+                          : parsedShowreel.isDropbox
+                          ? 'Đã nhận diện: Dropbox MP4 Direct Stream'
+                          : 'Đã nhận diện: File Video MP4 / WebM Trực Tiếp'}
+                      </span>
+                      {parsedShowreel.videoId && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/5 text-black/60">
+                          ID: {parsedShowreel.videoId}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-black/55 leading-tight">
+                      {parsedShowreel.type === 'youtube'
+                        ? 'Tự động tối ưu nhúng không quảng cáo và lặp theo khoảng thời gian đã cắt bên dưới.'
+                        : parsedShowreel.type === 'vimeo'
+                        ? 'Tự động kích hoạt player Vimeo điện ảnh không viền và áp dụng mốc bắt đầu.'
+                        : parsedShowreel.isDropbox
+                        ? 'Link Dropbox đã được tự động chuẩn hóa sang raw=1 để stream mượt mà không bị tải file.'
+                        : 'Hỗ trợ cắt chính xác từng giây và phát lặp 15 giây mượt mà không độ trễ.'}
+                    </p>
+                  </div>
+                </div>
+
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 self-start sm:self-auto">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Sẵn sàng phát Loop
+                </span>
+              </div>
+
+              {/* Quick Select Presets for high quality internal videos */}
+              <div className="pt-1 space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-black/50 block">
+                  Chọn nhanh video loop chất lượng cao có sẵn trong web:
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { label: 'Đêm Không Ngủ (1.1MB · Khuyên dùng)', url: '/videos/dem-khong-ngu.mp4' },
+                    { label: 'Crimson Stage (740KB)', url: '/videos/crimson-stage.mp4' },
+                    { label: 'Dusk Motion (800KB)', url: '/videos/dusk-motion.mp4' },
+                    { label: 'Doorway Sunbeam (1.5MB)', url: '/videos/doorway-sunbeam.mp4' },
+                    { label: 'Chuyến Xe Cuối Ngày (480KB)', url: '/videos/chuyen-xe-cuoi-ngay.mp4' },
+                  ].map((preset) => {
+                    const isSelected = (profile.showreelUrl || profile.heroBgUrl) === preset.url;
+                    return (
+                      <button
+                        key={preset.url}
+                        type="button"
+                        onClick={() =>
+                          onChange({
+                            showreelUrl: preset.url,
+                            heroBgUrl: preset.url,
+                            heroBgType: 'video',
+                          })
+                        }
+                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
+                            : 'bg-[#F9F9FB] border-black/10 text-black/75 hover:bg-white hover:border-black/25'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : ''}
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ẢNH POSTER FRAME NẠP TỨC THÌ (0ms INSTANT POSTER) */}
+              <div className="p-4 rounded-xl border border-black/10 bg-[#F9F9FB] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Image className="w-4 h-4 text-[#2563EB]" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                      Ảnh Poster Frame nạp tức thì (0ms Instant Poster)
+                    </span>
+                  </div>
+                  {profile.heroPosterUrl && (
+                    <button
+                      type="button"
+                      onClick={() => onChange({ heroPosterUrl: '' })}
+                      className="inline-flex items-center gap-1 text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Gỡ ảnh Poster</span>
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-black/60 leading-relaxed">
+                  Hiển thị ngay lập tức trong <strong>0 giây</strong> khi vừa F5 tải lại trang. Loại bỏ 100% hiện tượng màn hình đen trong 1–2 giây lúc trình duyệt chờ kết nối luồng video dung lượng lớn từ Dropbox.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Nút Chụp trực tiếp từ Video đang phát */}
+                  <button
+                    type="button"
+                    onClick={handleCaptureCurrentFrameAsPoster}
+                    disabled={capturingPoster}
+                    className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0 active:scale-98 disabled:opacity-50"
+                    title="Chụp ngay khung hình đang chiếu ở trình phát bên dưới làm ảnh Poster 0ms mà không cần tải file lên"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-white" />
+                    <span>
+                      {capturingPoster
+                        ? 'Đang chụp...'
+                        : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster`}
+                    </span>
+                  </button>
+
+                  <input
+                    type="file"
+                    ref={posterFileInputRef}
+                    accept="image/*"
+                    onChange={handlePosterFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => posterFileInputRef.current?.click()}
+                    disabled={uploadingPoster}
+                    className="px-3.5 py-2.5 rounded-lg bg-white border border-black/15 hover:border-[#2563EB] hover:text-[#2563EB] text-xs font-semibold text-[#111111] transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
+                    <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải file từ máy'}</span>
+                  </button>
+
+                  <input
+                    type="text"
+                    value={profile.heroPosterUrl || ''}
+                    onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
+                    className="flex-1 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs text-[#111111] placeholder:text-black/35 focus:outline-none focus:border-[#2563EB]"
+                    placeholder="Hoặc dán link ảnh bìa frame 00:00:00..."
+                  />
+                </div>
+
+                {posterCaptureSuccess && (
+                  <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-lg border border-emerald-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{posterCaptureSuccess}</span>
+                  </div>
+                )}
+
+                {posterCaptureError && (
+                  <div className="flex items-center gap-2 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>{posterCaptureError}</span>
+                  </div>
+                )}
+
+                {profile.heroPosterUrl && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <img
+                      src={profile.heroPosterUrl}
+                      alt="Hero Video Poster Preview"
+                      className="w-24 h-14 object-cover rounded-lg border border-black/15 shadow-xs"
+                    />
+                    <div className="text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Đã kích hoạt Poster Frame · Trang chủ sẽ sáng đẹp ngay 0ms khi reload</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* KHỐI CẮT ĐOẠN VIDEO LOOP (IN - OUT TRIMMER - ~15 GIÂY) */}
+            <div className="p-5 rounded-2xl bg-[#F4F4F7] border border-black/10 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center">
+                    <Scissors className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                      Cắt đoạn Video Loop (In - Out Trimmer · ~15 giây)
+                    </h4>
+                    <p className="text-[11px] text-black/55">
+                      Giới hạn đoạn video phát lặp làm nền Hero. Video sẽ chỉ phát trong khoảng này và quay lại từ đầu.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                      loopDuration === 15
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        : loopDuration >= 10 && loopDuration <= 20
+                        ? 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/30'
+                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}
+                  >
+                    Thời lượng loop: {loopDuration}s {loopDuration === 15 ? '✓ Chuẩn' : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* 1-Click Fast Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-black/60 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+                    Chọn nhanh khoảng 15 giây tối ưu:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={snapTo15Seconds}
+                    className="text-[11px] font-semibold text-[#2563EB] hover:underline cursor-pointer"
+                  >
+                    Khóa đúng 15s từ điểm bắt đầu
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {loopPresets.map((preset) => {
+                    const isActive = startSec === preset.start && endSec === preset.end;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() =>
+                          onChange({
+                            heroVideoStart: preset.start,
+                            heroVideoEnd: preset.end,
+                          })
+                        }
+                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
+                            : 'bg-white border-black/10 text-black/75 hover:border-black/30'
+                        }`}
+                      >
+                        {isActive ? '✓ ' : ''}
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* In-point and Out-point Fine Tuning Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                {/* IN-POINT (BẮT ĐẦU) */}
+                <div className="p-4 rounded-xl bg-white border border-black/10 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111] flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
+                      Mốc Bắt Đầu (In-point)
+                    </span>
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB]">
+                      {formatVideoDuration(startSec)} ({startSec}s)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={endSec - 1}
+                      value={startSec}
+                      onChange={(e) => setInPoint(Number(e.target.value) || 0)}
+                      className="w-24 bg-[#F9F9FB] border border-black/10 rounded-lg px-3 py-2 text-sm font-mono text-center font-bold focus:bg-white focus:outline-none"
+                    />
+                    <div className="flex items-center gap-1 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setInPoint(startSec - 5)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        -5s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInPoint(startSec - 1)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        -1s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInPoint(startSec + 1)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        +1s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInPoint(startSec + 5)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        +5s
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={setInFromCurrent}
+                    className="w-full py-1.5 px-3 rounded-lg bg-[#F9F9FB] hover:bg-[#2563EB]/10 border border-black/8 hover:border-[#2563EB]/30 text-xs font-semibold text-black/80 hover:text-[#2563EB] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>📍 Lấy mốc phát hiện tại ({formatVideoDuration(currentTime)})</span>
+                  </button>
+                </div>
+
+                {/* OUT-POINT (KẾT THÚC) */}
+                <div className="p-4 rounded-xl bg-white border border-black/10 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111] flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
+                      Mốc Kết Thúc (Out-point)
+                    </span>
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB]">
+                      {formatVideoDuration(endSec)} ({endSec}s)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={startSec + 1}
+                      value={endSec}
+                      onChange={(e) => setOutPoint(Number(e.target.value) || startSec + 15)}
+                      className="w-24 bg-[#F9F9FB] border border-black/10 rounded-lg px-3 py-2 text-sm font-mono text-center font-bold focus:bg-white focus:outline-none"
+                    />
+                    <div className="flex items-center gap-1 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setOutPoint(endSec - 5)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        -5s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOutPoint(endSec - 1)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        -1s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOutPoint(endSec + 1)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        +1s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOutPoint(endSec + 5)}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[#F9F9FB] hover:bg-black/5 border border-black/8 text-[11px] font-semibold text-black/70 cursor-pointer"
+                      >
+                        +5s
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={setOutFromCurrent}
+                    className="w-full py-1.5 px-3 rounded-lg bg-[#F9F9FB] hover:bg-[#2563EB]/10 border border-black/8 hover:border-[#2563EB]/30 text-xs font-semibold text-black/80 hover:text-[#2563EB] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>🏁 Lấy mốc phát hiện tại ({formatVideoDuration(currentTime)})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Video Loop Preview */}
+            <div className="p-4 rounded-xl bg-[#F9F9FB] border border-black/8 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Play className="w-3.5 h-3.5 text-[#2563EB]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                    Xem trước Video Loop nền Hero ({loopDuration} giây)
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB]">
+                  {formatVideoDuration(startSec)} ➔ {formatVideoDuration(endSec)} · {loopDuration}s
+                </span>
+              </div>
+
+              <div className="relative aspect-[21/9] sm:aspect-[16/7] w-full max-w-2xl mx-auto rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
+                {(parsedShowreel.type === 'youtube' ||
+                  parsedShowreel.type === 'vimeo' ||
+                  parsedShowreel.type === 'gdrive') &&
+                parsedShowreel.embedUrl ? (
+                  <iframe
+                    key={`${parsedShowreel.embedUrl}-${startSec}-${endSec}`}
+                    src={parsedShowreel.embedUrl}
+                    title="Video Loop Showreel Preview"
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    ref={previewVideoRef}
+                    key={currentVideoUrl}
+                    src={parsedShowreel.directUrl || currentVideoUrl}
+                    poster={profile.heroPosterUrl || ''}
+                    crossOrigin="anonymous"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    onTimeUpdate={handleTimeUpdate}
+                    onSeeked={handleSeeked}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute top-2.5 right-2.5 pointer-events-none">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Auto Loop: {formatVideoDuration(startSec)} – {formatVideoDuration(endSec)} ({loopDuration}s)
+                  </span>
+                </div>
+              </div>
+
+              {/* Player Quick Controls & Scrub Bar for Direct Video */}
+              {parsedShowreel.type === 'direct' && (
+                <div className="p-3 rounded-lg bg-white border border-black/8 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-black/80">
+                      Đang phát: {formatVideoDuration(currentTime)}
+                    </span>
+                    <span className="text-black/40">/</span>
+                    <span className="font-mono text-black/60">
+                      Vùng loop: {formatVideoDuration(startSec)} ➔ {formatVideoDuration(endSec)} ({loopDuration}s)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={seekToStart}
+                      className="px-2.5 py-1 rounded-md bg-[#F9F9FB] hover:bg-black/5 border border-black/10 font-medium text-black/70 cursor-pointer flex items-center gap-1"
+                    >
+                      <Rewind className="w-3 h-3" />
+                      <span>Về mốc In</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={set15sFromCurrent}
+                      className="px-2.5 py-1 rounded-md bg-[#2563EB]/10 hover:bg-[#2563EB]/20 border border-[#2563EB]/20 font-semibold text-[#2563EB] cursor-pointer flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Lấy 15s từ đây</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCaptureCurrentFrameAsPoster}
+                      disabled={capturingPoster}
+                      className="px-3 py-1 rounded-md bg-[#2563EB] hover:bg-blue-700 text-white font-bold cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                      title="Chụp ngay khung hình đang chiếu làm ảnh Poster 0ms"
+                    >
+                      <Camera className="w-3 h-3 text-white" />
+                      <span>{capturingPoster ? 'Đang chụp...' : '📸 Chụp Frame này làm Poster 0ms'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. THÔNG TIN LIÊN HỆ & KÊNH TRAO ĐỔI */}
+      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Cột trái */}
+        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
+          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
+            2. THÔNG TIN LIÊN HỆ &amp; KÊNH TRAO ĐỔI
+          </h2>
+          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
+            Xuất hiện tại thanh điều hướng Navbar, chân trang Footer và hộp thoại gửi brief nhanh khi đối tác bấm nút Liên hệ.
+          </p>
+        </div>
+
+        {/* Cột phải */}
+        <div className="lg:col-span-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={labelClass}>Email công việc</label>
+              <input
+                type="email"
+                value={profile.email}
+                onChange={(e) => onChange({ email: e.target.value })}
+                className={inputClass}
+                placeholder="vinh.film@gmail.com"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Số Zalo / Hotline liên hệ</label>
+              <input
+                type="text"
+                value={profile.zalo}
+                onChange={(e) => onChange({ zalo: e.target.value, phone: e.target.value })}
+                className={inputClass}
+                placeholder="0908 123 456"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Telegram Username</label>
+              <input
+                type="text"
+                value={profile.telegram}
+                onChange={(e) => onChange({ telegram: e.target.value })}
+                className={inputClass}
+                placeholder="@quocvinhfilm"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Địa bàn hoạt động chính</label>
+              <input
+                type="text"
+                value={profile.location}
+                onChange={(e) => onChange({ location: e.target.value })}
+                className={inputClass}
+                placeholder="TP. Hồ Chí Minh"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. DÒNG DẪN & CHÂN TRANG */}
+      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Cột trái */}
+        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
+          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
+            3. DÒNG DẪN &amp; CHÂN TRANG
+          </h2>
+          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
+            Tinh chỉnh lời tựa cho danh mục Dự án, Dịch vụ Agency và lời kêu gọi kèm cam kết báo giá ở khối chân trang (Footer CTA).
+          </p>
+        </div>
+
+        {/* Cột phải */}
+        <div className="lg:col-span-8 space-y-6">
+          <div>
+            <label className={labelClass}>Dòng mô tả dưới tiêu đề &quot;DỰ ÁN ĐÃ THỰC HIỆN&quot;</label>
+            <input
+              type="text"
+              value={profile.projectsSubtitle}
+              onChange={(e) => onChange({ projectsSubtitle: e.target.value })}
+              className={inputClass}
+              placeholder="Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao."
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Dải thương hiệu &amp; Agency đã cộng tác (Tùy chỉnh)</label>
+            <input
+              type="text"
+              value={profile.collaboratorsText || ''}
+              onChange={(e) => onChange({ collaboratorsText: e.target.value })}
+              className={inputClass}
+              placeholder="VD: Dentsu · PepsiCo · Havas · VinFast · Ogilvy · Heineken (Bỏ trống để tự động tổng hợp từ các dự án)"
+            />
+            <p className={helperClass}>
+              Mặc định để trống: Hệ thống tự động trích xuất các thương hiệu/agency từ các dự án đang hiển thị trên trang chủ. Bạn có thể nhập danh sách tùy chỉnh để ghi đè theo ý muốn.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Dòng mô tả dưới tiêu đề &quot;3 ĐẦU VIỆC THỰC CHIẾN CHO AGENCY&quot;</label>
+            <input
+              type="text"
+              value={profile.agencySubtitle}
+              onChange={(e) => onChange({ agencySubtitle: e.target.value })}
+              className={inputClass}
+              placeholder="Quy trình sản xuất tinh gọn, bảo đảm chất lượng hình ảnh cao nhất trong thời gian ngắn nhất."
+            />
+          </div>
+
+          {/* Tách Tiêu đề khối chốt dự án thành hàng ngang phía trên */}
+          <div>
+            <label className={labelClass}>Tiêu đề khối chốt dự án (Footer CTA)</label>
+            <input
+              type="text"
+              value={profile.footerTitle}
+              onChange={(e) => onChange({ footerTitle: e.target.value })}
+              className={`${inputClass} font-bold uppercase`}
+              placeholder="GỬI BRIEF DỰ ÁN CỦA BẠN"
+            />
+          </div>
+
+          {/* Đặt Mô tả cam kết báo giá trải rộng toàn chiều ngang bên dưới */}
+          <div>
+            <label className={labelClass}>Mô tả cam kết báo giá (Footer CTA)</label>
+            <textarea
+              rows={3}
+              value={profile.footerDescription}
+              onChange={(e) => onChange({ footerDescription: e.target.value })}
+              className={textareaClass}
+              placeholder="Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM."
+            />
+            <p className={helperClass}>
+              Hiển thị với độ tương phản cao, rõ nét toàn câu ở khu vực chân trang.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,308 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-bricolage: "Bricolage Grotesque", sans-serif;
+  --font-jakarta: "Plus Jakarta Sans", sans-serif;
+
+  /* Studio Showcase Semantic Color Tokens */
+  --color-surface-base: #F7F6F2;
+  --color-surface-dark: #0A0A0A;
+  --color-surface-white: #FFFFFF;
+  --color-surface-card: #FFFFFF;
+  --color-text-primary: #111111;
+  --color-text-secondary: #555555;
+  --color-text-muted: #777777;
+  --color-accent-cobalt: #2563EB;
+  --color-accent-hover: #1D4ED8;
+
+  /* Border Tokens */
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
+  /* Radius Tokens */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+}
+
+@layer base {
+  :root {
+    --color-surface-base: #F7F6F2;
+    --color-text-primary: #111111;
+    --color-text-secondary: #555555;
+    --color-accent-cobalt: #2563EB;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: #0A0A0A;
+    color: #111111;
+    font-family: var(--font-sans);
+  }
+
+  body {
+    overflow-x: clip;
+    background-color: #0A0A0A;
+    color: #111111;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  ::selection {
+    background-color: #2563EB;
+    color: #FFFFFF;
+  }
+
+  main {
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+}
+
+.font-bricolage {
+  font-family: "Bricolage Grotesque", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.font-bricolage-headline {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Pure Opacity Fade Page-Load Entrance (1.2s Settlement)
+   Completely zero blur, zero scale, zero translate - pure opacity transition
+   under smooth acceleration cubic-bezier(0.25, 0.1, 0.25, 1)
+   ========================================================================== */
+
+/* Ambient Slow Zoom (Slow Breath) for Hero Background */
+@keyframes slowBreath {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.04);
+  }
+}
+
+/* 1. Pure Opacity Fade for Hero Text, Chips & Navbar (from 0 to 1) */
+@keyframes pureOpacityFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 2. Gentle Opacity Fade for Hero Background (from 0.2 to 1) */
+@keyframes heroBgPureFade {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Video nền Hero: hiển thị sáng rõ tự nhiên 100% không bị phủ tối, nhịp thở chậm điện ảnh */
+  .hero-reveal-bg {
+    opacity: 1;
+    animation: slowBreath 20s ease-in-out infinite alternate;
+    will-change: transform;
+    transform-origin: center center;
+  }
+
+  /* Tiêu đề lớn TRẦN QUỐC VINH, định danh chuyên môn và 4 thẻ dịch vụ: luôn hiển thị rõ ràng 100% không bị kẹt */
+  .hero-reveal-headline,
+  .hero-reveal-role,
+  .hero-reveal-intro,
+  .hero-reveal-chip {
+    opacity: 1;
+    will-change: auto;
+  }
+
+  /* Thanh Navbar trên cùng: fade thuần từ 0 lên 1 trong 0.6s */
+  .hero-reveal-navbar {
+    animation: pureOpacityFade 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) 0s both;
+    will-change: opacity;
+  }
+}
+
+/* Opposing Dual-Row Marquee Animations */
+@keyframes marquee-left {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 34s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-right {
+  animation: marquee-right 34s linear infinite;
+  will-change: transform;
+}
+
+.marquee-row:hover .animate-marquee-left,
+.marquee-row:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+/* Brand Infinite Marquee Animation (45s slow loop) */
+@keyframes brand-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-brand-marquee {
+  animation: brand-marquee 45s linear infinite;
+  will-change: transform;
+}
+
+.brand-marquee-container:hover .animate-brand-marquee {
+  animation-play-state: paused;
+}
+
+.brand-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* Stills Single-Row Infinite Marquee Animation (55s slow loop) */
+@keyframes stills-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-stills-marquee {
+  animation: stills-marquee 55s linear infinite;
+  will-change: transform;
+}
+
+.stills-marquee-container:hover .animate-stills-marquee {
+  animation-play-state: paused;
+}
+
+.stills-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-brand-marquee,
+  .animate-stills-marquee,
+  .animate-marquee-left,
+  .animate-marquee-right,
+  .animate-slow-breath,
+  .hero-reveal-bg,
+  .hero-reveal-headline,
+  .hero-reveal-navbar,
+  .hero-reveal-intro,
+  .hero-reveal-chip,
+  .animate-reveal-headline,
+  .animate-reveal-intro {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   Plyr Minimalist Editorial Studio Styling Overrides
+   ========================================================================== */
+:root {
+  --plyr-color-main: #111111;
+  --plyr-video-controls-background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75));
+  --plyr-video-control-color: #ffffff;
+  --plyr-video-control-color-hover: #ffffff;
+  --plyr-video-control-background-hover: rgba(255, 255, 255, 0.15);
+  --plyr-range-fill-background: #111111;
+  --plyr-range-thumb-background: #ffffff;
+  --plyr-range-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --plyr-control-radius: 6px;
+}
+
+.plyr {
+  --plyr-color-main: #111111;
+  font-family: inherit;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0.5rem;
+}
+
+.plyr--video {
+  height: 100% !important;
+  width: 100% !important;
+  background: #000000;
+}
+
+.plyr__video-wrapper {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.plyr video {
+  height: 100% !important;
+  width: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Center Large Play Button */
+.plyr__control--overlaid {
+  background: rgba(17, 17, 17, 0.85) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.plyr__control--overlaid:hover {
+  background: #111111 !important;
+  transform: scale(1.06);
+}
