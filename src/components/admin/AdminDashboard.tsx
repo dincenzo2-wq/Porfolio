@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -11,6 +11,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { usePortfolioData } from '../../context/PortfolioDataContext';
+import {
+  cleanSvgWhiteBackground,
+  autoCropSvgViewBox,
+  invertSvgColors,
+} from '../../utils/brandingLogic';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { ProjectsTab } from './ProjectsTab';
 import { StillsAndGearTab } from './StillsAndGearTab';
@@ -59,6 +64,26 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
     }
   };
 
+  // Render SVG logo dynamically based on current branding
+  const renderedLogoSvg = useMemo(() => {
+    if (!content.branding?.logoSvg) return null;
+    let svg = content.branding.logoSvg;
+    if (content.branding.autoRemoveWhiteBg) {
+      svg = cleanSvgWhiteBackground(svg);
+    }
+    svg = autoCropSvgViewBox(svg);
+    svg = invertSvgColors(svg, '#111111');
+    const height = 24;
+    svg = svg.replace(/<svg\b([^>]*)>/i, (_match, attrs) => {
+      const cleanAttrs = attrs
+        .replace(/\bwidth\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/\bheight\s*=\s*["'][^"']*["']/gi, '')
+        .trim();
+      return `<svg ${cleanAttrs} style="height: ${height}px; width: auto; max-height: 100%; display: block;">`;
+    });
+    return svg;
+  }, [content.branding?.logoSvg, content.branding?.autoRemoveWhiteBg]);
+
   return (
     <div className="min-h-screen bg-[#F6F6F8] text-[#111111] font-sans antialiased selection:bg-[#2563EB] selection:text-white pb-24">
       {/* 1. Master Sticky Header (Fixed height 64px, docks flush with top) */}
@@ -76,10 +101,18 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
             </button>
 
             <div className="border-l border-black/10 pl-3">
-              <div className="flex items-center gap-2">
-                <span className="font-bricolage font-extrabold text-sm sm:text-base text-[#111111] uppercase tracking-tight">
-                  QUỐC VINH®
-                </span>
+              <div className="flex items-center gap-2.5">
+                {renderedLogoSvg && (
+                  <span
+                    className="shrink-0 flex items-center justify-center"
+                    dangerouslySetInnerHTML={{ __html: renderedLogoSvg }}
+                  />
+                )}
+                {content.branding?.showBrandName !== false && (
+                  <span className="font-bricolage font-extrabold text-sm sm:text-base text-[#111111] uppercase tracking-tight">
+                    {content.branding?.brandName || 'VINH TRẦN'}
+                  </span>
+                )}
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-black/5 text-[#555555] uppercase tracking-wider">
                   Dashboard
                 </span>
