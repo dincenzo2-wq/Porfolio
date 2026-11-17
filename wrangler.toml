@@ -1,3 +1,14 @@
 name = "vtproduction"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "dist"
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "portfolio_db"
+database_id = "b39a831a-24eb-485c-9661-32dc5b9e0b32"
+
+# Cloudflare R2 Bucket Binding (for uploaded image assets)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "portfolio-media"
