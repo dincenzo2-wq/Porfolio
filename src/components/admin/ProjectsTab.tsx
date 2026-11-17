@@ -22,6 +22,8 @@ import {
   parseDeliverableRoles,
   formatDeliverableRoles,
   suggestAspectRatioForCategory,
+  DEFAULT_SUGGESTED_BRANDS,
+  toggleClientOrAgency,
 } from '../../utils/portfolioLogic';
 
 interface ProjectsTabProps {
@@ -70,6 +72,7 @@ export function ProjectsTab({
   const [selectedCategory, setSelectedCategory] = useState<string>('Tất cả');
   const [editingProject, setEditingProject] = useState<PortfolioProject | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [clientTypeMode, setClientTypeMode] = useState<'independent' | 'commercial'>('commercial');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [compressionInfo, setCompressionInfo] = useState<CompressionResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -439,6 +442,7 @@ export function ProjectsTab({
     };
     setEditingProject(emptyProject);
     setIsCreatingNew(true);
+    setClientTypeMode('commercial');
     setCompressionInfo(null);
     setUploadError(null);
     setIsAddingCustomRole(false);
@@ -451,6 +455,14 @@ export function ProjectsTab({
   const handleOpenEdit = (project: PortfolioProject) => {
     setEditingProject({ ...project });
     setIsCreatingNew(false);
+    const client = (project.clientOrAgency || '').trim().toLowerCase();
+    const isIndie =
+      !client ||
+      client.includes('wedding') ||
+      client.includes('khách lẻ') ||
+      client.includes('độc lập') ||
+      client.includes('cặp đôi');
+    setClientTypeMode(isIndie ? 'independent' : 'commercial');
     setCompressionInfo(null);
     setUploadError(null);
     setIsAddingCustomRole(false);
@@ -966,44 +978,149 @@ export function ProjectsTab({
                   />
                 </div>
 
-                {/* Row 1b: Khách hàng / Thương hiệu của riêng dự án này (Tùy chọn) */}
-                <div className="space-y-3 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
-                  <div>
-                    <label className="block font-semibold text-[#111111]">
-                      Khách hàng / Thương hiệu của riêng dự án này{' '}
-                      <span className="text-[11px] font-normal text-black/50">(Tùy chọn — Chỉ điền cho Commercial/TVC)</span>
-                    </label>
-                    <span className="text-[11px] text-black/50 font-medium">
-                      Dự án Đám cưới / Khách lẻ / Độc lập: để trống (web tự ẩn Brand). Chỉ điền Brand khi làm dự án Commercial.
-                    </span>
+                {/* Row 1b: Phân định riêng biệt: Khách lẻ / Độc lập HOẶC Thương hiệu & Agency */}
+                <div className="space-y-3.5 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                      <label className="block font-semibold text-[#111111]">
+                        Khách hàng / Thương hiệu
+                      </label>
+                      <span className="text-[11px] text-black/50 font-medium">
+                        Chọn riêng biệt giữa nhóm Khách lẻ (Đám cưới / Cá nhân) và Thương hiệu đối tác (Commercial)
+                      </span>
+                    </div>
+
+                    {/* Segmented Switch: Chọn 1 trong 2 nhóm riêng biệt */}
+                    <div className="inline-flex p-1 bg-black/[0.06] rounded-xl border border-black/5 text-xs font-semibold shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientTypeMode('independent');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                          clientTypeMode === 'independent'
+                            ? 'bg-white text-[#111111] shadow-xs'
+                            : 'text-black/60 hover:text-black'
+                        }`}
+                      >
+                        Khách lẻ / Độc lập
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientTypeMode('commercial');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                          clientTypeMode === 'commercial'
+                            ? 'bg-white text-[#111111] shadow-xs'
+                            : 'text-black/60 hover:text-black'
+                        }`}
+                      >
+                        Thương hiệu &amp; Agency đối tác
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Manual input for custom typing */}
-                  <input
-                    type="text"
-                    value={editingProject.clientOrAgency || ''}
-                    onChange={(e) =>
-                      setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
-                    }
-                    placeholder="Để trống nếu là Đám cưới / Khách lẻ, hoặc điền tên Brand (VD: PepsiCo, VinFast...)"
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
-                  />
+                  {/* NHÁNH 1: KHÁCH LẺ / ĐỘC LẬP (ĐÁM CƯỚI / CÁ NHÂN) */}
+                  {clientTypeMode === 'independent' ? (
+                    <div className="space-y-2.5 pt-1 border-t border-black/[0.06]">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
+                        Tùy chọn Khách lẻ / Đám cưới (Không hiển thị Brand thương mại trên web)
+                      </span>
 
-                  {/* Hành động nhanh: 1 chạm xóa trắng cho Khách lẻ / Đám cưới */}
-                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setEditingProject({ ...editingProject, clientOrAgency: '' })}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
-                        !editingProject.clientOrAgency?.trim()
-                          ? 'bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs'
-                          : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
-                      }`}
-                    >
-                      <EyeOff className="w-3 h-3" />
-                      <span>Không hiển thị Brand (Khách lẻ / Đám cưới)</span>
-                    </button>
-                  </div>
+                      {/* Các nút chọn nhanh riêng biệt cho Khách lẻ */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingProject({ ...editingProject, clientOrAgency: '' })}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                            !editingProject.clientOrAgency?.trim()
+                              ? 'bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs'
+                              : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
+                          }`}
+                        >
+                          <EyeOff className="w-3 h-3" />
+                          <span>Không hiển thị tên khách (Mặc định cho Đám cưới)</span>
+                        </button>
+
+                        {['Wedding · Cặp đôi', 'Khách lẻ / Cá nhân', 'Dự án độc lập'].map((preset) => {
+                          const isActive = editingProject.clientOrAgency?.trim() === preset;
+                          return (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => {
+                                setEditingProject({
+                                  ...editingProject,
+                                  clientOrAgency: isActive ? '' : preset,
+                                });
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                                isActive
+                                  ? 'bg-[#111111] text-white shadow-xs'
+                                  : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
+                              }`}
+                            >
+                              <span>{preset}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-[11px] text-black/50 italic pt-0.5">
+                        * Nhóm này hoạt động độc lập: không ảnh hưởng đến phân loại danh mục, không tạo thêm tab mới và không đưa vào danh sách Brand.
+                      </p>
+                    </div>
+                  ) : (
+                    /* NHÁNH 2: THƯƠNG HIỆU & AGENCY ĐỐI TÁC (COMMERCIAL / TVC) */
+                    <div className="space-y-2.5 pt-1 border-t border-black/[0.06]">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
+                          Tên Thương hiệu / Agency đối tác (Dành cho Commercial / TVC)
+                        </span>
+                        <input
+                          type="text"
+                          value={editingProject.clientOrAgency || ''}
+                          onChange={(e) =>
+                            setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
+                          }
+                          placeholder="VD: Dentsu Redder · PepsiCo Vietnam hoặc VinFast..."
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
+                        />
+                      </div>
+
+                      {/* Các thẻ Brand mẫu thuần thương mại (TUYỆT ĐỐI KHÔNG CÓ WEDDING) */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] text-black/50 font-medium block">
+                          Bấm chọn nhanh hoặc kết hợp Agency + Brand:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {DEFAULT_SUGGESTED_BRANDS.map((brand) => {
+                            const cur = editingProject.clientOrAgency || '';
+                            const isActive = cur.toLowerCase().includes(brand.toLowerCase());
+                            return (
+                              <button
+                                key={brand}
+                                type="button"
+                                onClick={() => {
+                                  const next = toggleClientOrAgency(editingProject.clientOrAgency, brand);
+                                  setEditingProject({ ...editingProject, clientOrAgency: next });
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                                  isActive
+                                    ? 'bg-[#111111] text-white shadow-xs'
+                                    : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
+                                }`}
+                              >
+                                <span>{brand}</span>
+                                {isActive && <Check className="w-3 h-3 text-white" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Row 2: Category Selectable Pills with Manage Button & 1-touch Auto Aspect Ratio */}
