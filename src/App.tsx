@@ -118,16 +118,15 @@ function PortfolioApp() {
                 projects={content.projects}
                 categories={content.categories}
                 subtitle={content.profile.projectsSubtitle}
-                collaboratorsText={content.profile.collaboratorsText}
                 openCategories={openCategories}
                 onToggleCategory={handleToggleCategory}
                 onSelectProject={setSelectedProject}
               />
             </ViewportFocusSection>
 
-            {/* Dải băng chữ chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Ngăn cách Dự án và Năng lực Agency) */}
+            {/* Dải băng chữ chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
             <BrandMarquee
-              projects={content.projects}
+              showBrandMarquee={content.profile.showBrandMarquee}
               collaboratorsText={content.profile.collaboratorsText}
             />
 

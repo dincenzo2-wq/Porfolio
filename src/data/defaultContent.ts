@@ -70,7 +70,9 @@ export const DEFAULT_PROFILE: SiteProfileData = {
     'Trần Quốc Vinh — Videographer, Film Editor & Motion Designer. Chuyên quay dựng phim quảng cáo, video ngắn 9:16 và Motion Graphics tốc độ cao cho Agency & Thương hiệu.',
   projectsSubtitle: 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.',
   agencySubtitle: 'Nhận từng hạng mục lẻ hoặc trọn gói từ ghi hình đến dựng hoàn thiện.',
-  collaboratorsText: '',
+  showBrandMarquee: true,
+  collaboratorsText:
+    'Dentsu Redder · PepsiCo Vietnam · Havas Vietnam · VinFast · Ogilvy Vietnam · Heineken Silver · Studio 09 · VNG Games · Tech In Asia · T&A Ogilvy · L\'OFFICIEL Vietnam · Vibe Nation · Tiger Beer Vietnam',
   footerTitle: 'Gửi brief dự án của bạn',
   footerDescription:
     'Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM.',

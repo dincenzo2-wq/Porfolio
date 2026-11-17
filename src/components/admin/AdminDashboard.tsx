@@ -266,14 +266,12 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
               projects={content.projects}
               categories={content.categories}
               roles={content.roles}
-              collaboratorsText={content.profile.collaboratorsText}
               onAddProject={addProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
               onReorderProjects={updateProjects}
               onUpdateCategories={updateCategories}
               onUpdateRoles={updateRoles}
-              onUpdateCollaboratorsText={(text) => updateProfile({ collaboratorsText: text })}
               onMarkUnsaved={markUnsaved}
             />
           </div>

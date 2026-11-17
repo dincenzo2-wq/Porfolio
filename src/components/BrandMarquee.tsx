@@ -1,6 +1,4 @@
 import { useMemo, useState } from 'react';
-import type { PortfolioProject } from '../types/portfolio';
-import { extractUniqueBrands } from '../utils/portfolioLogic';
 
 export const DEFAULT_BRAND_MARQUEE: string[] = [
   'DENTSU REDDER',
@@ -19,24 +17,31 @@ export const DEFAULT_BRAND_MARQUEE: string[] = [
 ];
 
 interface BrandMarqueeProps {
-  projects?: PortfolioProject[];
+  showBrandMarquee?: boolean;
   collaboratorsText?: string;
   brands?: string[];
 }
 
-export function BrandMarquee({ projects, collaboratorsText, brands }: BrandMarqueeProps) {
+export function BrandMarquee({ showBrandMarquee = true, collaboratorsText, brands }: BrandMarqueeProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const brandsList = useMemo(() => {
     if (brands && brands.length > 0) return brands;
-    if (projects && projects.length > 0) {
-      const extracted = extractUniqueBrands(projects, collaboratorsText);
-      if (extracted && extracted.length > 0) {
-        return extracted.map((b) => b.toUpperCase());
+    if (collaboratorsText && collaboratorsText.trim()) {
+      const parsed = collaboratorsText
+        .split(/[·•,\n]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (parsed.length > 0) {
+        return parsed.map((b) => b.toUpperCase());
       }
     }
     return DEFAULT_BRAND_MARQUEE;
-  }, [brands, projects, collaboratorsText]);
+  }, [brands, collaboratorsText]);
+
+  if (showBrandMarquee === false) {
+    return null;
+  }
 
   return (
     <section

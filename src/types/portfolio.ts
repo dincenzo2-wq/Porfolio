@@ -125,6 +125,7 @@ export interface SiteProfileData {
   heroIntro: string;
   projectsSubtitle: string;
   agencySubtitle: string;
+  showBrandMarquee?: boolean;
   collaboratorsText?: string;
   footerTitle: string;
   footerDescription: string;

@@ -15,7 +15,6 @@ interface ProjectsAccordionSectionProps {
   projects?: PortfolioProject[];
   categories?: string[];
   subtitle?: string;
-  collaboratorsText?: string;
 }
 
 interface CategoryGroup {
@@ -179,7 +178,6 @@ export function ProjectsAccordionSection({
   projects: customProjects,
   categories: customCategories,
   subtitle,
-  collaboratorsText,
 }: ProjectsAccordionSectionProps) {
   const activeCategories =
     customCategories && customCategories.length > 0
