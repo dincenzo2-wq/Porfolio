@@ -2,12 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Camera,
   CheckCircle2,
-  Clock,
   Play,
   RotateCcw,
   Video,
   AlertCircle,
-  Rewind,
   Image,
   Upload,
   Trash2,
@@ -40,8 +38,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   });
 
   const previewVideoRef = useRef<HTMLVideoElement>(null);
-  const [currentTime, setCurrentTime] = useState<number>(startSec);
-  const [totalDuration, setTotalDuration] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(0);
 
   // Poster upload & frame capture state
   const [uploadingPoster, setUploadingPoster] = useState(false);
@@ -335,92 +332,13 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
       }
     };
 
-    if (video.currentTime < startSec || video.currentTime >= endSec) {
-      video.currentTime = startSec;
-    }
     tryPlay();
-  }, [currentVideoUrl, startSec, endSec]);
-
-  const isLoopSeekingRef = useRef(false);
+  }, [currentVideoUrl]);
 
   const handleTimeUpdate = () => {
     const video = previewVideoRef.current;
     if (!video) return;
     setCurrentTime(video.currentTime);
-
-    if (isLoopSeekingRef.current) return;
-
-    if (video.currentTime >= endSec) {
-      isLoopSeekingRef.current = true;
-      video.currentTime = startSec;
-      return;
-    }
-
-    if (startSec > 0 && video.currentTime < startSec - 0.5) {
-      isLoopSeekingRef.current = true;
-      video.currentTime = startSec;
-    }
-  };
-
-  const handleSeeked = () => {
-    isLoopSeekingRef.current = false;
-    const video = previewVideoRef.current;
-    if (!video) return;
-    video.defaultMuted = true;
-    video.muted = true;
-    video.play().catch(() => {});
-  };
-
-  const handleLoadedMetadata = () => {
-    const video = previewVideoRef.current;
-    if (!video) return;
-    setTotalDuration(video.duration);
-    if (startSec > 0 && video.currentTime < startSec) {
-      video.currentTime = startSec;
-    }
-    video.defaultMuted = true;
-    video.muted = true;
-    video.play().catch(() => {});
-  };
-
-  const setInPoint = (newStart: number) => {
-    const safeStart = Math.max(0, Math.round(newStart));
-    let safeEnd = endSec;
-    if (safeEnd <= safeStart) {
-      safeEnd = safeStart + 15;
-    }
-    onChange({
-      heroVideoStart: safeStart,
-      heroVideoEnd: safeEnd,
-    });
-    if (previewVideoRef.current) {
-      previewVideoRef.current.currentTime = safeStart;
-    }
-  };
-
-  const setOutPoint = (newEnd: number) => {
-    const safeEnd = Math.max(startSec + 1, Math.round(newEnd));
-    onChange({
-      heroVideoEnd: safeEnd,
-    });
-  };
-
-  const seekToStart = () => {
-    if (previewVideoRef.current) {
-      previewVideoRef.current.currentTime = startSec;
-      previewVideoRef.current.play().catch(() => {});
-    }
-  };
-
-  const set15sFromCurrent = () => {
-    const current = Math.floor(currentTime);
-    onChange({
-      heroVideoStart: current,
-      heroVideoEnd: current + 15,
-    });
-    if (previewVideoRef.current) {
-      previewVideoRef.current.currentTime = current;
-    }
   };
   const inputClass =
     'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
@@ -493,8 +411,8 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
           </div>
 
-          {/* Cụm điều khiển: Video Loop Showreel Nền Hero */}
-          <div className="pt-6 border-t border-black/8 space-y-6">
+          {/* Cụm điều khiển: Video Loop Showreel Nền Hero (1 Khung duy nhất) */}
+          <div className="pt-6 border-t border-black/8 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Video className="w-4 h-4 text-[#2563EB]" />
@@ -508,141 +426,102 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
 
             <p className="text-xs text-black/60 leading-relaxed">
-              Video loop điện ảnh phát nền toàn màn hình cho Hero. Hỗ trợ link YouTube, Dropbox hoặc tải trực tiếp file video lên Cloudflare R2.
+              Video nền Hero chất lượng cao lưu trữ tại Cloudflare R2 với bộ đệm CDN toàn cầu. Tải trực tiếp video mới hoặc chụp khung hình đang phát làm ảnh bìa Poster nạp tức thì 0ms.
             </p>
 
-            {/* Video Loop Showreel URL & Reset */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className={labelClass}>
-                  Link Video Loop Showreel (YouTube / Vimeo / Dropbox / Direct MP4)
-                </label>
-                {(profile.showreelUrl || profile.heroBgUrl) &&
-                  ((profile.showreelUrl && profile.showreelUrl !== '/videos/dem-khong-ngu.mp4') ||
-                    (profile.heroBgUrl && profile.heroBgUrl !== '/videos/dem-khong-ngu.mp4')) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onChange({
-                          showreelUrl: '/videos/dem-khong-ngu.mp4',
-                          heroBgUrl: '/videos/dem-khong-ngu.mp4',
-                          heroBgType: 'video',
-                          heroVideoStart: 0,
-                          heroVideoEnd: 15,
-                        })
-                      }
-                      className="inline-flex items-center gap-1.5 text-xs text-[#2563EB] hover:underline font-semibold cursor-pointer"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Khôi phục video mặc định</span>
-                    </button>
-                  )}
-              </div>
+            {/* Khung duy nhất: Video 16:9 xem trước đặt cạnh 2 nút thao tác chính */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#F4F4F7] border border-black/10">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+                {/* Khung phát xem trước video nền hiện tại (16:9 gọn gàng) */}
+                <div className="lg:col-span-7">
+                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
+                    {(parsedShowreel.type === 'youtube' ||
+                      parsedShowreel.type === 'vimeo' ||
+                      parsedShowreel.type === 'gdrive') &&
+                    parsedShowreel.embedUrl ? (
+                      <iframe
+                        src={parsedShowreel.embedUrl}
+                        title="Video Loop Showreel Preview"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        ref={previewVideoRef}
+                        key={currentVideoUrl}
+                        src={parsedShowreel.directUrl || currentVideoUrl}
+                        poster={profile.heroPosterUrl || ''}
+                        crossOrigin="anonymous"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        controls
+                        onTimeUpdate={handleTimeUpdate}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
 
-              {/* Input URL + Nút Tải Video lên R2 (< 15MB) */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                <input
-                  type="text"
-                  value={profile.showreelUrl || profile.heroBgUrl || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onChange({
-                      showreelUrl: val,
-                      heroBgUrl: val,
-                      heroBgType: 'video',
-                    });
-                  }}
-                  className={`flex-1 ${inputClass}`}
-                  placeholder="VD: https://youtu.be/... hoặc /media/uploads/... hoặc /videos/dem-khong-ngu.mp4"
-                />
-
-                <input
-                  ref={heroVideoFileInputRef}
-                  type="file"
-                  accept="video/mp4,video/webm"
-                  className="hidden"
-                  onChange={handleUploadHeroVideo}
-                />
-
-                <button
-                  type="button"
-                  disabled={uploadingHeroVideo}
-                  onClick={() => heroVideoFileInputRef.current?.click()}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-98 shrink-0"
-                  title="Chọn file video MP4 hoặc WebM dưới 15MB tải trực tiếp lên Cloudflare R2"
-                >
-                  {uploadingHeroVideo ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Đang tải lên R2 ({heroVideoUploadProgress})...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 text-white" />
-                      <span>📁 Tải Video nền lên R2 (&lt; 15MB)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Status messages for video upload */}
-              {heroVideoUploadSuccess && (
-                <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium">{heroVideoUploadSuccess}</span>
-                </div>
-              )}
-
-              {heroVideoUploadError && (
-                <div className="flex items-center gap-2.5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span className="font-medium">{heroVideoUploadError}</span>
-                </div>
-              )}
-
-              {/* ẢNH POSTER FRAME NẠP TỨC THÌ (0ms INSTANT POSTER) */}
-              <div className="p-4 rounded-xl border border-black/10 bg-[#F9F9FB] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Image className="w-4 h-4 text-[#2563EB]" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                      Ảnh Poster Frame nạp tức thì (0ms Instant Poster)
-                    </span>
+                    {profile.heroPosterUrl && (
+                      <div className="absolute top-2.5 left-2.5 pointer-events-none">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          Poster 0ms đang bật
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {profile.heroPosterUrl && (
-                    <button
-                      type="button"
-                      onClick={() => onChange({ heroPosterUrl: '' })}
-                      className="inline-flex items-center gap-1 text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Gỡ ảnh Poster</span>
-                    </button>
-                  )}
                 </div>
 
-                <p className="text-[11px] text-black/55 leading-relaxed">
-                  Hiển thị tức thì 0ms khi vừa tải trang, loại bỏ hiện tượng màn hình đen trong lúc chờ kết nối video.
-                </p>
+                {/* Cạnh 2 nút thao tác chính */}
+                <div className="lg:col-span-5 space-y-3">
+                  {/* Nút 1: [📁 Tải Video nền lên R2 (< 15MB)] */}
+                  <input
+                    ref={heroVideoFileInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    className="hidden"
+                    onChange={handleUploadHeroVideo}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploadingHeroVideo}
+                    onClick={() => heroVideoFileInputRef.current?.click()}
+                    className="w-full px-4 py-3 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                    title="Chọn file video MP4 hoặc WebM dưới 15MB tải trực tiếp lên Cloudflare R2"
+                  >
+                    {uploadingHeroVideo ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Đang tải lên R2 ({heroVideoUploadProgress})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-white" />
+                        <span>📁 Tải Video nền lên R2 (&lt; 15MB)</span>
+                      </>
+                    )}
+                  </button>
 
-                <div className="space-y-2.5">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {/* Nút Chụp trực tiếp từ Video đang phát */}
-                    <button
-                      type="button"
-                      onClick={handleCaptureCurrentFrameAsPoster}
-                      disabled={capturingPoster}
-                      className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0 active:scale-98 disabled:opacity-50"
-                      title="Chụp ngay khung hình đang chiếu ở trình phát bên dưới làm ảnh Poster 0ms mà không cần tải file lên"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-white" />
-                      <span>
-                        {capturingPoster
-                          ? 'Đang chụp...'
-                          : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster`}
-                      </span>
-                    </button>
+                  {/* Nút 2: [📸 Chụp Frame đang phát làm Poster 0ms] */}
+                  <button
+                    type="button"
+                    onClick={handleCaptureCurrentFrameAsPoster}
+                    disabled={capturingPoster}
+                    className="w-full px-4 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                    title="Chụp ngay khung hình đang chiếu ở trình phát bên cạnh làm ảnh Poster 0ms"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                    <span>
+                      {capturingPoster
+                        ? 'Đang chụp WebP...'
+                        : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster 0ms`}
+                    </span>
+                  </button>
 
+                  {/* Kèm nút phụ tải ảnh Poster từ máy nếu cần */}
+                  <div className="flex items-center gap-2 pt-0.5">
                     <input
                       type="file"
                       ref={posterFileInputRef}
@@ -654,175 +533,83 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                       type="button"
                       onClick={() => posterFileInputRef.current?.click()}
                       disabled={uploadingPoster}
-                      className="px-3.5 py-2.5 rounded-lg bg-white border border-black/15 hover:border-[#2563EB] hover:text-[#2563EB] text-xs font-semibold text-[#111111] transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
+                      className="flex-1 px-3 py-2 rounded-lg bg-white border border-black/15 hover:border-black/30 text-xs font-semibold text-black/75 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:bg-[#F9F9FB] transition-all"
                     >
-                      <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
-                      <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải file từ máy'}</span>
+                      <Image className="w-3.5 h-3.5 text-black/50" />
+                      <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải Poster từ máy'}</span>
                     </button>
+
+                    {profile.heroPosterUrl && (
+                      <button
+                        type="button"
+                        onClick={() => onChange({ heroPosterUrl: '' })}
+                        className="px-3 py-2 rounded-lg bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0 transition-all shadow-2xs"
+                        title="Gỡ ảnh Poster hiện tại"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Gỡ</span>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Ô nhập link ảnh bìa frame chiếm trọn 100% bề ngang */}
-                  <input
-                    type="text"
-                    value={profile.heroPosterUrl || ''}
-                    onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
-                    className="w-full bg-white border border-black/10 rounded-lg px-3.5 py-2.5 text-xs text-[#111111] placeholder:text-black/35 focus:outline-none focus:border-[#2563EB]"
-                    placeholder="Hoặc dán link ảnh bìa frame 00:00:00..."
-                  />
-                </div>
+                  {/* Nguồn video ngầm & Khôi phục mặc định */}
+                  <div className="pt-2 border-t border-black/8 space-y-1">
+                    <p className="text-[11px] font-mono text-black/45 truncate" title={currentVideoUrl}>
+                      Nguồn video: {currentVideoUrl}
+                    </p>
 
-                {posterCaptureSuccess && (
-                  <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-lg border border-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{posterCaptureSuccess}</span>
+                    {(profile.showreelUrl || profile.heroBgUrl) &&
+                      ((profile.showreelUrl && profile.showreelUrl !== '/videos/dem-khong-ngu.mp4') ||
+                        (profile.heroBgUrl && profile.heroBgUrl !== '/videos/dem-khong-ngu.mp4')) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange({
+                              showreelUrl: '/videos/dem-khong-ngu.mp4',
+                              heroBgUrl: '/videos/dem-khong-ngu.mp4',
+                              heroBgType: 'video',
+                              heroVideoStart: 0,
+                              heroVideoEnd: 15,
+                            })
+                          }
+                          className="text-[11px] text-black/50 hover:text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Khôi phục video mặc định (/videos/dem-khong-ngu.mp4)</span>
+                        </button>
+                      )}
                   </div>
-                )}
-
-                {posterCaptureError && (
-                  <div className="flex items-center gap-2 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>{posterCaptureError}</span>
-                  </div>
-                )}
-
-                {profile.heroPosterUrl && (
-                  <div className="flex items-center gap-3 pt-1">
-                    <img
-                      src={profile.heroPosterUrl}
-                      alt="Hero Video Poster Preview"
-                      className="w-24 h-14 object-cover rounded-lg border border-black/15 shadow-xs"
-                    />
-                    <div className="text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Đã kích hoạt Poster Frame · Trang chủ sẽ sáng đẹp ngay 0ms khi reload</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* XEM TRƯỚC VIDEO LOOP NỀN HERO & CẮT ĐOẠN (IN - OUT TRIMMER) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#F4F4F7] border border-black/10 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <Play className="w-4 h-4 text-[#2563EB]" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                    Xem trước Video Loop &amp; Cắt đoạn (~15 giây)
-                  </h4>
-                </div>
-                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                  <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                      loopDuration === 15
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                        : loopDuration >= 10 && loopDuration <= 20
-                        ? 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/30'
-                        : 'bg-amber-50 text-amber-800 border-amber-300'
-                    }`}
-                  >
-                    Thời lượng loop: {loopDuration}s {loopDuration === 15 ? '✓ Chuẩn' : ''}
-                  </span>
                 </div>
               </div>
 
-              {/* Khung phát video xem trước */}
-              <div className="relative aspect-[21/9] sm:aspect-[16/7] w-full max-w-2xl mx-auto rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
-                {(parsedShowreel.type === 'youtube' ||
-                  parsedShowreel.type === 'vimeo' ||
-                  parsedShowreel.type === 'gdrive') &&
-                parsedShowreel.embedUrl ? (
-                  <iframe
-                    key={`${parsedShowreel.embedUrl}-${startSec}-${endSec}`}
-                    src={parsedShowreel.embedUrl}
-                    title="Video Loop Showreel Preview"
-                    className="w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video
-                    ref={previewVideoRef}
-                    key={currentVideoUrl}
-                    src={parsedShowreel.directUrl || currentVideoUrl}
-                    poster={profile.heroPosterUrl || ''}
-                    crossOrigin="anonymous"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                    onTimeUpdate={handleTimeUpdate}
-                    onSeeked={handleSeeked}
-                    onLoadedMetadata={handleLoadedMetadata}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute top-2.5 right-2.5 pointer-events-none">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Auto Loop: {formatVideoDuration(startSec)} – {formatVideoDuration(endSec)} ({loopDuration}s)
-                  </span>
+              {/* Status messages for video upload & poster capture */}
+              {heroVideoUploadSuccess && (
+                <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">{heroVideoUploadSuccess}</span>
                 </div>
-              </div>
+              )}
 
-              {/* Hàng ngang điều khiển: Mốc bắt đầu (s), Mốc kết thúc (s) và Nút [Lấy 15s từ mốc đang phát] */}
-              <div className="p-3 bg-white border border-black/10 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[#111111]">
-                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
-                    Mốc bắt đầu:
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={0}
-                      max={endSec - 1}
-                      value={startSec}
-                      onChange={(e) => setInPoint(Number(e.target.value) || 0)}
-                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
-                    />
-                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(startSec)})</span>
-                  </div>
-
-                  <span className="text-black/30 font-bold px-1 select-none">—</span>
-
-                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
-                    Mốc kết thúc:
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={startSec + 1}
-                      value={endSec}
-                      onChange={(e) => setOutPoint(Number(e.target.value) || startSec + 15)}
-                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
-                    />
-                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(endSec)})</span>
-                  </div>
-
-                  {parsedShowreel.type === 'direct' && (
-                    <button
-                      type="button"
-                      onClick={seekToStart}
-                      className="ml-2 px-2.5 py-1 rounded-md bg-[#F9F9FB] hover:bg-black/5 border border-black/10 text-[11px] font-medium text-black/70 cursor-pointer flex items-center gap-1"
-                      title="Xem lại từ mốc bắt đầu"
-                    >
-                      <Rewind className="w-3 h-3" />
-                      <span>Về mốc In</span>
-                    </button>
-                  )}
+              {heroVideoUploadError && (
+                <div className="mt-3 flex items-center gap-2.5 p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span className="font-medium">{heroVideoUploadError}</span>
                 </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={set15sFromCurrent}
-                  className="px-3.5 py-2 rounded-lg bg-[#2563EB]/10 hover:bg-[#2563EB] text-[#2563EB] hover:text-white border border-[#2563EB]/25 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-98"
-                  title="Cắt lấy 15 giây phát tiếp theo từ khung hình video hiện tại"
-                >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>📍 Lấy 15s từ mốc đang phát ({formatVideoDuration(currentTime)})</span>
-                </button>
-              </div>
+              {posterCaptureSuccess && (
+                <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">{posterCaptureSuccess}</span>
+                </div>
+              )}
+
+              {posterCaptureError && (
+                <div className="mt-3 flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="font-medium">{posterCaptureError}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
