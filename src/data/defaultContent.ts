@@ -73,6 +73,7 @@ export const DEFAULT_PROFILE: SiteProfileData = {
   showBrandMarquee: true,
   collaboratorsText:
     'Dentsu Redder · PepsiCo Vietnam · Havas Vietnam · VinFast · Ogilvy Vietnam · Heineken Silver · Studio 09 · VNG Games · Tech In Asia · T&A Ogilvy · L\'OFFICIEL Vietnam · Vibe Nation · Tiger Beer Vietnam',
+  brandLogos: [],
   footerTitle: 'Gửi brief dự án của bạn',
   footerDescription:
     'Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM.',
@@ -86,7 +87,21 @@ export const DEFAULT_PROFILE: SiteProfileData = {
   heroVideoEnd: 15,
 };
 
-export const DEFAULT_CATEGORIES: string[] = ['TVC', 'Social 9:16', 'Motion', 'Event Recap'];
+export const DEFAULT_CATEGORIES: string[] = [
+  'TVC',
+  'Social 9:16',
+  'Event Recap',
+  'Wedding',
+  'Cá Nhân',
+];
+
+export const DEFAULT_CATEGORY_SUBTITLES: Record<string, string> = {
+  'TVC': 'Phim quảng cáo, Digital Commercial & Video thương hiệu',
+  'Social 9:16': 'Short-form 9:16, TikTok, Reels & Performance Ads',
+  'Event Recap': 'Corporate Highlight, Aftermovie & Sự kiện doanh nghiệp',
+  'Wedding': 'Wedding Highlight, Pre-wedding & Phóng sự cưới điện ảnh',
+  'Cá Nhân': 'Cinematography, Spec Ads & Dự án sáng tạo độc lập',
+};
 
 export const DEFAULT_ROLES: string[] = [
   'Quay phim',
@@ -127,6 +142,7 @@ export const DEFAULT_CONTENT_PAYLOAD: PortfolioContentPayload = {
   branding: DEFAULT_BRANDING,
   projects: PORTFOLIO_PROJECTS,
   categories: DEFAULT_CATEGORIES,
+  categorySubtitles: DEFAULT_CATEGORY_SUBTITLES,
   roles: DEFAULT_ROLES,
   stills: DEFAULT_STILLS,
   gear: DEFAULT_GEAR,

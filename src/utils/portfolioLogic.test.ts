@@ -12,8 +12,16 @@ import {
   suggestAspectRatioForCategory,
   toggleClientOrAgency,
   validateInquiryForm,
+  normalizeCategoryKey,
+  getCategoryMeta,
+  capitalizeWords,
 } from './portfolioLogic';
-import { formatVideoDuration, normalizeDropboxUrl, parseVideoUrl } from './videoEmbed';
+import {
+  formatVideoDuration,
+  normalizeDropboxUrl,
+  parseVideoUrl,
+  detectAspectRatioFromVideoUrl,
+} from './videoEmbed';
 import type { PortfolioProject } from '../types/portfolio';
 
 const SAMPLE_PROJECTS: PortfolioProject[] = [
@@ -473,6 +481,29 @@ test('suggestAspectRatioForCategory returns 9:16 for vertical categories and 16:
   assert.equal(suggestAspectRatioForCategory('Documentary Film'), '16:9');
 });
 
+test('detectAspectRatioFromVideoUrl detects 9:16 for Shorts, TikTok, and Reels, and 16:9 for standard URLs', () => {
+  // YouTube Shorts
+  assert.equal(detectAspectRatioFromVideoUrl('https://www.youtube.com/shorts/5x-j_fXW7qU'), '9:16');
+  assert.equal(detectAspectRatioFromVideoUrl('https://youtube.com/shorts/abcdef12345?feature=share'), '9:16');
+
+  // TikTok
+  assert.equal(detectAspectRatioFromVideoUrl('https://www.tiktok.com/@vinhfilm/video/71234567890'), '9:16');
+
+  // Instagram Reels
+  assert.equal(detectAspectRatioFromVideoUrl('https://www.instagram.com/reel/C8xyz123/'), '9:16');
+  assert.equal(detectAspectRatioFromVideoUrl('https://instagram.com/reels/C8xyz123'), '9:16');
+
+  // Standard 16:9 YouTube & Vimeo
+  assert.equal(detectAspectRatioFromVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), '16:9');
+  assert.equal(detectAspectRatioFromVideoUrl('https://youtu.be/dQw4w9WgXcQ'), '16:9');
+  assert.equal(detectAspectRatioFromVideoUrl('https://vimeo.com/12345678'), '16:9');
+
+  // Direct MP4 without metadata returns null (to let loadedmetadata inspect real pixel dimensions)
+  assert.equal(detectAspectRatioFromVideoUrl('https://pub-r2.dev/video.mp4'), null);
+  assert.equal(detectAspectRatioFromVideoUrl(''), null);
+  assert.equal(detectAspectRatioFromVideoUrl(undefined), null);
+});
+
 test('isPillActive detects active pills and empty state', () => {
   // Empty text -> "Không hiển thị tên khách" or "Không hiển thị Brand (Khách lẻ / Đám cưới)" is active
   assert.equal(isPillActive('', 'Không hiển thị tên khách'), true);
@@ -525,4 +556,135 @@ test('toggleClientOrAgency handles intelligent combination and toggling', () => 
   // Toggling off the preset leaves the custom name
   const toggledPresetOff = toggleClientOrAgency(switchedPreset, 'Khách lẻ / Cá nhân');
   assert.equal(toggledPresetOff, 'Thanh Thúy & Minh Khang');
+});
+
+test('normalizeCategoryKey handles case, spaces, and diacritics', () => {
+  assert.equal(normalizeCategoryKey('TVC'), 'tvc');
+  assert.equal(normalizeCategoryKey('TVC & Commercial'), 'tvccommercial');
+  assert.equal(normalizeCategoryKey('  TVC & COMMERCIAL  '), 'tvccommercial');
+  assert.equal(normalizeCategoryKey('Social 9:16'), 'social916');
+  assert.equal(normalizeCategoryKey('SOCIAL'), 'social');
+  assert.equal(normalizeCategoryKey('Event Recap'), 'eventrecap');
+  assert.equal(normalizeCategoryKey('EVENT RECAP'), 'eventrecap');
+  assert.equal(normalizeCategoryKey('Wedding'), 'wedding');
+  assert.equal(normalizeCategoryKey('Cá Nhân'), 'canhan');
+  assert.equal(normalizeCategoryKey('CÁ NHÂN'), 'canhan');
+  assert.equal(normalizeCategoryKey('Personal Works'), 'personalworks');
+  assert.equal(normalizeCategoryKey('PERSONAL WORKS'), 'personalworks');
+});
+
+test('getCategoryMeta standardizes industry subtitles for all 5 production categories', () => {
+  // 1. TVC / TVC & Commercial
+  const tvcMeta = getCategoryMeta('TVC');
+  assert.equal(tvcMeta.title, 'TVC & Commercial');
+  assert.equal(tvcMeta.subtitle, 'Phim quảng cáo, Digital Commercial & Video thương hiệu');
+  assert.equal(tvcMeta.isVertical, false);
+
+  const tvcUpper = getCategoryMeta('TVC & COMMERCIAL');
+  assert.equal(tvcUpper.subtitle, 'Phim quảng cáo, Digital Commercial & Video thương hiệu');
+
+  // 2. SOCIAL / SOCIAL 9:16
+  const socialMeta = getCategoryMeta('Social 9:16');
+  assert.equal(socialMeta.subtitle, 'Short-form 9:16, TikTok, Reels & Performance Ads');
+  assert.equal(socialMeta.isVertical, true);
+
+  const socialPlain = getCategoryMeta('SOCIAL');
+  assert.equal(socialPlain.subtitle, 'Short-form 9:16, TikTok, Reels & Performance Ads');
+  assert.equal(socialPlain.isVertical, true);
+
+  // 3. EVENT RECAP
+  const eventMeta = getCategoryMeta('Event Recap');
+  assert.equal(eventMeta.subtitle, 'Corporate Highlight, Aftermovie & Sự kiện doanh nghiệp');
+  assert.equal(eventMeta.isVertical, false);
+
+  const eventUpper = getCategoryMeta('EVENT RECAP');
+  assert.equal(eventUpper.subtitle, 'Corporate Highlight, Aftermovie & Sự kiện doanh nghiệp');
+
+  // 4. WEDDING
+  const weddingMeta = getCategoryMeta('Wedding');
+  assert.equal(weddingMeta.subtitle, 'Wedding Highlight, Pre-wedding & Phóng sự cưới điện ảnh');
+  assert.equal(weddingMeta.isVertical, false);
+
+  const weddingUpper = getCategoryMeta('WEDDING');
+  assert.equal(weddingUpper.subtitle, 'Wedding Highlight, Pre-wedding & Phóng sự cưới điện ảnh');
+
+  // 5. CÁ NHÂN / PERSONAL / PERSONAL WORKS
+  const caNhanMeta = getCategoryMeta('Cá Nhân');
+  assert.equal(caNhanMeta.subtitle, 'Cinematography, Spec Ads & Dự án sáng tạo độc lập');
+  assert.equal(caNhanMeta.isVertical, false);
+
+  const caNhanUpper = getCategoryMeta('CÁ NHÂN');
+  assert.equal(caNhanUpper.subtitle, 'Cinematography, Spec Ads & Dự án sáng tạo độc lập');
+
+  const personalMeta = getCategoryMeta('PERSONAL WORKS');
+  assert.equal(personalMeta.subtitle, 'Cinematography, Spec Ads & Dự án sáng tạo độc lập');
+});
+
+test('getCategoryMeta supports custom subtitles and hiding subtitles when empty', () => {
+  // Custom override for TVC
+  const customTvc = getCategoryMeta('TVC', {
+    TVC: 'Chiến dịch thương hiệu lớn & Brand Story',
+  });
+  assert.equal(customTvc.subtitle, 'Chiến dịch thương hiệu lớn & Brand Story');
+
+  // Custom empty override to hide subtitle
+  const hiddenTvc = getCategoryMeta('TVC', {
+    TVC: '',
+  });
+  assert.equal(hiddenTvc.subtitle, '');
+
+  // Custom new category without subtitle returns empty string (never template string)
+  const newCat = getCategoryMeta('Documentary Film');
+  assert.equal(newCat.subtitle, '');
+  assert.notEqual(newCat.subtitle, 'Sản phẩm thuộc hạng mục Documentary Film');
+
+  // Custom new category with custom subtitle
+  const newCatWithSub = getCategoryMeta('Documentary Film', {
+    'Documentary Film': 'Phim tài liệu dài tập & Phỏng vấn chiều sâu',
+  });
+  assert.equal(newCatWithSub.subtitle, 'Phim tài liệu dài tập & Phỏng vấn chiều sâu');
+});
+
+test('capitalizeWords capitalizes the first letter of each word in Vietnamese and English', () => {
+  // Vietnamese titles with lowercase
+  assert.equal(
+    capitalizeWords('việt kiều về nước làm răng có lợi ích gì'),
+    'Việt Kiều Về Nước Làm Răng Có Lợi Ích Gì'
+  );
+  assert.equal(
+    capitalizeWords('phóng sự cưới điện ảnh — ngày chung đôi'),
+    'Phóng Sự Cưới Điện Ảnh — Ngày Chung Đôi'
+  );
+  assert.equal(
+    capitalizeWords('nụ cười việt nam (bản đầy đủ)'),
+    'Nụ Cười Việt Nam (Bản Đầy Đủ)'
+  );
+
+  // English & Commercial brands
+  assert.equal(
+    capitalizeWords('pepsi electric blue — summer launch'),
+    'Pepsi Electric Blue — Summer Launch'
+  );
+  assert.equal(
+    capitalizeWords('short-form video tiktok & reels ads'),
+    'Short-Form Video Tiktok & Reels ADS'
+  );
+  assert.equal(
+    capitalizeWords('chiến dịch TikTok creator'),
+    'Chiến Dịch TikTok Creator'
+  );
+
+  // Preserves existing industry acronyms
+  assert.equal(
+    capitalizeWords('TVC 30s vinfast vf9 - công nghệ dẫn lối'),
+    'TVC 30s Vinfast Vf9 - Công Nghệ Dẫn Lối'
+  );
+  assert.equal(
+    capitalizeWords('mv ca nhạc 4K hdr (dop trần quốc vinh)'),
+    'MV Ca Nhạc 4K Hdr (DOP Trần Quốc Vinh)'
+  );
+
+  // Edge cases
+  assert.equal(capitalizeWords(''), '');
+  assert.equal(capitalizeWords('   '), '   ');
 });

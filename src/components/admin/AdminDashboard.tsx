@@ -49,6 +49,7 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
     updateExperience,
     updateEducation,
     updateCategories,
+    updateCategorySubtitles,
     updateRoles,
     updateBranding,
     markUnsaved,
@@ -298,12 +299,14 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
             <ProjectsTab
               projects={content.projects}
               categories={content.categories}
+              categorySubtitles={content.categorySubtitles}
               roles={content.roles}
               onAddProject={addProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
               onReorderProjects={updateProjects}
               onUpdateCategories={updateCategories}
+              onUpdateCategorySubtitles={updateCategorySubtitles}
               onUpdateRoles={updateRoles}
               onMarkUnsaved={markUnsaved}
             />

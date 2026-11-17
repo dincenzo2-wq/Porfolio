@@ -127,6 +127,7 @@ export interface SiteProfileData {
   agencySubtitle: string;
   showBrandMarquee?: boolean;
   collaboratorsText?: string;
+  brandLogos?: string[];
   footerTitle: string;
   footerDescription: string;
   showreelEnabled?: boolean;
@@ -157,6 +158,7 @@ export interface PortfolioContentPayload {
   branding?: SiteBrandingData;
   projects: PortfolioProject[];
   categories?: string[];
+  categorySubtitles?: Record<string, string>;
   roles?: string[];
   stills: StillsItem[];
   gear: GearSpecSheetData;

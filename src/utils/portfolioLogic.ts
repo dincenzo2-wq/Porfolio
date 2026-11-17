@@ -342,3 +342,177 @@ export function suggestAspectRatioForCategory(category: string): AspectRatioType
   }
   return '16:9';
 }
+
+export interface CategoryMeta {
+  title: string;
+  subtitle: string;
+  isVertical: boolean;
+}
+
+/**
+ * Chuẩn hóa tên danh mục để so khớp không phân biệt chữ hoa/thường, dấu cách và dấu tiếng Việt:
+ * Ví dụ: 'TVC & Commercial' -> 'tvccommercial', 'Social 9:16' -> 'social916', 'Cá Nhân' -> 'canhan'
+ */
+export function normalizeCategoryKey(name: string): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+/**
+ * Bản đồ thuật ngữ chuyên ngành chuẩn hóa cho các danh mục sản xuất video:
+ * 01. TVC & Commercial: Phim quảng cáo, Digital Commercial & Video thương hiệu
+ * 02. Social 9:16: Short-form 9:16, TikTok, Reels & Performance Ads
+ * 03. Event Recap: Corporate Highlight, Aftermovie & Sự kiện doanh nghiệp
+ * 04. Wedding: Wedding Highlight, Pre-wedding & Phóng sự cưới điện ảnh
+ * 05. Cá Nhân / Personal Works: Cinematography, Spec Ads & Dự án sáng tạo độc lập
+ */
+export const KNOWN_CATEGORY_METADATA_MAP: Record<string, CategoryMeta> = {
+  tvc: {
+    title: 'TVC & Commercial',
+    subtitle: 'Phim quảng cáo, Digital Commercial & Video thương hiệu',
+    isVertical: false,
+  },
+  tvccommercial: {
+    title: 'TVC & Commercial',
+    subtitle: 'Phim quảng cáo, Digital Commercial & Video thương hiệu',
+    isVertical: false,
+  },
+  social: {
+    title: 'Social 9:16',
+    subtitle: 'Short-form 9:16, TikTok, Reels & Performance Ads',
+    isVertical: true,
+  },
+  social916: {
+    title: 'Social 9:16',
+    subtitle: 'Short-form 9:16, TikTok, Reels & Performance Ads',
+    isVertical: true,
+  },
+  eventrecap: {
+    title: 'Event Recap',
+    subtitle: 'Corporate Highlight, Aftermovie & Sự kiện doanh nghiệp',
+    isVertical: false,
+  },
+  wedding: {
+    title: 'Wedding',
+    subtitle: 'Wedding Highlight, Pre-wedding & Phóng sự cưới điện ảnh',
+    isVertical: false,
+  },
+  canhan: {
+    title: 'Cá Nhân',
+    subtitle: 'Cinematography, Spec Ads & Dự án sáng tạo độc lập',
+    isVertical: false,
+  },
+  personal: {
+    title: 'Personal Works',
+    subtitle: 'Cinematography, Spec Ads & Dự án sáng tạo độc lập',
+    isVertical: false,
+  },
+  personalworks: {
+    title: 'Personal Works',
+    subtitle: 'Cinematography, Spec Ads & Dự án sáng tạo độc lập',
+    isVertical: false,
+  },
+  motion: {
+    title: 'Motion Graphics',
+    subtitle: 'Kinetic Typography & Visual Effects',
+    isVertical: false,
+  },
+};
+
+/**
+ * Lấy thông tin hiển thị (title, subtitle, isVertical) cho từng hạng mục:
+ * - So khớp không phân biệt hoa/thường và dấu cách.
+ * - Ưu tiên mô tả phụ tùy chỉnh từ admin (customSubtitles).
+ * - Nếu không có customSubtitles, lấy phụ đề chuẩn hóa chuyên ngành tương ứng.
+ * - KHÔNG BAO GIỜ sinh chuỗi rập khuôn "— Sản phẩm thuộc hạng mục...".
+ * - Nếu không có mô tả (hoặc cố tình để trống), trả về subtitle rỗng "" để ẩn dấu '—'.
+ */
+export function getCategoryMeta(
+  catName: string,
+  customSubtitles?: Record<string, string>
+): CategoryMeta {
+  const normKey = normalizeCategoryKey(catName);
+
+  // 1. Kiểm tra customSubtitles: tìm theo exact key hoặc normalized key
+  let userSubtitle: string | undefined = undefined;
+  if (customSubtitles && typeof customSubtitles === 'object') {
+    if (customSubtitles[catName] !== undefined) {
+      userSubtitle = customSubtitles[catName];
+    } else {
+      for (const [k, v] of Object.entries(customSubtitles)) {
+        if (normalizeCategoryKey(k) === normKey) {
+          userSubtitle = v;
+          break;
+        }
+      }
+    }
+  }
+
+  const defaultMeta = KNOWN_CATEGORY_METADATA_MAP[normKey];
+
+  const isVertical = defaultMeta
+    ? defaultMeta.isVertical
+    : (catName.includes('9:16') ||
+       catName.toLowerCase().includes('dọc') ||
+       catName.toLowerCase().includes('tiktok') ||
+       catName.toLowerCase().includes('reel'));
+
+  const title = defaultMeta?.title || catName;
+
+  // Subtitle:
+  // - Nếu userSubtitle được cung cấp (kể cả rỗng ""), ưu tiên dùng userSubtitle
+  // - Nếu không có userSubtitle, dùng defaultMeta?.subtitle (nếu có)
+  // - Nếu không có cả hai, trả về rỗng "" (tuyệt đối không sinh câu mẫu)
+  let subtitle = '';
+  if (userSubtitle !== undefined) {
+    subtitle = userSubtitle.trim();
+  } else if (defaultMeta?.subtitle) {
+    subtitle = defaultMeta.subtitle.trim();
+  }
+
+  return {
+    title,
+    subtitle,
+    isVertical,
+  };
+}
+
+/**
+ * Tự động viết hoa chữ cái đầu của từng từ (Title Case / Capitalize Each Word),
+ * hỗ trợ toàn diện tiếng Việt có dấu và giữ nguyên các từ viết tắt chuyên ngành (TVC, MV, 4K, VFX, DOP...).
+ *
+ * Ví dụ:
+ * "việt kiều về nước làm răng có lợi ích gì" -> "Việt Kiều Về Nước Làm Răng Có Lợi Ích Gì"
+ * "pepsi electric blue — summer launch" -> "Pepsi Electric Blue — Summer Launch"
+ * "TVC 30s - nụ cười việt" -> "TVC 30s - Nụ Cười Việt"
+ */
+export function capitalizeWords(str: string): string {
+  if (!str || typeof str !== 'string') return '';
+
+  // Danh sách các từ viết tắt chuyên ngành sản xuất video luôn giữ nguyên viết hoa
+  const PRESERVED_ACRONYMS = new Set([
+    'TVC', 'MV', 'VFX', 'DOP', 'CGI', '4K', '8K', 'HD', 'FHD', 'KOL', 'KOC', 'AI',
+    'DJI', 'SONY', 'RED', 'ARRI', 'BMPCC', 'BMD', 'LED', 'RGB', 'B-ROLL', 'A-ROLL',
+    'PR', 'CEO', 'CTO', 'ADS', 'BTS'
+  ]);
+
+  return str.replace(/[\p{L}\p{N}]+/gu, (word) => {
+    const upperWord = word.toUpperCase();
+    if (PRESERVED_ACRONYMS.has(upperWord)) {
+      return upperWord;
+    }
+    // Nếu từ ban đầu viết hoa toàn bộ và có độ dài từ 2-4 ký tự (dạng viết tắt), giữ nguyên
+    if (word.length >= 2 && word.length <= 4 && word === word.toUpperCase() && !/[0-9]/.test(word)) {
+      return word;
+    }
+    // Viết hoa chữ cái đầu, giữ nguyên phần còn lại của từ
+    const firstChar = word.charAt(0).toUpperCase();
+    const rest = word.slice(1);
+    return firstChar + rest;
+  });
+}

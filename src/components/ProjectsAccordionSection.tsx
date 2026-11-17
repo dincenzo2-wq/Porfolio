@@ -6,7 +6,7 @@ import { RevealGroup, RevealItem } from './ScrollReveal';
 import { PORTFOLIO_PROJECTS } from '../data/portfolioData';
 import type { PortfolioProject, ProjectCategory } from '../types/portfolio';
 import { parseVideoUrl } from '../utils/videoEmbed';
-import { formatDeliverableRoles } from '../utils/portfolioLogic';
+import { formatDeliverableRoles, getCategoryMeta } from '../utils/portfolioLogic';
 
 interface ProjectsAccordionSectionProps {
   onSelectProject: (project: PortfolioProject) => void;
@@ -14,6 +14,7 @@ interface ProjectsAccordionSectionProps {
   onToggleCategory?: (categoryId: string) => void;
   projects?: PortfolioProject[];
   categories?: string[];
+  categorySubtitles?: Record<string, string>;
   subtitle?: string;
 }
 
@@ -25,29 +26,6 @@ interface CategoryGroup {
   categoryFilter: string;
   isVertical: boolean;
 }
-
-const KNOWN_CATEGORY_METADATA: Record<string, { title: string; subtitle: string; isVertical: boolean }> = {
-  'TVC': {
-    title: 'TVC & Commercial',
-    subtitle: 'Phim quảng cáo & Chiến dịch thương hiệu',
-    isVertical: false,
-  },
-  'Social 9:16': {
-    title: 'Social 9:16',
-    subtitle: 'Reels, TikTok & Short-form dọc',
-    isVertical: true,
-  },
-  'Motion': {
-    title: 'Motion Graphics',
-    subtitle: 'Kinetic Typography & Visual Effects',
-    isVertical: false,
-  },
-  'Event Recap': {
-    title: 'Event Recap',
-    subtitle: 'Aftermovie & Sự kiện trực tiếp',
-    isVertical: false,
-  },
-};
 
 /**
  * Chia lưới thông minh theo số lượng dự án:
@@ -81,6 +59,7 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
+  const isCardVertical = isVertical || project.aspectRatio === '9:16';
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const parsedVideo = parseVideoUrl(project.videoUrl);
@@ -121,7 +100,7 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
       {/* 1. Pure Footage Frame: 100% clean, zero gradient, zero text superimposed */}
       <div
         className={`relative w-full ${
-          isVertical ? 'aspect-[9/16]' : 'aspect-video'
+          isCardVertical ? 'aspect-[9/16]' : 'aspect-video'
         } rounded-xl overflow-hidden bg-black/5 border border-black/8 shadow-2xs group-hover:border-black/25 group-hover:shadow-md transition-all duration-300`}
       >
         <img
@@ -177,36 +156,25 @@ export function ProjectsAccordionSection({
   onToggleCategory: controlledToggleCategory,
   projects: customProjects,
   categories: customCategories,
+  categorySubtitles,
   subtitle,
 }: ProjectsAccordionSectionProps) {
   const activeCategories =
     customCategories && customCategories.length > 0
       ? customCategories
-      : ['TVC', 'Social 9:16', 'Motion', 'Event Recap'];
+      : ['TVC', 'Social 9:16', 'Event Recap', 'Wedding', 'Cá Nhân'];
 
   const categoryGroups: CategoryGroup[] = activeCategories.map((cat, idx) => {
-    const meta = KNOWN_CATEGORY_METADATA[cat];
-    const isVertical = meta
-      ? meta.isVertical
-      : (cat.includes('9:16') || cat.toLowerCase().includes('dọc') || cat.toLowerCase().includes('tiktok') || cat.toLowerCase().includes('reel'));
-    const defaultSlug =
-      cat === 'TVC'
-        ? 'tvc-commercial'
-        : cat === 'Social 9:16'
-        ? 'social-916'
-        : cat === 'Motion'
-        ? 'motion-graphics'
-        : cat === 'Event Recap'
-        ? 'event-recap'
-        : slugifyCategory(cat);
+    const meta = getCategoryMeta(cat, categorySubtitles);
+    const defaultSlug = slugifyCategory(cat);
 
     return {
       id: defaultSlug,
       index: String(idx + 1).padStart(2, '0'),
-      title: meta?.title || cat,
-      subtitle: meta?.subtitle || `Sản phẩm thuộc hạng mục ${cat}`,
+      title: meta.title || cat,
+      subtitle: meta.subtitle,
       categoryFilter: cat,
-      isVertical,
+      isVertical: meta.isVertical,
     };
   });
 
@@ -259,7 +227,8 @@ export function ProjectsAccordionSection({
               (p) => p.category === group.categoryFilter && !p.hidden
             );
             const isOpen = !!openCategories[group.id];
-            const dynamicGridClass = getDynamicGridClass(group.isVertical, projectsInGroup.length);
+            const isGroupVertical = group.isVertical || projectsInGroup.some((p) => p.aspectRatio === '9:16');
+            const dynamicGridClass = getDynamicGridClass(isGroupVertical, projectsInGroup.length);
 
             return (
               <RevealItem key={group.id} index={groupIdx} className="transition-colors">
@@ -282,10 +251,12 @@ export function ProjectsAccordionSection({
                       {group.title}
                     </h3>
 
-                    {/* Subtitle / Description (Hidden on mobile) */}
-                    <span className="hidden lg:inline-block text-sm sm:text-base text-[#555555] font-normal truncate">
-                      — {group.subtitle}
-                    </span>
+                    {/* Subtitle / Description (Hidden on mobile; only show when subtitle is not empty) */}
+                    {group.subtitle?.trim() && (
+                      <span className="hidden lg:inline-block text-sm sm:text-base text-[#555555] font-normal truncate">
+                        — {group.subtitle.trim()}
+                      </span>
+                    )}
                   </div>
 
                   {/* Right: Count Badge & +/- Round Button */}

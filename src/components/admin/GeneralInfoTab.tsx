@@ -20,10 +20,14 @@ import {
   Trash2,
   Plus,
   X,
+  ArrowLeft,
+  ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import type { SiteProfileData } from '../../types/portfolio';
 import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
 import { compressImageToWebP } from '../../utils/imageCompression';
+import { convertLogoToWhiteWebP } from '../../utils/logoProcessing';
 import { DEFAULT_BRAND_MARQUEE } from '../BrandMarquee';
 
 interface GeneralInfoTabProps {
@@ -55,6 +59,93 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const [posterCaptureError, setPosterCaptureError] = useState<string | null>(null);
   const posterFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Brand Logos & Marquee State
+  const brandLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const [processingLogos, setProcessingLogos] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState<string | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+
+  const brandLogos: string[] = profile.brandLogos || [];
+
+  const handleUploadBrandLogos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      setProcessingLogos(true);
+      setLogoUploadError(null);
+      setLogoUploadProgress(`Bắt đầu xử lý 0/${files.length} logo...`);
+
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setLogoUploadProgress(`Đang chuyển sang logo trắng & xén viền (${i + 1}/${files.length}): ${file.name}...`);
+
+        // Process through canvas pipeline: white recoloring + negative space punchout + auto-trim
+        const processed = await convertLogoToWhiteWebP(file);
+
+        // Upload to Cloudflare R2
+        let finalUrl = processed.dataUrl;
+        const formData = new FormData();
+        formData.append('file', processed.file);
+
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.success && data?.url) {
+              finalUrl = data.url;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('[Brand Logo Upload] Failed to upload to R2, using WebP data URL:', uploadErr);
+        }
+
+        uploadedUrls.push(finalUrl);
+      }
+
+      const updated = [...(profile.brandLogos || []), ...uploadedUrls];
+      onChange({ brandLogos: updated });
+      setLogoUploadProgress(`Đã xử lý và tải lên thành công ${files.length} logo!`);
+      setTimeout(() => setLogoUploadProgress(null), 4000);
+    } catch (err: unknown) {
+      console.error('Failed to process/upload brand logos:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setLogoUploadError(`Lỗi xử lý logo: ${errMsg}`);
+    } finally {
+      setProcessingLogos(false);
+      if (brandLogoFileInputRef.current) {
+        brandLogoFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveBrandLogo = (indexToRemove: number) => {
+    const current = profile.brandLogos || [];
+    const nextList = current.filter((_, idx) => idx !== indexToRemove);
+    onChange({ brandLogos: nextList });
+  };
+
+  const handleMoveBrandLogo = (index: number, direction: 'left' | 'right') => {
+    const current = [...(profile.brandLogos || [])];
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= current.length) return;
+    const temp = current[index];
+    current[index] = current[targetIndex];
+    current[targetIndex] = temp;
+    onChange({ brandLogos: current });
+  };
+
+  const handleClearAllBrandLogos = () => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh logo để quay về dải băng chữ?')) {
+      onChange({ brandLogos: [] });
+    }
+  };
+
   // Marquee Brands List Parsing & Management (Separate from individual project clients)
   const [newMarqueeBrand, setNewMarqueeBrand] = useState('');
 
@@ -62,12 +153,12 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     profile.collaboratorsText && profile.collaboratorsText.trim()
       ? profile.collaboratorsText
           .split(/[·•,\n]/)
-          .map((s) => s.trim())
+          .map((s) => s.trim().replace(/LOUTUS/i, 'LOTUS'))
           .filter(Boolean)
-      : DEFAULT_BRAND_MARQUEE;
+      : DEFAULT_BRAND_MARQUEE.map((b) => b.replace(/LOUTUS/i, 'LOTUS'));
 
   const handleAddMarqueeBrand = () => {
-    const trimmed = newMarqueeBrand.trim();
+    const trimmed = newMarqueeBrand.trim().replace(/LOUTUS/i, 'LOTUS');
     if (!trimmed) return;
     if (marqueeBrands.some((b) => b.toLowerCase() === trimmed.toLowerCase())) {
       setNewMarqueeBrand('');
@@ -84,7 +175,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   };
 
   const handleResetMarqueeBrands = () => {
-    onChange({ collaboratorsText: DEFAULT_BRAND_MARQUEE.join(' · ') });
+    onChange({ collaboratorsText: DEFAULT_BRAND_MARQUEE.map((b) => b.replace(/LOUTUS/i, 'LOTUS')).join(' · ') });
   };
 
   const handlePosterFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1101,7 +1192,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
               </h2>
             </div>
             <p className="text-xs text-black/60 mt-1 max-w-2xl leading-relaxed">
-              Dải băng chữ chạy ngang trang web giới thiệu các đối tác, thương hiệu uy tín bạn từng cộng tác. Dải băng này hoạt động hoàn toàn độc lập với thương hiệu của từng dự án riêng lẻ.
+              Dải băng chạy ngang vô tận giới thiệu các đối tác, thương hiệu uy tín bạn từng cộng tác. Tải lên trực tiếp nhiều file ảnh Logo (.png) để tự động chuyển sang màu trắng tinh, khoét âm bản và ngăn cách bằng dấu hoa thị xanh (*).
             </p>
           </div>
 
@@ -1121,12 +1212,210 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
 
         {/* Content of Marquee Section */}
         {profile.showBrandMarquee !== false ? (
-          <div className="space-y-4">
-            {/* Input thêm thương hiệu mới vào dải băng */}
-            <div className="bg-[#F9F9FB] p-4 rounded-xl border border-black/[0.07] space-y-2">
-              <label className="block text-xs font-semibold text-[#111111]">
-                Thêm thương hiệu / Agency vào dải băng
-              </label>
+          <div className="space-y-6">
+            {/* Hidden Multi-file input for Logo PNGs */}
+            <input
+              ref={brandLogoFileInputRef}
+              type="file"
+              multiple
+              accept="image/png,image/webp,image/jpeg,image/svg+xml"
+              className="hidden"
+              onChange={handleUploadBrandLogos}
+            />
+
+            {/* PHẦN 1: TẢI TRỰC TIẾP NHIỀU FILE LOGO .PNG & XỬ LÝ CANVAS TRẮNG */}
+            <div className="bg-[#F9F9FB] p-5 rounded-2xl border border-black/[0.07] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
+                    <Image className="w-4 h-4 text-[#3B82F6]" />
+                    <span>Quản lý Logo PNG màu trắng ({brandLogos.length})</span>
+                  </h3>
+                  <p className="text-[11px] text-black/60 mt-0.5">
+                    Tải trực tiếp nhiều file .png lên Cloudflare R2 (không cần gõ tên). Hệ thống dùng Canvas tự động đục thủng chi tiết âm bản bên trong, đổi toàn bộ sang trắng tinh (#FFFFFF) và xén sát viền thừa.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={processingLogos}
+                    onClick={() => brandLogoFileInputRef.current?.click()}
+                    className="px-4 py-2 bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-98"
+                  >
+                    {processingLogos ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Tải nhiều Logo (.png)</span>
+                      </>
+                    )}
+                  </button>
+
+                  {brandLogos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllBrandLogos}
+                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                      title="Xóa tất cả logo để quay về dải băng chữ"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Xóa tất cả logo</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Status notifications */}
+              {processingLogos && (
+                <div className="flex items-center gap-2.5 p-3.5 bg-blue-50 border border-blue-200/80 rounded-xl text-xs text-blue-900">
+                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+                  <span className="font-medium">{logoUploadProgress}</span>
+                </div>
+              )}
+
+              {logoUploadError && (
+                <div className="flex items-center gap-2.5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span className="font-medium">{logoUploadError}</span>
+                </div>
+              )}
+
+              {!processingLogos && logoUploadProgress && (
+                <div className="flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">{logoUploadProgress}</span>
+                </div>
+              )}
+
+              {/* Gallery of Uploaded White Logos */}
+              {brandLogos.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-[#0B0B0D] rounded-xl border border-white/10">
+                    <div className="flex items-center justify-between mb-3 text-[11px] text-white/60">
+                      <span className="font-medium">Xem trước trên nền đen thực tế:</span>
+                      <span>Dùng mũi tên để đổi vị trí, dấu X để xóa</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      {brandLogos.map((url, idx) => (
+                        <div
+                          key={`${url}-${idx}`}
+                          className="relative group bg-[#16161A] hover:bg-[#1E1E24] rounded-lg border border-white/10 hover:border-white/20 p-2.5 flex flex-col items-center justify-between w-32 h-24 shrink-0 transition-all shadow-xs"
+                        >
+                          <div className="flex-1 w-full flex items-center justify-center p-1">
+                            <img
+                              src={url}
+                              alt={`Logo ${idx + 1}`}
+                              className="max-h-10 w-auto max-w-[100px] object-contain drop-shadow select-none"
+                            />
+                          </div>
+
+                          <div className="w-full flex items-center justify-between pt-1 border-t border-white/10 text-[10px] text-white/50">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveBrandLogo(idx, 'left')}
+                                className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                                title="Di chuyển sang trái"
+                              >
+                                <ArrowLeft className="w-3 h-3" />
+                              </button>
+                              <span className="font-mono text-[9px] text-white/40">#{idx + 1}</span>
+                              <button
+                                type="button"
+                                disabled={idx === brandLogos.length - 1}
+                                onClick={() => handleMoveBrandLogo(idx, 'right')}
+                                className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                                title="Di chuyển sang phải"
+                              >
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBrandLogo(idx)}
+                              className="p-1 rounded hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 cursor-pointer transition-colors"
+                              title="Xóa logo này"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Marquee Simulation Preview */}
+                  <div className="p-3 bg-[#0B0B0D] rounded-xl border border-white/10 overflow-hidden">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 font-mono">
+                      Mô phỏng hiển thị trên trang chủ:
+                    </p>
+                    <div className="flex items-center overflow-x-auto py-2 scrollbar-none gap-0">
+                      {brandLogos.map((url, idx) => (
+                        <div key={`sim-${url}-${idx}`} className="flex items-center shrink-0">
+                          <img
+                            src={url}
+                            alt="Logo preview"
+                            className="h-8 w-auto max-w-[120px] object-contain opacity-90"
+                          />
+                          <span className="flex items-center mx-6 text-[#3B82F6] text-lg font-bold leading-none select-none">
+                            *
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 rounded-xl border border-dashed border-black/15 bg-white text-center space-y-2">
+                  <Image className="w-8 h-8 text-black/30 mx-auto" />
+                  <p className="text-xs font-semibold text-[#111111]">
+                    Chưa có file Logo .PNG nào
+                  </p>
+                  <p className="text-[11px] text-black/50 max-w-md mx-auto">
+                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để chọn đồng thời nhiều file logo thương hiệu. Trang chủ hiện đang tạm hiển thị dải chữ dự phòng bên dưới.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* PHẦN 2: DẢI CHỮ DỰ PHÒNG (FALLBACK KHI CHƯA CÓ LOGO PNG) */}
+            <div className="space-y-4 pt-2 border-t border-black/[0.07]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-[#111111] flex items-center gap-1.5">
+                    <span>Dải băng chữ dự phòng</span>
+                    {brandLogos.length > 0 && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        Đang tạm ẩn trên trang chủ (ưu tiên Logo PNG)
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-[11px] text-black/50 mt-0.5">
+                    {brandLogos.length > 0
+                      ? 'Dải chữ này sẽ tự động hiển thị lại nếu bạn xóa toàn bộ các logo PNG ở trên.'
+                      : 'Đang hiển thị trên trang chủ dưới dạng chữ in hoa cách nhau bởi dấu *.'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleResetMarqueeBrands}
+                  className="text-[11px] font-semibold text-black/50 hover:text-[#111111] transition-colors cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Khôi phục dải chữ gốc</span>
+                </button>
+              </div>
+
+              {/* Input thêm thương hiệu mới vào dải băng chữ */}
               <div className="flex items-center gap-2 max-w-xl">
                 <input
                   type="text"
@@ -1147,31 +1436,15 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   className="px-4 py-2 bg-[#111111] hover:bg-black/85 text-white rounded-lg text-xs font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-98 shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm vào dải băng</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Danh sách thẻ thương hiệu đang chạy */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#111111]">
-                  Các thương hiệu đang hiển thị trên dải băng ({marqueeBrands.length})
-                </span>
-                <button
-                  type="button"
-                  onClick={handleResetMarqueeBrands}
-                  className="text-[11px] font-semibold text-black/50 hover:text-[#111111] transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Khôi phục mặc định</span>
+                  <span>Thêm chữ</span>
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 p-3 bg-[#F9F9FB] rounded-xl border border-black/[0.07] min-h-[56px]">
+              {/* Danh sách thẻ thương hiệu chữ */}
+              <div className="flex flex-wrap items-center gap-2 p-3 bg-[#F9F9FB] rounded-xl border border-black/[0.07] min-h-[50px]">
                 {marqueeBrands.length === 0 ? (
                   <p className="text-xs text-black/45 italic py-1">
-                    Chưa có thương hiệu nào. Bấm &quot;Khôi phục mặc định&quot; hoặc nhập thương hiệu mới ở trên.
+                    Chưa có thương hiệu nào. Bấm &quot;Khôi phục dải chữ gốc&quot; hoặc nhập thương hiệu mới ở trên.
                   </p>
                 ) : (
                   marqueeBrands.map((brand) => (

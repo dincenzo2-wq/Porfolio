@@ -42,7 +42,8 @@ interface PortfolioDataContextValue {
   updateExperience: (experience: ExperienceItem[]) => void;
   updateEducation: (education: EducationItem[]) => void;
   updateTools: (tools: SoftwareToolType[]) => void;
-  updateCategories: (categories: string[]) => void;
+  updateCategories: (categories: string[], categorySubtitles?: Record<string, string>) => void;
+  updateCategorySubtitles: (categorySubtitles: Record<string, string>) => void;
   updateRoles: (roles: string[]) => void;
   updateBranding: (branding: Partial<SiteBrandingData>) => void;
   markUnsaved: () => void;
@@ -68,6 +69,8 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
               parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0
                 ? parsed.categories
                 : DEFAULT_CONTENT_PAYLOAD.categories,
+            categorySubtitles:
+              parsed.categorySubtitles || DEFAULT_CONTENT_PAYLOAD.categorySubtitles,
             roles:
               parsed.roles && Array.isArray(parsed.roles) && parsed.roles.length > 0
                 ? parsed.roles
@@ -139,6 +142,8 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
                 remoteData.categories && Array.isArray(remoteData.categories) && remoteData.categories.length > 0
                   ? remoteData.categories
                   : prev.categories,
+              categorySubtitles:
+                remoteData.categorySubtitles || prev.categorySubtitles || DEFAULT_CONTENT_PAYLOAD.categorySubtitles,
               roles:
                 remoteData.roles && Array.isArray(remoteData.roles) && remoteData.roles.length > 0
                   ? remoteData.roles
@@ -310,11 +315,25 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
     setHasUnsavedChanges(true);
   }, []);
 
-  // Update categories list
-  const updateCategories = useCallback((categories: string[]) => {
+  // Update categories list (and optionally categorySubtitles)
+  const updateCategories = useCallback(
+    (categories: string[], categorySubtitles?: Record<string, string>) => {
+      setContent((prev) => ({
+        ...prev,
+        categories,
+        ...(categorySubtitles !== undefined ? { categorySubtitles } : {}),
+      }));
+      setSaveStatus('idle');
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  // Update category subtitles map
+  const updateCategorySubtitles = useCallback((categorySubtitles: Record<string, string>) => {
     setContent((prev) => ({
       ...prev,
-      categories,
+      categorySubtitles,
     }));
     setSaveStatus('idle');
     setHasUnsavedChanges(true);
@@ -461,6 +480,7 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
         updateEducation,
         updateTools,
         updateCategories,
+        updateCategorySubtitles,
         updateRoles,
         updateBranding,
         markUnsaved,

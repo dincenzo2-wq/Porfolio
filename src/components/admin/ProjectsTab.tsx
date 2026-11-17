@@ -17,24 +17,33 @@ import {
 } from 'lucide-react';
 import type { AspectRatioType, PortfolioProject } from '../../types/portfolio';
 import { compressImageToWebP, formatBytes, type CompressionResult } from '../../utils/imageCompression';
-import { parseVideoUrl, formatVideoDuration, normalizeDropboxUrl } from '../../utils/videoEmbed';
+import {
+  parseVideoUrl,
+  formatVideoDuration,
+  normalizeDropboxUrl,
+  detectAspectRatioFromVideoUrl,
+} from '../../utils/videoEmbed';
 import {
   parseDeliverableRoles,
   formatDeliverableRoles,
   suggestAspectRatioForCategory,
   DEFAULT_SUGGESTED_BRANDS,
   toggleClientOrAgency,
+  getCategoryMeta,
+  capitalizeWords,
 } from '../../utils/portfolioLogic';
 
 interface ProjectsTabProps {
   projects: PortfolioProject[];
   categories?: string[];
+  categorySubtitles?: Record<string, string>;
   roles?: string[];
   onAddProject: (project: PortfolioProject) => void;
   onUpdateProject: (id: string, partial: Partial<PortfolioProject>) => void;
   onDeleteProject: (id: string) => void;
   onReorderProjects?: (projects: PortfolioProject[]) => void;
-  onUpdateCategories?: (categories: string[]) => void;
+  onUpdateCategories?: (categories: string[], categorySubtitles?: Record<string, string>) => void;
+  onUpdateCategorySubtitles?: (categorySubtitles: Record<string, string>) => void;
   onUpdateRoles?: (roles: string[]) => void;
   onMarkUnsaved?: () => void;
 }
@@ -42,8 +51,9 @@ interface ProjectsTabProps {
 const DEFAULT_CATEGORIES: string[] = [
   'TVC',
   'Social 9:16',
-  'Motion',
   'Event Recap',
+  'Wedding',
+  'Cá Nhân',
 ];
 
 const DEFAULT_SUGGESTED_ROLES: string[] = [
@@ -59,11 +69,13 @@ export function ProjectsTab({
   projects,
   categories: inputCategories = DEFAULT_CATEGORIES,
   roles: inputRoles = DEFAULT_SUGGESTED_ROLES,
+  categorySubtitles,
   onAddProject,
   onUpdateProject,
   onDeleteProject,
   onReorderProjects,
   onUpdateCategories,
+  onUpdateCategorySubtitles,
   onUpdateRoles,
   onMarkUnsaved,
 }: ProjectsTabProps) {
@@ -86,7 +98,8 @@ export function ProjectsTab({
   // Category Management Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
-  const [renamingCategory, setRenamingCategory] = useState<{ oldName: string; newName: string } | null>(null);
+  const [newCategorySubtitleInput, setNewCategorySubtitleInput] = useState('');
+  const [renamingCategory, setRenamingCategory] = useState<{ oldName: string; newName: string; subtitle?: string } | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<{ name: string; projectCount: number } | null>(null);
   const [categoryActionError, setCategoryActionError] = useState<string | null>(null);
   const [categoryActionSuccess, setCategoryActionSuccess] = useState<string | null>(null);
@@ -155,6 +168,7 @@ export function ProjectsTab({
   // Add new category
   const handleAddCategory = () => {
     const trimmed = newCategoryInput.trim();
+    const trimmedSubtitle = newCategorySubtitleInput.trim();
     if (!trimmed) {
       setCategoryActionError('Vui lòng nhập tên danh mục.');
       return;
@@ -164,12 +178,40 @@ export function ProjectsTab({
       return;
     }
     const updated = [...categories, trimmed];
+    const updatedSubtitles = { ...(categorySubtitles || {}) };
+    if (trimmedSubtitle) {
+      updatedSubtitles[trimmed] = trimmedSubtitle;
+    }
     if (onUpdateCategories) {
-      onUpdateCategories(updated);
+      onUpdateCategories(updated, updatedSubtitles);
+    }
+    if (onUpdateCategorySubtitles) {
+      onUpdateCategorySubtitles(updatedSubtitles);
+    }
+    if (onMarkUnsaved) {
+      onMarkUnsaved();
     }
     setNewCategoryInput('');
+    setNewCategorySubtitleInput('');
     setCategoryActionError(null);
     setCategoryActionSuccess(`Đã thêm danh mục "${trimmed}" thành công!`);
+  };
+
+  // Update subtitle for a category
+  const handleUpdateSubtitle = (cat: string, newSubtitle: string) => {
+    const updatedSubtitles = {
+      ...(categorySubtitles || {}),
+      [cat]: newSubtitle,
+    };
+    if (onUpdateCategories) {
+      onUpdateCategories(categories, updatedSubtitles);
+    }
+    if (onUpdateCategorySubtitles) {
+      onUpdateCategorySubtitles(updatedSubtitles);
+    }
+    if (onMarkUnsaved) {
+      onMarkUnsaved();
+    }
   };
 
   // Rename category & automatically migrate all associated projects
@@ -184,10 +226,18 @@ export function ProjectsTab({
       return;
     }
 
-    // 1. Update categories array
+    // 1. Update categories array & migrate subtitle
     const updatedCategories = categories.map((c) => (c === oldName ? trimmed : c));
+    const updatedSubtitles = { ...(categorySubtitles || {}) };
+    if (updatedSubtitles[oldName] !== undefined) {
+      updatedSubtitles[trimmed] = updatedSubtitles[oldName];
+      delete updatedSubtitles[oldName];
+    }
     if (onUpdateCategories) {
-      onUpdateCategories(updatedCategories);
+      onUpdateCategories(updatedCategories, updatedSubtitles);
+    }
+    if (onUpdateCategorySubtitles) {
+      onUpdateCategorySubtitles(updatedSubtitles);
     }
 
     // 2. Automatically migrate all projects tagged with oldName to trimmed
@@ -256,9 +306,14 @@ export function ProjectsTab({
     }
 
     const remainingCategories = categories.filter((c) => c !== catToDelete);
+    const updatedSubtitles = { ...(categorySubtitles || {}) };
+    delete updatedSubtitles[catToDelete];
 
     if (onUpdateCategories) {
-      onUpdateCategories(remainingCategories);
+      onUpdateCategories(remainingCategories, updatedSubtitles);
+    }
+    if (onUpdateCategorySubtitles) {
+      onUpdateCategorySubtitles(updatedSubtitles);
     }
 
     if (selectedCategory === catToDelete) {
@@ -425,16 +480,25 @@ export function ProjectsTab({
 
   const handleOpenCreate = () => {
     const newId = `project-${Date.now()}`;
+    const initialCategory =
+      selectedCategory && selectedCategory !== 'Tất cả'
+        ? selectedCategory
+        : categories[0] || 'TVC';
+    const isIndie =
+      initialCategory.toLowerCase().includes('wedding') ||
+      initialCategory.toLowerCase().includes('cá nhân') ||
+      initialCategory.toLowerCase().includes('personal');
+
     const emptyProject: PortfolioProject = {
       id: newId,
       title: '',
       clientOrAgency: '',
-      category: categories[0] || 'TVC',
-      aspectRatio: '16:9',
+      category: initialCategory,
+      aspectRatio: suggestAspectRatioForCategory(initialCategory),
       gridSpan: 'col-span-12 md:col-span-6',
       year: new Date().getFullYear().toString(),
-      duration: '00:30',
-      deliverableRole: ['Quay phim', 'Dựng phim'],
+      duration: '',
+      deliverableRole: [], // Không tự chọn sẵn vai trò: để người dùng tự chọn đúng vai trò thực tế
       coverImage: '',
       videoUrl: '',
       agencyBrief: '',
@@ -442,7 +506,7 @@ export function ProjectsTab({
     };
     setEditingProject(emptyProject);
     setIsCreatingNew(true);
-    setClientTypeMode('commercial');
+    setClientTypeMode(isIndie ? 'independent' : 'commercial');
     setCompressionInfo(null);
     setUploadError(null);
     setIsAddingCustomRole(false);
@@ -556,11 +620,13 @@ export function ProjectsTab({
     }
   };
 
-  // Auto-detect and format video duration when direct MP4 video loads metadata
+  // Auto-detect and format video duration & aspect ratio when direct MP4 video loads metadata
   const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
+    if (!video) return;
+
+    let nextDuration: string | undefined;
     if (
-      video &&
       typeof video.duration === 'number' &&
       !isNaN(video.duration) &&
       isFinite(video.duration) &&
@@ -568,19 +634,66 @@ export function ProjectsTab({
     ) {
       const formatted = formatVideoDuration(video.duration);
       if (formatted) {
-        setEditingProject((prev) => (prev ? { ...prev, duration: formatted } : null));
+        nextDuration = formatted;
       }
     }
+
+    // Auto-detect aspect ratio from pixel dimensions
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    let detectedRatio: AspectRatioType | undefined;
+    if (width > 0 && height > 0) {
+      detectedRatio = height > width ? '9:16' : '16:9';
+    }
+
+    setEditingProject((prev) => {
+      if (!prev) return null;
+      const updates: Partial<PortfolioProject> = {};
+      if (nextDuration && prev.duration !== nextDuration) {
+        updates.duration = nextDuration;
+      }
+      if (detectedRatio && prev.aspectRatio !== detectedRatio) {
+        updates.aspectRatio = detectedRatio;
+      }
+      // Không tự ý đổi tab danh mục: giữ nguyên 100% danh mục do người dùng chọn
+      return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
+    });
+  };
+
+  // Auto-detect aspect ratio when pasting video URLs (Shorts, TikTok, Reels, Vimeo, YouTube)
+  // Tuyệt đối KHÔNG tự động chuyển tab/danh mục: giữ nguyên lựa chọn danh mục của người dùng
+  const handleVideoUrlChange = (rawVal: string) => {
+    const normalized = normalizeDropboxUrl(rawVal);
+    const detectedRatio = detectAspectRatioFromVideoUrl(normalized);
+
+    setEditingProject((prev) => {
+      if (!prev) return null;
+      const updates: Partial<PortfolioProject> = { videoUrl: normalized };
+
+      if (detectedRatio && prev.aspectRatio !== detectedRatio) {
+        updates.aspectRatio = detectedRatio;
+      }
+      // Giữ nguyên tab danh mục hiện tại, không tự động chọn tab sang Social hay bất kỳ tab nào khác
+      return { ...prev, ...updates };
+    });
   };
 
   const handleSaveModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProject || !editingProject.title.trim()) return;
 
+    const projectToSave: PortfolioProject = {
+      ...editingProject,
+      title: capitalizeWords(editingProject.title.trim()),
+      clientOrAgency: editingProject.clientOrAgency
+        ? capitalizeWords(editingProject.clientOrAgency.trim())
+        : '',
+    };
+
     if (isCreatingNew) {
-      onAddProject(editingProject);
+      onAddProject(projectToSave);
     } else {
-      onUpdateProject(editingProject.id, editingProject);
+      onUpdateProject(projectToSave.id, projectToSave);
     }
 
     if (onMarkUnsaved) {
@@ -754,12 +867,20 @@ export function ProjectsTab({
         </button>
       </div>
 
-      {/* 2. Projects Grid List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* 2. Projects Grid List: Smart Grid - 4 columns for vertical/social, 3 columns for mixed/horizontal */}
+      <div
+        className={`grid gap-5 ${
+          selectedCategory.toLowerCase().includes('social') ||
+          (filteredProjects.length > 0 && filteredProjects.every((p) => p.aspectRatio === '9:16'))
+            ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+        }`}
+      >
         {filteredProjects.map((project, idx) => {
           const videoMeta = getVideoSourceMeta(project.videoUrl);
           const isFirst = idx === 0;
           const isLast = idx === filteredProjects.length - 1;
+          const isVertical = project.aspectRatio === '9:16';
 
           return (
             <div
@@ -771,8 +892,12 @@ export function ProjectsTab({
               }`}
             >
               <div>
-                {/* Thumbnail Preview (Clean, without noisy text overlay) */}
-                <div className="relative aspect-[16/9] bg-[#141414] overflow-hidden">
+                {/* Thumbnail Preview: True 9:16 for vertical or 16:9 for horizontal */}
+                <div
+                  className={`relative ${
+                    isVertical ? 'aspect-[9/16] max-h-[380px]' : 'aspect-[16/9]'
+                  } bg-[#141414] overflow-hidden flex items-center justify-center w-full`}
+                >
                   {project.coverImage ? (
                     <img
                       src={project.coverImage}
@@ -786,18 +911,24 @@ export function ProjectsTab({
                   )}
 
                   {/* Top-left Badges: Category & Aspect Ratio */}
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
                     <span className="px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider">
                       {project.category}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-md text-[#111111] text-[10px] font-bold tabular-nums">
+                    <span
+                      className={`px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold tabular-nums ${
+                        isVertical
+                          ? 'bg-[#2563EB] text-white shadow-xs'
+                          : 'bg-white/90 text-[#111111]'
+                      }`}
+                    >
                       {project.aspectRatio}
                     </span>
                   </div>
 
                   {/* Top-right Draft/Hidden Badge */}
                   {project.hidden && (
-                    <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
+                    <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider shadow-xs z-10">
                       Tạm ẩn
                     </div>
                   )}
@@ -965,7 +1096,27 @@ export function ProjectsTab({
               <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5 text-xs sm:text-sm">
                 {/* Row 1: Title */}
                 <div className="space-y-1.5">
-                  <label className="block font-semibold text-[#111111]">Tên dự án *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block font-semibold text-[#111111]">Tên dự án *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editingProject && editingProject.title) {
+                          setEditingProject({
+                            ...editingProject,
+                            title: capitalizeWords(editingProject.title),
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-black/60 hover:text-[#111111] hover:underline cursor-pointer"
+                      title="Bấm để tự động viết hoa chữ cái đầu của mỗi từ"
+                    >
+                      <span className="font-mono bg-black/5 px-1.5 py-0.5 rounded border border-black/10 text-[10px] font-bold">
+                        Aa
+                      </span>
+                      <span>Viết hoa từng chữ</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
@@ -973,9 +1124,19 @@ export function ProjectsTab({
                     onChange={(e) =>
                       setEditingProject({ ...editingProject, title: e.target.value })
                     }
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      const formatted = capitalizeWords(val);
+                      if (formatted !== val) {
+                        setEditingProject((prev) => (prev ? { ...prev, title: formatted } : null));
+                      }
+                    }}
                     placeholder="VD: Pepsi Electric Blue — Summer Launch..."
                     className="w-full px-3.5 py-2.5 rounded-lg bg-[#F9F9FB] border border-black/10 text-sm font-semibold text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
                   />
+                  <p className="text-[11px] text-black/45">
+                    Tự động viết hoa chữ cái đầu mỗi từ khi gõ xong hoặc dán tên dự án (Title Case)
+                  </p>
                 </div>
 
                 {/* Row 1b: Phân định riêng biệt: Khách lẻ / Độc lập HOẶC Thương hiệu & Agency */}
@@ -1072,11 +1233,11 @@ export function ProjectsTab({
                       </p>
                     </div>
                   ) : (
-                    /* NHÁNH 2: THƯƠNG HIỆU & AGENCY ĐỐI TÁC (COMMERCIAL / TVC) */
+                    /* NHÁNH 2: THƯƠNG HIỆU & AGENCY ĐỐI TÁC (DOANH NGHIỆP / AGENCY) */
                     <div className="space-y-2.5 pt-1 border-t border-black/[0.06]">
                       <div className="space-y-1">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
-                          Tên Thương hiệu / Agency đối tác (Dành cho Commercial / TVC)
+                          Tên Thương hiệu / Doanh nghiệp / Agency đối tác
                         </span>
                         <input
                           type="text"
@@ -1084,6 +1245,15 @@ export function ProjectsTab({
                           onChange={(e) =>
                             setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
                           }
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            const formatted = capitalizeWords(val);
+                            if (formatted !== val) {
+                              setEditingProject((prev) =>
+                                prev ? { ...prev, clientOrAgency: formatted } : null
+                              );
+                            }
+                          }}
                           placeholder="VD: Dentsu Redder · PepsiCo Vietnam hoặc VinFast..."
                           className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
                         />
@@ -1255,24 +1425,14 @@ export function ProjectsTab({
                   <input
                     type="url"
                     value={editingProject.videoUrl || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const normalized = normalizeDropboxUrl(val);
-                      setEditingProject({ ...editingProject, videoUrl: normalized });
-                    }}
-                    onBlur={(e) => {
-                      const val = e.target.value;
-                      const normalized = normalizeDropboxUrl(val);
-                      if (normalized !== val) {
-                        setEditingProject({ ...editingProject, videoUrl: normalized });
-                      }
-                    }}
+                    onChange={(e) => handleVideoUrlChange(e.target.value)}
+                    onBlur={(e) => handleVideoUrlChange(e.target.value)}
                     placeholder="https://www.youtube.com/... hoặc link Vimeo, Dropbox, MP4"
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
                   />
 
                   <p className="text-[11px] text-[#777777] leading-relaxed">
-                    Hỗ trợ link YouTube, Vimeo, Dropbox (tự động chuyển sang luồng phát trực tiếp) hoặc link file MP4 từ Cloudflare R2.
+                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, Dropbox MP4 và link file MP4 từ Cloudflare R2 (tự động bắt kích thước khung hình và thời lượng).
                   </p>
 
                   {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
@@ -1291,16 +1451,28 @@ export function ProjectsTab({
                     return (
                       <div className="pt-2">
                         <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                          <p className="text-[11px] font-bold text-[#333333]">
-                            Xem trước video ({
-                              parsed.type === 'youtube'
-                                ? 'YouTube'
+                          <p className="text-[11px] font-bold text-[#333333] flex items-center gap-1.5 flex-wrap">
+                            <span>Xem trước video:</span>
+                            <span className="font-semibold text-black/75">
+                              {parsed.type === 'youtube'
+                                ? parsed.isShorts
+                                  ? 'YouTube Shorts'
+                                  : 'YouTube'
                                 : parsed.type === 'vimeo'
                                 ? 'Vimeo'
                                 : parsed.isDropbox
                                 ? 'Dropbox MP4'
-                                : 'File MP4 / Trực tiếp'
-                            }):
+                                : 'File MP4 / Trực tiếp'}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                editingProject.aspectRatio === '9:16'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : 'bg-black/5 text-black/60 border border-black/10'
+                              }`}
+                            >
+                              {editingProject.aspectRatio === '9:16' ? 'Dọc 9:16' : 'Ngang 16:9'}
+                            </span>
                           </p>
                           <div className="flex items-center gap-2">
                             {/* Button: Chụp frame này làm ảnh bìa */}
@@ -1331,7 +1503,14 @@ export function ProjectsTab({
                             </span>
                           </div>
                         </div>
-                        <div className="w-full max-w-md aspect-video rounded-xl overflow-hidden bg-black border border-black/10 shadow-xs">
+                        {/* Video Player: Adaptively 9:16 vertical or 16:9 horizontal */}
+                        <div
+                          className={`w-full ${
+                            editingProject.aspectRatio === '9:16'
+                              ? 'max-w-[240px] aspect-[9/16]'
+                              : 'max-w-md aspect-video'
+                          } mx-auto rounded-xl overflow-hidden bg-black border border-black/10 shadow-md transition-all`}
+                        >
                           {parsed.type === 'youtube' || parsed.type === 'vimeo' ? (
                             <iframe
                               src={parsed.embedUrl}
@@ -1372,8 +1551,14 @@ export function ProjectsTab({
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-start gap-4">
-                    {/* Bên trái: Khung xem trước ảnh bìa tỷ lệ 16:9 rõ nét */}
-                    <div className="w-36 h-20 rounded-lg overflow-hidden border border-black/10 bg-black/5 shrink-0 relative flex items-center justify-center shadow-2xs">
+                    {/* Bên trái: Khung xem trước ảnh bìa (tự động 9:16 dọc hoặc 16:9 ngang) */}
+                    <div
+                      className={`${
+                        editingProject.aspectRatio === '9:16'
+                          ? 'w-20 h-36 aspect-[9/16]'
+                          : 'w-36 h-20 aspect-[16/9]'
+                      } rounded-lg overflow-hidden border border-black/10 bg-black/5 shrink-0 relative flex items-center justify-center shadow-2xs transition-all`}
+                    >
                       {editingProject.coverImage ? (
                         <img
                           src={editingProject.coverImage}
@@ -1446,19 +1631,51 @@ export function ProjectsTab({
 
                 {/* Row 5: Deliverable Roles (Multi-select Pills) */}
                 <div className="space-y-2.5 col-span-full bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <label className="block font-semibold text-[#111111]">
                         Vai trò đảm nhiệm (Deliverable Roles)
                       </label>
                       <span className="text-[11px] text-black/50 font-medium">
-                        Bấm để chọn nhiều vai trò cùng lúc (Multi-select)
+                        Bấm để chọn nhiều vai trò cùng lúc (Không tự chọn sẵn ép buộc)
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="bg-black/5 text-[#111111] border border-black/10 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider">
                         {selectedRoles.length} vai trò đã chọn
                       </span>
+
+                      {selectedRoles.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editingProject) {
+                              setEditingProject({ ...editingProject, deliverableRole: [] });
+                            }
+                          }}
+                          className="px-2 py-0.5 text-[11px] font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/60 rounded-md border border-red-200/60 transition-colors cursor-pointer"
+                          title="Bỏ chọn toàn bộ vai trò"
+                        >
+                          Bỏ chọn tất cả
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editingProject) {
+                              setEditingProject({
+                                ...editingProject,
+                                deliverableRole: ['Quay phim', 'Dựng phim'],
+                              });
+                            }
+                          }}
+                          className="px-2 py-0.5 text-[11px] font-semibold text-black/75 hover:text-[#111111] bg-black/5 hover:bg-black/10 rounded-md border border-black/10 transition-colors cursor-pointer"
+                          title="Chọn nhanh vai trò phổ biến"
+                        >
+                          + Mặc định (Quay & Dựng)
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1652,11 +1869,16 @@ export function ProjectsTab({
               )}
 
               {/* Add New Category Box */}
-              <div className="bg-[#F9F9FB] p-4 rounded-xl border border-black/[0.07] space-y-2.5 shadow-2xs">
-                <label className="block text-xs font-semibold text-[#111111]">
-                  Thêm phân loại mới
-                </label>
-                <div className="flex items-center gap-2">
+              <div className="bg-[#F9F9FB] p-4 rounded-xl border border-black/[0.07] space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black/70">
+                    Thêm phân loại mới
+                  </label>
+                  <span className="text-[11px] text-black/40">
+                    Kèm thuật ngữ sản xuất chuyên ngành
+                  </span>
+                </div>
+                <div className="space-y-2">
                   <input
                     type="text"
                     value={newCategoryInput}
@@ -1664,23 +1886,35 @@ export function ProjectsTab({
                       setNewCategoryInput(e.target.value);
                       if (categoryActionError) setCategoryActionError(null);
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCategory();
-                      }
-                    }}
-                    placeholder="VD: Documentary, 3D Animation, Travel Film..."
-                    className="flex-1 px-3.5 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
+                    placeholder="Tên danh mục (VD: Documentary, 3D Animation, Music Video...)"
+                    className="w-full px-3.5 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-semibold"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    className="px-4 py-2 bg-[#111111] hover:bg-black/85 text-white rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-98"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Thêm</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newCategorySubtitleInput}
+                      onChange={(e) => {
+                        setNewCategorySubtitleInput(e.target.value);
+                        if (categoryActionError) setCategoryActionError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCategory();
+                        }
+                      }}
+                      placeholder="Mô tả phụ chuyên ngành (để trống nếu muốn ẩn dấu —)"
+                      className="flex-1 px-3.5 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      className="px-4 py-2 bg-[#111111] hover:bg-black/85 text-white rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-98"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1691,7 +1925,7 @@ export function ProjectsTab({
                     Danh sách phân loại ({categories.length})
                   </h4>
                   <span className="text-[11px] text-black/40">
-                    Thứ tự hiển thị trên bộ lọc trang chủ
+                    Thứ tự hiển thị & mô tả phụ trên trang chủ
                   </span>
                 </div>
 
@@ -1700,6 +1934,9 @@ export function ProjectsTab({
                     const projectCount = projects.filter((p) => p.category === cat).length;
                     const isRenaming = renamingCategory?.oldName === cat;
                     const isDeleting = deletingCategory?.name === cat;
+                    const effectiveMeta = getCategoryMeta(cat, categorySubtitles);
+                    const currentCustomSub = categorySubtitles?.[cat];
+                    const activeSubtitle = currentCustomSub !== undefined ? currentCustomSub : effectiveMeta.subtitle;
 
                     return (
                       <div
@@ -1772,92 +2009,119 @@ export function ProjectsTab({
                           </div>
                         ) : (
                           /* Standard View Mode */
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {/* Reorder Up / Down Controls */}
-                              <div className="flex items-center gap-0.5 shrink-0">
-                                <button
-                                  type="button"
-                                  disabled={catIdx === 0}
-                                  onClick={() => handleMoveCategory(catIdx, 'up')}
-                                  className={`p-1 rounded-md transition-colors ${
-                                    catIdx === 0
-                                      ? 'text-black/15 cursor-not-allowed'
-                                      : 'text-black/60 hover:text-black hover:bg-black/5 cursor-pointer'
-                                  }`}
-                                  title={catIdx === 0 ? 'Đang ở đầu danh sách' : 'Di chuyển lên'}
-                                  aria-label={`Di chuyển danh mục ${cat} lên`}
-                                >
-                                  <ArrowUp className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={catIdx === categories.length - 1}
-                                  onClick={() => handleMoveCategory(catIdx, 'down')}
-                                  className={`p-1 rounded-md transition-colors ${
-                                    catIdx === categories.length - 1
-                                      ? 'text-black/15 cursor-not-allowed'
-                                      : 'text-black/60 hover:text-black hover:bg-black/5 cursor-pointer'
-                                  }`}
-                                  title={catIdx === categories.length - 1 ? 'Đang ở cuối danh sách' : 'Di chuyển xuống'}
-                                  aria-label={`Di chuyển danh mục ${cat} xuống`}
-                                >
-                                  <ArrowDown className="w-3.5 h-3.5" />
-                                </button>
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {/* Reorder Up / Down Controls */}
+                                <div className="flex items-center gap-0.5 shrink-0 bg-[#F7F6F2] p-0.5 rounded-lg border border-black/8">
+                                  <button
+                                    type="button"
+                                    disabled={catIdx === 0}
+                                    onClick={() => handleMoveCategory(catIdx, 'up')}
+                                    className={`p-1 rounded-md transition-colors ${
+                                      catIdx === 0
+                                        ? 'text-black/15 cursor-not-allowed'
+                                        : 'text-black/60 hover:text-black hover:bg-black/5 cursor-pointer'
+                                    }`}
+                                    title={catIdx === 0 ? 'Đang ở đầu danh sách' : 'Di chuyển lên'}
+                                    aria-label={`Di chuyển danh mục ${cat} lên`}
+                                  >
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={catIdx === categories.length - 1}
+                                    onClick={() => handleMoveCategory(catIdx, 'down')}
+                                    className={`p-1 rounded-md transition-colors ${
+                                      catIdx === categories.length - 1
+                                        ? 'text-black/15 cursor-not-allowed'
+                                        : 'text-black/60 hover:text-black hover:bg-black/5 cursor-pointer'
+                                    }`}
+                                    title={catIdx === categories.length - 1 ? 'Đang ở cuối danh sách' : 'Di chuyển xuống'}
+                                    aria-label={`Di chuyển danh mục ${cat} xuống`}
+                                  >
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                <span className="font-semibold text-xs text-[#111111] truncate">
+                                  {cat}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/5 text-black/60 font-medium shrink-0">
+                                  {projectCount} dự án
+                                </span>
                               </div>
 
-                              <span className="font-semibold text-xs text-[#111111] truncate">
-                                {cat}
-                              </span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/5 text-black/60 font-medium shrink-0">
-                                {projectCount} dự án
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRenamingCategory({ oldName: cat, newName: cat });
-                                  setDeletingCategory(null);
-                                  setCategoryActionError(null);
-                                  setCategoryActionSuccess(null);
-                                }}
-                                className="p-1.5 text-black/50 hover:text-black hover:bg-black/5 rounded-md transition-colors cursor-pointer"
-                                title="Đổi tên danh mục"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              {projectCount > 0 ? (
-                                <button
-                                  type="button"
-                                  disabled
-                                  className="p-1.5 text-black/30 opacity-30 cursor-not-allowed rounded-md transition-colors"
-                                  title="Cần chuyển hết dự án sang mục khác trước khi xóa"
-                                  aria-label={`Không thể xóa danh mục ${cat} vì đang có ${projectCount} dự án`}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              ) : (
+                              <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (categories.length <= 1) {
-                                      setCategoryActionError('Cần giữ lại ít nhất 1 danh mục trong hệ thống.');
-                                      return;
-                                    }
-                                    setDeletingCategory({ name: cat, projectCount: 0 });
-                                    setRenamingCategory(null);
+                                    setRenamingCategory({ oldName: cat, newName: cat });
+                                    setDeletingCategory(null);
                                     setCategoryActionError(null);
                                     setCategoryActionSuccess(null);
                                   }}
-                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                                  title="Xóa danh mục"
-                                  aria-label={`Xóa danh mục ${cat}`}
+                                  className="p-1.5 text-black/50 hover:text-black hover:bg-black/5 rounded-md transition-colors cursor-pointer"
+                                  title="Đổi tên danh mục"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Edit2 className="w-3.5 h-3.5" />
                                 </button>
-                              )}
+                                {projectCount > 0 ? (
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="p-1.5 text-black/30 opacity-30 cursor-not-allowed rounded-md transition-colors"
+                                    title="Cần chuyển hết dự án sang mục khác trước khi xóa"
+                                    aria-label={`Không thể xóa danh mục ${cat} vì đang có ${projectCount} dự án`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (categories.length <= 1) {
+                                        setCategoryActionError('Cần giữ lại ít nhất 1 danh mục trong hệ thống.');
+                                        return;
+                                      }
+                                      setDeletingCategory({ name: cat, projectCount: 0 });
+                                      setRenamingCategory(null);
+                                      setCategoryActionError(null);
+                                      setCategoryActionSuccess(null);
+                                    }}
+                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                                    title="Xóa danh mục"
+                                    aria-label={`Xóa danh mục ${cat}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Subtitle Customization Input */}
+                            <div className="pt-2 border-t border-black/[0.06] space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-black/50">
+                                  Mô tả phụ hạng mục
+                                </label>
+                                <span className="text-[10px] text-black/40 font-medium truncate max-w-[260px]">
+                                  {activeSubtitle?.trim() ? (
+                                    <span className="text-emerald-700 font-semibold">
+                                      Hiển thị: — {activeSubtitle.trim()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-amber-700 font-semibold">(Để trống: Ẩn dấu —)</span>
+                                  )}
+                                </span>
+                              </div>
+                              <input
+                                type="text"
+                                value={activeSubtitle}
+                                onChange={(e) => handleUpdateSubtitle(cat, e.target.value)}
+                                placeholder="Nhập thuật ngữ chuyên ngành (để trống nếu muốn ẩn dấu —)"
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-black/15 text-xs text-[#111111] placeholder:text-black/35 focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition-all font-normal"
+                              />
                             </div>
                           </div>
                         )}

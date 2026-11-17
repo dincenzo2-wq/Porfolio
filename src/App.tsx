@@ -117,6 +117,7 @@ function PortfolioApp() {
               <ProjectsAccordionSection
                 projects={content.projects}
                 categories={content.categories}
+                categorySubtitles={content.categorySubtitles}
                 subtitle={content.profile.projectsSubtitle}
                 openCategories={openCategories}
                 onToggleCategory={handleToggleCategory}
@@ -124,10 +125,11 @@ function PortfolioApp() {
               />
             </ViewportFocusSection>
 
-            {/* Dải băng chữ chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
+            {/* Dải băng chữ/logo chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
             <BrandMarquee
               showBrandMarquee={content.profile.showBrandMarquee}
               collaboratorsText={content.profile.collaboratorsText}
+              brandLogos={content.profile.brandLogos}
             />
 
             {/* PHẦN 4: Giới thiệu năng lực thực chiến, 5 icon công cụ, Kinh nghiệm & Học vấn */}

@@ -12,3 +12,7 @@ database_id = "b39a831a-24eb-485c-9661-32dc5b9e0b32"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "portfolio-media"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "portfolio-media"

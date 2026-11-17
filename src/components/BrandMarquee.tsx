@@ -20,20 +20,43 @@ interface BrandMarqueeProps {
   showBrandMarquee?: boolean;
   collaboratorsText?: string;
   brands?: string[];
+  brandLogos?: string[];
 }
 
-export function BrandMarquee({ showBrandMarquee = true, collaboratorsText, brands }: BrandMarqueeProps) {
+export function BrandMarquee({
+  showBrandMarquee = true,
+  collaboratorsText,
+  brands,
+  brandLogos,
+}: BrandMarqueeProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  const hasLogos = Boolean(brandLogos && brandLogos.length > 0);
+
+  // When logo images are provided, repeat logos to ensure smooth infinite loop without blank gaps
+  const displayLogos = useMemo(() => {
+    if (!brandLogos || brandLogos.length === 0) return [];
+    let result = [...brandLogos];
+    while (result.length < 8) {
+      result = [...result, ...brandLogos];
+    }
+    return result;
+  }, [brandLogos]);
+
+  // Fallback text brands with spelling correction for 'LOUTUS' -> 'LOTUS'
   const brandsList = useMemo(() => {
-    if (brands && brands.length > 0) return brands;
+    const fixSpelling = (name: string) => name.replace(/LOUTUS/i, 'LOTUS');
+
+    if (brands && brands.length > 0) {
+      return brands.map((b) => fixSpelling(b.toUpperCase()));
+    }
     if (collaboratorsText && collaboratorsText.trim()) {
       const parsed = collaboratorsText
         .split(/[·•,\n]/)
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
       if (parsed.length > 0) {
-        return parsed.map((b) => b.toUpperCase());
+        return parsed.map((b) => fixSpelling(b.toUpperCase()));
       }
     }
     return DEFAULT_BRAND_MARQUEE;
@@ -48,8 +71,8 @@ export function BrandMarquee({ showBrandMarquee = true, collaboratorsText, brand
       aria-label="Thương hiệu và Agency đã hợp tác"
       className="w-full bg-[#0B0B0D] border-y border-white/10 py-10 md:py-14 overflow-hidden select-none"
     >
-      {/* 2. Tiêu đề phụ: Tăng cỡ chữ lên text-xs md:text-sm, tạo khoảng cách dưới rộng rãi mb-5 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mb-5 flex items-center justify-center gap-2.5">
+      {/* Tiêu đề phụ dải băng */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mb-6 flex items-center justify-center gap-2.5">
         <span
           className="w-2 h-2 rounded-full bg-[#3B82F6] shrink-0"
           aria-hidden="true"
@@ -59,7 +82,7 @@ export function BrandMarquee({ showBrandMarquee = true, collaboratorsText, brand
         </span>
       </div>
 
-      {/* 1. Marquee Track với hiệu ứng mask làm mờ dần tự nhiên ở hai mép 12% - 88% */}
+      {/* Marquee Track với hiệu ứng mask làm mờ dần tự nhiên ở hai mép 12% - 88% */}
       <div
         className="brand-marquee-container relative w-full overflow-hidden"
         style={{
@@ -73,33 +96,50 @@ export function BrandMarquee({ showBrandMarquee = true, collaboratorsText, brand
           className="flex w-max animate-brand-marquee"
           style={{ animationPlayState: isHovered ? 'paused' : 'running' }}
         >
-          {/* Đúng 2 bản sao duy nhất trong DOM để chạy vòng lặp vô tận translateX(-50%) mượt 60fps mà nhẹ trang */}
+          {/* Đúng 2 bản sao duy nhất trong DOM để chạy vòng lặp vô tận translateX(-50%) mượt 60fps */}
           {[0, 1].map((copyIdx) => (
             <div
               key={copyIdx}
               aria-hidden={copyIdx > 0}
               className="flex shrink-0 items-center"
             >
-              {brandsList.map((brand, idx) => {
-                return (
-                  <span
-                    key={`${copyIdx}-${brand}-${idx}`}
-                    className="inline-flex items-center"
-                  >
+              {hasLogos
+                ? displayLogos.map((logoUrl, idx) => (
                     <span
-                      className="font-bricolage text-xl md:text-2xl font-bold tracking-wider uppercase text-[#F7F6F2]/85 hover:text-white hover:scale-105 transition-all duration-200 cursor-default px-2 py-1 whitespace-nowrap"
+                      key={`${copyIdx}-${logoUrl}-${idx}`}
+                      className="inline-flex items-center shrink-0"
                     >
-                      {brand}
+                      <img
+                        src={logoUrl}
+                        alt="Logo đối tác"
+                        className="h-10 md:h-12 w-auto max-w-[180px] object-contain opacity-90 hover:opacity-100 transition-opacity filter drop-shadow-sm select-none"
+                        loading="lazy"
+                        draggable={false}
+                      />
+                      <span
+                        className="flex items-center mx-8 md:mx-12 text-[#3B82F6] text-xl md:text-2xl font-bold leading-none select-none shrink-0"
+                        aria-hidden="true"
+                      >
+                        *
+                      </span>
                     </span>
+                  ))
+                : brandsList.map((brand, idx) => (
                     <span
-                      className="mx-4 sm:mx-6 md:mx-8 text-[#3B82F6] font-bold text-lg md:text-xl select-none shrink-0"
-                      aria-hidden="true"
+                      key={`${copyIdx}-${brand}-${idx}`}
+                      className="inline-flex items-center shrink-0"
                     >
-                      *
+                      <span className="font-bricolage text-xl md:text-2xl font-bold tracking-wider uppercase text-[#F7F6F2]/85 hover:text-white hover:scale-105 transition-all duration-200 cursor-default px-2 py-1 whitespace-nowrap">
+                        {brand}
+                      </span>
+                      <span
+                        className="flex items-center mx-8 md:mx-12 text-[#3B82F6] text-xl md:text-2xl font-bold leading-none select-none shrink-0"
+                        aria-hidden="true"
+                      >
+                        *
+                      </span>
                     </span>
-                  </span>
-                );
-              })}
+                  ))}
             </div>
           ))}
         </div>

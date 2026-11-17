@@ -10,6 +10,17 @@ interface Env {
       value: ArrayBuffer | ReadableStream,
       options?: { httpMetadata?: { contentType?: string } }
     ) => Promise<any>;
+    get?: (key: string) => Promise<any>;
+    delete?: (key: string) => Promise<any>;
+  };
+  BUCKET?: {
+    put: (
+      key: string,
+      value: ArrayBuffer | ReadableStream,
+      options?: { httpMetadata?: { contentType?: string } }
+    ) => Promise<any>;
+    get?: (key: string) => Promise<any>;
+    delete?: (key: string) => Promise<any>;
   };
   R2_PUBLIC_URL?: string;
 }
@@ -64,8 +75,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const r2Key = `uploads/${dateStr}/${Date.now()}_${randomSuffix}_${cleanName}`;
 
     // If R2 binding is active in Cloudflare Pages
-    if (env.R2_BUCKET) {
-      await env.R2_BUCKET.put(r2Key, fileBuffer, {
+    const r2Bucket = env.R2_BUCKET || env.BUCKET;
+    if (r2Bucket) {
+      await r2Bucket.put(r2Key, fileBuffer, {
         httpMetadata: {
           contentType: 'image/webp',
         },
@@ -132,8 +144,9 @@ export async function onRequestDelete(context: { request: Request; env: Env }) {
       if (match) targetKey = match[1];
     }
 
-    if (targetKey && (env as any).R2_BUCKET?.delete) {
-      await (env as any).R2_BUCKET.delete(targetKey);
+    const r2Bucket = env.R2_BUCKET || env.BUCKET;
+    if (targetKey && r2Bucket?.delete) {
+      await r2Bucket.delete(targetKey);
     }
 
     return new Response(

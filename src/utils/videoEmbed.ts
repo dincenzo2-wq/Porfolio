@@ -10,6 +10,7 @@ export interface ParsedVideo {
   videoId?: string;
   platformName?: string;
   isDropbox?: boolean;
+  isShorts?: boolean;
   startSec?: number;
   endSec?: number;
 }
@@ -19,6 +20,31 @@ export interface VideoParseOptions {
   endSec?: number;
   muted?: boolean;
   loop?: boolean;
+}
+
+/**
+ * Detects whether a video URL represents a vertical 9:16 video (e.g. YouTube Shorts, TikTok, Instagram Reels)
+ * or horizontal 16:9 (standard YouTube/Vimeo). Returns null if indeterminate (e.g. direct MP4 where metadata is needed).
+ */
+export function detectAspectRatioFromVideoUrl(url?: string): '9:16' | '16:9' | null {
+  if (!url || typeof url !== 'string') return null;
+  const clean = url.trim().toLowerCase();
+  if (
+    clean.includes('/shorts/') ||
+    clean.includes('tiktok.com') ||
+    clean.includes('/reel/') ||
+    clean.includes('/reels/')
+  ) {
+    return '9:16';
+  }
+  if (
+    clean.includes('youtube.com/watch') ||
+    clean.includes('youtu.be/') ||
+    clean.includes('vimeo.com')
+  ) {
+    return '16:9';
+  }
+  return null;
 }
 
 /**
@@ -92,7 +118,8 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
     return {
       type: 'youtube',
       videoId,
-      platformName: 'YouTube',
+      platformName: cleanUrl.includes('/shorts/') ? 'YouTube Shorts' : 'YouTube',
+      isShorts: cleanUrl.includes('/shorts/'),
       startSec: options?.startSec,
       endSec: options?.endSec,
       embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1${startParam}${endParam}${loopParam}`,

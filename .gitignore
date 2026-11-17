@@ -16,3 +16,4 @@ coverage/
 .codex/
 .taste-skill/
 skills-lock.json
+.wrangler/
