@@ -3,22 +3,14 @@ import {
   Camera,
   CheckCircle2,
   Clock,
-  Film,
   Play,
   RotateCcw,
-  Scissors,
-  Sparkles,
   Video,
-  Youtube,
   AlertCircle,
-  ExternalLink,
-  FastForward,
   Rewind,
-  SlidersHorizontal,
   Image,
   Upload,
   Trash2,
-  Plus,
   X,
   ArrowLeft,
   ArrowRight,
@@ -28,7 +20,6 @@ import type { SiteProfileData } from '../../types/portfolio';
 import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
 import { compressImageToWebP } from '../../utils/imageCompression';
 import { convertLogoToWhiteWebP } from '../../utils/logoProcessing';
-import { DEFAULT_BRAND_MARQUEE } from '../BrandMarquee';
 
 interface GeneralInfoTabProps {
   profile: SiteProfileData;
@@ -148,41 +139,9 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   };
 
   const handleClearAllBrandLogos = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh logo để quay về dải băng chữ?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh logo?')) {
       onChange({ brandLogos: [] });
     }
-  };
-
-  // Marquee Brands List Parsing & Management (Separate from individual project clients)
-  const [newMarqueeBrand, setNewMarqueeBrand] = useState('');
-
-  const marqueeBrands: string[] =
-    profile.collaboratorsText && profile.collaboratorsText.trim()
-      ? profile.collaboratorsText
-          .split(/[·•,\n]/)
-          .map((s) => s.trim().replace(/LOUTUS/i, 'LOTUS'))
-          .filter(Boolean)
-      : DEFAULT_BRAND_MARQUEE.map((b) => b.replace(/LOUTUS/i, 'LOTUS'));
-
-  const handleAddMarqueeBrand = () => {
-    const trimmed = newMarqueeBrand.trim().replace(/LOUTUS/i, 'LOTUS');
-    if (!trimmed) return;
-    if (marqueeBrands.some((b) => b.toLowerCase() === trimmed.toLowerCase())) {
-      setNewMarqueeBrand('');
-      return;
-    }
-    const nextList = [...marqueeBrands, trimmed];
-    onChange({ collaboratorsText: nextList.join(' · ') });
-    setNewMarqueeBrand('');
-  };
-
-  const handleRemoveMarqueeBrand = (brandToRemove: string) => {
-    const nextList = marqueeBrands.filter((b) => b !== brandToRemove);
-    onChange({ collaboratorsText: nextList.join(' · ') });
-  };
-
-  const handleResetMarqueeBrands = () => {
-    onChange({ collaboratorsText: DEFAULT_BRAND_MARQUEE.map((b) => b.replace(/LOUTUS/i, 'LOTUS')).join(' · ') });
   };
 
   // Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
@@ -446,27 +405,11 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     });
   };
 
-  const snapTo15Seconds = () => {
-    onChange({
-      heroVideoEnd: startSec + 15,
-    });
-  };
-
   const seekToStart = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.currentTime = startSec;
       previewVideoRef.current.play().catch(() => {});
     }
-  };
-
-  const setInFromCurrent = () => {
-    const current = Math.floor(currentTime);
-    setInPoint(current);
-  };
-
-  const setOutFromCurrent = () => {
-    const current = Math.ceil(currentTime);
-    setOutPoint(current);
   };
 
   const set15sFromCurrent = () => {
@@ -479,14 +422,6 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
       previewVideoRef.current.currentTime = current;
     }
   };
-
-  const loopPresets = [
-    { label: '15s Chuẩn (00:00 – 00:15)', start: 0, end: 15 },
-    { label: '15s Cao trào (00:05 – 00:20)', start: 5, end: 20 },
-    { label: '15s Giữa (00:10 – 00:25)', start: 10, end: 25 },
-    { label: '10s Ngắn (00:00 – 00:10)', start: 0, end: 10 },
-    { label: '20s Mở rộng (00:00 – 00:20)', start: 0, end: 20 },
-  ];
   const inputClass =
     'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
   const textareaClass =
@@ -504,7 +439,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             1. HERO &amp; ĐỊNH VỊ THƯƠNG HIỆU
           </h2>
           <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
-            Các nội dung xuất hiện nổi bật tại phần đầu trang (Hero Showreel), thanh định danh thương hiệu và phần tóm tắt hồ sơ năng lực.
+            Nội dung định danh thương hiệu, hồ sơ năng lực và video loop nền Hero.
           </p>
         </div>
 
@@ -538,10 +473,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             <div>
               <label className={labelClass}>Định vị năng lực (Positioning)</label>
               <textarea
-                rows={5}
+                rows={6}
                 value={profile.positioning}
                 onChange={(e) => onChange({ positioning: e.target.value })}
-                className={`${textareaClass} min-h-[135px]`}
+                className={`${textareaClass} min-h-[160px]`}
                 placeholder="Chuyên quay phim thương mại, dựng hậu kỳ tốc độ cao và motion graphics cho Agency, Brand & Production House."
               />
             </div>
@@ -549,10 +484,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             <div>
               <label className={labelClass}>Cam kết tiến độ (Bio Detail)</label>
               <textarea
-                rows={5}
+                rows={6}
                 value={profile.bioDetail}
                 onChange={(e) => onChange({ bioDetail: e.target.value })}
-                className={`${textareaClass} min-h-[135px]`}
+                className={`${textareaClass} min-h-[160px]`}
                 placeholder="Quy trình làm việc thực chiến, đáp ứng brief chuẩn xác. Nhận brief và xuất bản nháp nhanh trong 24–48h."
               />
             </div>
@@ -573,7 +508,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
 
             <p className="text-xs text-black/60 leading-relaxed">
-              Trang web sử dụng trực tiếp video loop điện ảnh làm nền chuyển động toàn màn hình cho Hero. Bạn có thể dán link YouTube, Vimeo, Dropbox hoặc link file MP4 trực tiếp, hệ thống sẽ tự động nhận diện và cho phép bạn cắt đoạn khoảng 15 giây để video chạy lặp liên tục.
+              Video loop điện ảnh phát nền toàn màn hình cho Hero. Hỗ trợ link YouTube, Dropbox hoặc tải trực tiếp file video lên Cloudflare R2.
             </p>
 
             {/* Video Loop Showreel URL & Reset */}
@@ -665,107 +600,6 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 </div>
               )}
 
-              {/* TỰ ĐỘNG NHẬN DIỆN NỀN TẢNG VIDEO (AUTO-DETECTION BADGE) */}
-              <div className="p-3.5 rounded-xl border bg-[#F9F9FB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start sm:items-center gap-2.5">
-                  {parsedShowreel.type === 'youtube' ? (
-                    <div className="w-7 h-7 rounded-lg bg-red-600/10 text-red-600 flex items-center justify-center shrink-0">
-                      <Youtube className="w-4 h-4" />
-                    </div>
-                  ) : parsedShowreel.type === 'vimeo' ? (
-                    <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
-                      <Film className="w-4 h-4" />
-                    </div>
-                  ) : parsedShowreel.type === 'gdrive' ? (
-                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                      <Video className="w-4 h-4" />
-                    </div>
-                  ) : parsedShowreel.isDropbox ? (
-                    <div className="w-7 h-7 rounded-lg bg-blue-600/10 text-[#2563EB] flex items-center justify-center shrink-0">
-                      <Video className="w-4 h-4" />
-                    </div>
-                  ) : (
-                    <div className="w-7 h-7 rounded-lg bg-emerald-600/10 text-emerald-600 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                  )}
-
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-[#111111]">
-                        {parsedShowreel.type === 'youtube'
-                          ? 'Đã nhận diện: YouTube Video'
-                          : parsedShowreel.type === 'vimeo'
-                          ? 'Đã nhận diện: Vimeo Video'
-                          : parsedShowreel.type === 'gdrive'
-                          ? 'Đã nhận diện: Google Drive Video'
-                          : parsedShowreel.isDropbox
-                          ? 'Đã nhận diện: Dropbox MP4 Direct Stream'
-                          : 'Đã nhận diện: File Video MP4 / WebM Trực Tiếp'}
-                      </span>
-                      {parsedShowreel.videoId && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/5 text-black/60">
-                          ID: {parsedShowreel.videoId}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-black/55 leading-tight">
-                      {parsedShowreel.type === 'youtube'
-                        ? 'Tự động tối ưu nhúng không quảng cáo và lặp theo khoảng thời gian đã cắt bên dưới.'
-                        : parsedShowreel.type === 'vimeo'
-                        ? 'Tự động kích hoạt player Vimeo điện ảnh không viền và áp dụng mốc bắt đầu.'
-                        : parsedShowreel.isDropbox
-                        ? 'Link Dropbox đã được tự động chuẩn hóa sang raw=1 để stream mượt mà không bị tải file.'
-                        : 'Hỗ trợ cắt chính xác từng giây và phát lặp 15 giây mượt mà không độ trễ.'}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 self-start sm:self-auto">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Sẵn sàng phát Loop
-                </span>
-              </div>
-
-              {/* Quick Select Presets for high quality internal videos */}
-              <div className="pt-1 space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-black/50 block">
-                  Chọn nhanh video loop chất lượng cao có sẵn trong web:
-                </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { label: 'Đêm Không Ngủ (1.1MB · Khuyên dùng)', url: '/videos/dem-khong-ngu.mp4' },
-                    { label: 'Crimson Stage (740KB)', url: '/videos/crimson-stage.mp4' },
-                    { label: 'Dusk Motion (800KB)', url: '/videos/dusk-motion.mp4' },
-                    { label: 'Doorway Sunbeam (1.5MB)', url: '/videos/doorway-sunbeam.mp4' },
-                    { label: 'Chuyến Xe Cuối Ngày (480KB)', url: '/videos/chuyen-xe-cuoi-ngay.mp4' },
-                  ].map((preset) => {
-                    const isSelected = (profile.showreelUrl || profile.heroBgUrl) === preset.url;
-                    return (
-                      <button
-                        key={preset.url}
-                        type="button"
-                        onClick={() =>
-                          onChange({
-                            showreelUrl: preset.url,
-                            heroBgUrl: preset.url,
-                            heroBgType: 'video',
-                          })
-                        }
-                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                            : 'bg-[#F9F9FB] border-black/10 text-black/75 hover:bg-white hover:border-black/25'
-                        }`}
-                      >
-                        {isSelected ? '✓ ' : ''}
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* ẢNH POSTER FRAME NẠP TỨC THÌ (0ms INSTANT POSTER) */}
               <div className="p-4 rounded-xl border border-black/10 bg-[#F9F9FB] space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -787,8 +621,8 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   )}
                 </div>
 
-                <p className="text-[11px] text-black/60 leading-relaxed">
-                  Hiển thị ngay lập tức trong <strong>0 giây</strong> khi vừa F5 tải lại trang. Loại bỏ 100% hiện tượng màn hình đen trong 1–2 giây lúc trình duyệt chờ kết nối luồng video dung lượng lớn từ Dropbox.
+                <p className="text-[11px] text-black/55 leading-relaxed">
+                  Hiển thị tức thì 0ms khi vừa tải trang, loại bỏ hiện tượng màn hình đen trong lúc chờ kết nối video.
                 </p>
 
                 <div className="space-y-2.5">
@@ -867,23 +701,15 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
               </div>
             </div>
 
-            {/* KHỐI CẮT ĐOẠN VIDEO LOOP (IN - OUT TRIMMER - ~15 GIÂY) */}
+            {/* XEM TRƯỚC VIDEO LOOP NỀN HERO & CẮT ĐOẠN (IN - OUT TRIMMER) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-[#F4F4F7] border border-black/10 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center shrink-0">
-                    <Scissors className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                      Cắt đoạn Video Loop (In - Out Trimmer · ~15 giây)
-                    </h4>
-                    <p className="text-[11px] text-black/55">
-                      Giới hạn đoạn video phát lặp làm nền Hero. Video sẽ chỉ phát trong khoảng này và quay lại từ đầu.
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4 text-[#2563EB]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                    Xem trước Video Loop &amp; Cắt đoạn (~15 giây)
+                  </h4>
                 </div>
-
                 <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                   <span
                     className={`text-xs font-bold px-3 py-1 rounded-full border ${
@@ -899,99 +725,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 </div>
               </div>
 
-              {/* Hàng ngang gọn gàng: Mốc Bắt đầu – Kết thúc & Nút Lấy 15s từ mốc đang phát */}
-              <div className="p-3 bg-white border border-black/10 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[#111111]">
-                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
-                    Bắt đầu:
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={0}
-                      max={endSec - 1}
-                      value={startSec}
-                      onChange={(e) => setInPoint(Number(e.target.value) || 0)}
-                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
-                    />
-                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(startSec)})</span>
-                  </div>
-
-                  <span className="text-black/30 font-bold px-1 select-none">—</span>
-
-                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
-                    Kết thúc:
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={startSec + 1}
-                      value={endSec}
-                      onChange={(e) => setOutPoint(Number(e.target.value) || startSec + 15)}
-                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
-                    />
-                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(endSec)})</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={set15sFromCurrent}
-                  className="px-3.5 py-2 rounded-lg bg-[#2563EB]/10 hover:bg-[#2563EB] text-[#2563EB] hover:text-white border border-[#2563EB]/25 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-98"
-                  title="Cắt lấy 15 giây phát tiếp theo từ khung hình video hiện tại"
-                >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>📍 Lấy 15s từ mốc đang phát ({formatVideoDuration(currentTime)})</span>
-                </button>
-              </div>
-
-              {/* Dãy 5 nút chọn nhanh khoảng 15 giây */}
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-black/55 flex items-center gap-1.5 mr-1">
-                  <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                  Chọn nhanh khoảng 15s:
-                </span>
-                {loopPresets.map((preset) => {
-                  const isActive = startSec === preset.start && endSec === preset.end;
-                  return (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() =>
-                        onChange({
-                          heroVideoStart: preset.start,
-                          heroVideoEnd: preset.end,
-                        })
-                      }
-                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                          : 'bg-white border-black/10 text-black/75 hover:border-black/30 hover:bg-[#F9F9FB]'
-                      }`}
-                    >
-                      {isActive ? '✓ ' : ''}
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Live Video Loop Preview */}
-            <div className="p-4 rounded-xl bg-[#F9F9FB] border border-black/8 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Play className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                    Xem trước Video Loop nền Hero ({loopDuration} giây)
-                  </span>
-                </div>
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB]">
-                  {formatVideoDuration(startSec)} ➔ {formatVideoDuration(endSec)} · {loopDuration}s
-                </span>
-              </div>
-
+              {/* Khung phát video xem trước */}
               <div className="relative aspect-[21/9] sm:aspect-[16/7] w-full max-w-2xl mx-auto rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
                 {(parsedShowreel.type === 'youtube' ||
                   parsedShowreel.type === 'vimeo' ||
@@ -1031,49 +765,64 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 </div>
               </div>
 
-              {/* Player Quick Controls & Scrub Bar for Direct Video */}
-              {parsedShowreel.type === 'direct' && (
-                <div className="p-3 rounded-lg bg-white border border-black/8 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-black/80">
-                      Đang phát: {formatVideoDuration(currentTime)}
-                    </span>
-                    <span className="text-black/40">/</span>
-                    <span className="font-mono text-black/60">
-                      Vùng loop: {formatVideoDuration(startSec)} ➔ {formatVideoDuration(endSec)} ({loopDuration}s)
-                    </span>
+              {/* Hàng ngang điều khiển: Mốc bắt đầu (s), Mốc kết thúc (s) và Nút [Lấy 15s từ mốc đang phát] */}
+              <div className="p-3 bg-white border border-black/10 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#111111]">
+                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-[#2563EB]" />
+                    Mốc bắt đầu:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={endSec - 1}
+                      value={startSec}
+                      onChange={(e) => setInPoint(Number(e.target.value) || 0)}
+                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
+                    />
+                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(startSec)})</span>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-black/30 font-bold px-1 select-none">—</span>
+
+                  <span className="font-bold flex items-center gap-1.5 text-black/75 shrink-0">
+                    Mốc kết thúc:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={startSec + 1}
+                      value={endSec}
+                      onChange={(e) => setOutPoint(Number(e.target.value) || startSec + 15)}
+                      className="w-20 bg-[#F9F9FB] border border-black/15 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center focus:bg-white focus:outline-none focus:border-[#2563EB]"
+                    />
+                    <span className="font-mono text-[11px] text-black/50">s ({formatVideoDuration(endSec)})</span>
+                  </div>
+
+                  {parsedShowreel.type === 'direct' && (
                     <button
                       type="button"
                       onClick={seekToStart}
-                      className="px-2.5 py-1 rounded-md bg-[#F9F9FB] hover:bg-black/5 border border-black/10 font-medium text-black/70 cursor-pointer flex items-center gap-1"
+                      className="ml-2 px-2.5 py-1 rounded-md bg-[#F9F9FB] hover:bg-black/5 border border-black/10 text-[11px] font-medium text-black/70 cursor-pointer flex items-center gap-1"
+                      title="Xem lại từ mốc bắt đầu"
                     >
                       <Rewind className="w-3 h-3" />
                       <span>Về mốc In</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={set15sFromCurrent}
-                      className="px-2.5 py-1 rounded-md bg-[#2563EB]/10 hover:bg-[#2563EB]/20 border border-[#2563EB]/20 font-semibold text-[#2563EB] cursor-pointer flex items-center gap-1"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Lấy 15s từ đây</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCaptureCurrentFrameAsPoster}
-                      disabled={capturingPoster}
-                      className="px-3 py-1 rounded-md bg-[#2563EB] hover:bg-blue-700 text-white font-bold cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-                      title="Chụp ngay khung hình đang chiếu làm ảnh Poster 0ms"
-                    >
-                      <Camera className="w-3 h-3 text-white" />
-                      <span>{capturingPoster ? 'Đang chụp...' : '📸 Chụp Frame này làm Poster 0ms'}</span>
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
+
+                <button
+                  type="button"
+                  onClick={set15sFromCurrent}
+                  className="px-3.5 py-2 rounded-lg bg-[#2563EB]/10 hover:bg-[#2563EB] text-[#2563EB] hover:text-white border border-[#2563EB]/25 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-98"
+                  title="Cắt lấy 15 giây phát tiếp theo từ khung hình video hiện tại"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>📍 Lấy 15s từ mốc đang phát ({formatVideoDuration(currentTime)})</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1405,91 +1154,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                     Chưa có file Logo .PNG nào
                   </p>
                   <p className="text-[11px] text-black/50 max-w-md mx-auto">
-                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để chọn đồng thời nhiều file logo thương hiệu. Trang chủ hiện đang tạm hiển thị dải chữ dự phòng bên dưới.
+                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để chọn đồng thời nhiều file logo thương hiệu màu trắng trên nền trong suốt.
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* PHẦN 2: DẢI CHỮ DỰ PHÒNG (FALLBACK KHI CHƯA CÓ LOGO PNG) */}
-            <div className="space-y-4 pt-2 border-t border-black/[0.07]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-xs font-semibold text-[#111111] flex items-center gap-1.5">
-                    <span>Dải băng chữ dự phòng</span>
-                    {brandLogos.length > 0 && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                        Đang tạm ẩn trên trang chủ (ưu tiên Logo PNG)
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-[11px] text-black/50 mt-0.5">
-                    {brandLogos.length > 0
-                      ? 'Dải chữ này sẽ tự động hiển thị lại nếu bạn xóa toàn bộ các logo PNG ở trên.'
-                      : 'Đang hiển thị trên trang chủ dưới dạng chữ in hoa cách nhau bởi dấu *.'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleResetMarqueeBrands}
-                  className="text-[11px] font-semibold text-black/50 hover:text-[#111111] transition-colors cursor-pointer flex items-center gap-1 self-start sm:self-auto"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Khôi phục dải chữ gốc</span>
-                </button>
-              </div>
-
-              {/* Input thêm thương hiệu mới vào dải băng chữ */}
-              <div className="flex items-center gap-2 max-w-xl">
-                <input
-                  type="text"
-                  value={newMarqueeBrand}
-                  onChange={(e) => setNewMarqueeBrand(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddMarqueeBrand();
-                    }
-                  }}
-                  placeholder="VD: Samsung, Shopee, Honda..."
-                  className="flex-1 px-3.5 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 font-medium transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddMarqueeBrand}
-                  className="px-4 py-2 bg-[#111111] hover:bg-black/85 text-white rounded-lg text-xs font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-98 shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm chữ</span>
-                </button>
-              </div>
-
-              {/* Danh sách thẻ thương hiệu chữ */}
-              <div className="flex flex-wrap items-center gap-2 p-3 bg-[#F9F9FB] rounded-xl border border-black/[0.07] min-h-[50px]">
-                {marqueeBrands.length === 0 ? (
-                  <p className="text-xs text-black/45 italic py-1">
-                    Chưa có thương hiệu nào. Bấm &quot;Khôi phục dải chữ gốc&quot; hoặc nhập thương hiệu mới ở trên.
-                  </p>
-                ) : (
-                  marqueeBrands.map((brand) => (
-                    <span
-                      key={brand}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-black/10 text-xs font-semibold text-[#111111] shadow-2xs group hover:border-black/30 transition-all"
-                    >
-                      <span>{brand}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMarqueeBrand(brand)}
-                        className="text-black/40 hover:text-rose-600 transition-colors cursor-pointer p-0.5"
-                        title={`Xóa ${brand} khỏi dải băng`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
             </div>
           </div>
         ) : (
