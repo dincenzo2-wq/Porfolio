@@ -100,9 +100,9 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     const isMobile = vw < 640;
     const isTablet = vw >= 640 && vw < 1024;
 
-    // Responsive 3D spacing tuned so center card blooms cleanly with flanking cards tilted inward
-    const centerGap = isMobile ? 210 : isTablet ? 290 : 365;
-    const sideStep = isMobile ? 148 : isTablet ? 200 : 242;
+    // Responsive 3D spacing tuned so center card blooms cleanly with crisp breathing gaps around flanking 3D cards
+    const centerGap = isMobile ? 250 : isTablet ? 355 : 460;
+    const sideStep = isMobile ? 168 : isTablet ? 225 : 275;
     const zStep = isMobile ? 150 : 195;
 
     const currentOffset = offsetRef.current;
@@ -365,36 +365,36 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           ))}
         </div>
 
-        {/* Cinematic Depth-of-Field Edge Blur (Left 24% — smooth backdrop blur + #09090B fade) */}
+        {/* Cinematic Depth-of-Field Edge Blur (Left 22% — soft bokeh blur + subtle #09090B fade revealing 5-7 cards) */}
         <div
           aria-hidden="true"
           style={{
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            maskImage: 'linear-gradient(to right, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
+            maskImage: 'linear-gradient(to right, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[18%] sm:w-[23%] md:w-[25%] z-[1100]"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[21%] md:w-[23%] z-[1100]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[20%] z-[1101] bg-gradient-to-r from-[#09090B] via-[#09090B]/70 to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[13%] z-[1101] bg-gradient-to-r from-[#09090B] via-[#09090B]/45 to-transparent"
         />
 
-        {/* Cinematic Depth-of-Field Edge Blur (Right 24% — smooth backdrop blur + #09090B fade) */}
+        {/* Cinematic Depth-of-Field Edge Blur (Right 22% — soft bokeh blur + subtle #09090B fade revealing 5-7 cards) */}
         <div
           aria-hidden="true"
           style={{
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            maskImage: 'linear-gradient(to left, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to left, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
+            maskImage: 'linear-gradient(to left, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to left, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[18%] sm:w-[23%] md:w-[25%] z-[1100]"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[21%] md:w-[23%] z-[1100]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[20%] z-[1101] bg-gradient-to-l from-[#09090B] via-[#09090B]/70 to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[13%] z-[1101] bg-gradient-to-l from-[#09090B] via-[#09090B]/45 to-transparent"
         />
       </div>
 
