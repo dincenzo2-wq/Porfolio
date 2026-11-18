@@ -364,26 +364,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
-      {/* Top Progressive Blur & Seamless Feather connecting Hero into ArcWave Stage */}
-      <div
-        aria-hidden="true"
-        style={{
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.5) 45%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.5) 45%, transparent 100%)',
-        }}
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1105]"
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          background:
-            'linear-gradient(to bottom, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 55%, transparent 100%)',
-        }}
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1106]"
-      />
-
       {/* ArcWave 3D Cylindrical Concave Arc Stage: Continuous drift, drag/swipe & click-to-center */}
       <div
         onMouseEnter={() => {
@@ -462,46 +442,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             </button>
           ))}
         </div>
-
-        {/* Cinematic Horizon Edge Vignette (Left) */}
-        <div
-          aria-hidden="true"
-          style={{
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            maskImage: 'linear-gradient(to right, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[20%] md:w-[22%] z-[900]"
-        />
-        <div
-          aria-hidden="true"
-          style={{
-            background:
-              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, rgba(9,9,11,0.6) 50%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[12%] sm:w-[15%] z-[901]"
-        />
-
-        {/* Cinematic Horizon Edge Vignette (Right) */}
-        <div
-          aria-hidden="true"
-          style={{
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            maskImage: 'linear-gradient(to left, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to left, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[20%] md:w-[22%] z-[900]"
-        />
-        <div
-          aria-hidden="true"
-          style={{
-            background:
-              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, rgba(9,9,11,0.6) 50%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[12%] sm:w-[15%] z-[901]"
-        />
       </div>
 
       {/* Lightbox phóng to xem ảnh gốc toàn màn hình */}
