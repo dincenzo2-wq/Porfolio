@@ -309,9 +309,25 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       ref={sectionRef}
       id="stills"
       aria-label="Khung hình chọn lọc 3D Depth Blur Carousel"
-      className="relative w-full bg-[#09090B] py-14 sm:py-16 md:py-20 border-b border-white/10 select-none overflow-hidden"
+      className="relative w-full bg-[#09090B] pt-16 sm:pt-20 md:pt-24 pb-0 select-none overflow-hidden"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
+
+      {/* Top Progressive Blur & Seamless Feather connecting Hero (#09090B) into 3D Stage */}
+      <div
+        aria-hidden="true"
+        style={{
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.5) 45%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.5) 45%, transparent 100%)',
+        }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1105]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1106] bg-gradient-to-b from-[#09090B] via-[#09090B]/65 to-transparent"
+      />
 
       {/* 3D Depth Blur Stage: Continuous smooth glide, hover pause, drag/swipe & click-to-zoom */}
       <div
@@ -396,7 +412,29 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[13%] z-[1101] bg-gradient-to-l from-[#09090B] via-[#09090B]/45 to-transparent"
         />
+
+        {/* Subtle Bottom Edge Progressive Blur mist softly dissolving the 3D stage into the transition bridge */}
+        <div
+          aria-hidden="true"
+          style={{
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            maskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.45) 50%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.45) 50%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-16 sm:h-20 z-[1102]"
+        />
       </div>
+
+      {/* Multi-Stop Eased Soft Gradient Bridge: seamlessly melts #09090B Dark Cinema Stage into #F7F6F2 Studio Gallery */}
+      <div
+        aria-hidden="true"
+        style={{
+          background:
+            'linear-gradient(to bottom, #09090B 0%, #111114 14%, #1D1D20 26%, #343336 39%, #575657 52%, #868583 64%, #B8B7B3 76%, #DFDED9 88%, #F1F0EC 95%, #F7F6F2 100%)',
+        }}
+        className="pointer-events-none relative w-full h-28 sm:h-36 md:h-44 -mt-4 z-[1103]"
+      />
 
       {/* Lightbox phóng to xem ảnh gốc toàn màn hình */}
       {lightboxIndex !== null && currentLightboxFrame && (

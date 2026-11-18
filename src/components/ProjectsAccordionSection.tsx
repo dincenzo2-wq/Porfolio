@@ -210,7 +210,7 @@ export function ProjectsAccordionSection({
     <section
       id="du-an"
       aria-label="Dự án đã thực hiện theo nhóm loại hình"
-      className="w-full bg-[#F7F6F2] text-[#111111] py-20 sm:py-24 md:py-28 border-b border-black/8"
+      className="w-full bg-[#F7F6F2] text-[#111111] pt-10 sm:pt-14 md:pt-16 pb-20 sm:pb-24 md:pb-28 border-b border-black/8"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 space-y-10 sm:space-y-12">
         {/* Section Header: Minimal Studio Heading */}
