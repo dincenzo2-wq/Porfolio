@@ -56,67 +56,127 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
 
   // Brand Logos & Marquee State
   const brandLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const logoDragDepthRef = useRef(0);
+  const [isDraggingLogos, setIsDraggingLogos] = useState(false);
   const [processingLogos, setProcessingLogos] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState<string | null>(null);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   const brandLogos: string[] = profile.brandLogos || [];
 
-  const handleUploadBrandLogos = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const isSupportedLogoImage = (file: File): boolean => {
+    if (file.type && file.type.startsWith('image/')) return true;
+    return /\.(png|webp|jpe?g|svg)$/i.test(file.name);
+  };
+
+  const processBrandLogoFiles = async (rawFiles: File[]) => {
+    const imageFiles = rawFiles.filter(isSupportedLogoImage);
+    if (imageFiles.length === 0) {
+      setLogoUploadError(
+        'Không tìm thấy file ảnh hợp lệ. Vui lòng thả hoặc chọn file .PNG, .WebP, .JPG hoặc .SVG.'
+      );
+      return;
+    }
 
     try {
       setProcessingLogos(true);
       setLogoUploadError(null);
-      setLogoUploadProgress(`Bắt đầu xử lý 0/${files.length} logo...`);
+      setLogoUploadProgress(`Đang xử lý 0/${imageFiles.length} logo...`);
 
-      const uploadedUrls: string[] = [];
+      const processedDataUrls: string[] = [];
+      let totalKB = 0;
+      const failedNames: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setLogoUploadProgress(`Đang chuyển sang logo trắng & xén viền (${i + 1}/${files.length}): ${file.name}...`);
-
-        // Process through canvas pipeline: white recoloring + negative space punchout + auto-trim
-        const processed = await convertLogoToWhiteWebP(file);
-
-        // Upload to Cloudflare R2
-        let finalUrl = processed.dataUrl;
-        const formData = new FormData();
-        formData.append('file', processed.file);
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        setLogoUploadProgress(
+          `Đang chuyển sang logo trắng & xén viền (${i + 1}/${imageFiles.length}): ${file.name}...`
+        );
 
         try {
-          const res = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data?.success && data?.url) {
-              finalUrl = data.url;
-            }
-          }
-        } catch (uploadErr) {
-          console.warn('[Brand Logo Upload] Failed to upload to R2, using WebP data URL:', uploadErr);
+          // Process directly via safe Canvas pipeline -> inline WebP/PNG DataURL (3KB-8KB, zero R2 broken links)
+          const processed = await convertLogoToWhiteWebP(file, 4, 140);
+          processedDataUrls.push(processed.dataUrl);
+          totalKB += processed.sizeKB;
+        } catch (fileErr) {
+          console.error(`[Brand Logo] Failed to process ${file.name}:`, fileErr);
+          failedNames.push(file.name);
         }
-
-        uploadedUrls.push(finalUrl);
       }
 
-      const updated = [...(profile.brandLogos || []), ...uploadedUrls];
-      onChange({ brandLogos: updated });
-      setLogoUploadProgress(`Đã xử lý và tải lên thành công ${files.length} logo!`);
-      setTimeout(() => setLogoUploadProgress(null), 4000);
+      if (processedDataUrls.length > 0) {
+        const updated = [...(profile.brandLogos || []), ...processedDataUrls];
+        onChange({ brandLogos: updated });
+        const avgKB = (totalKB / processedDataUrls.length).toFixed(1);
+        setLogoUploadProgress(
+          `Đã xử lý thành công ${processedDataUrls.length} logo sang màu trắng (~${avgKB}KB/logo)!`
+        );
+        setTimeout(() => setLogoUploadProgress(null), 4500);
+      } else {
+        setLogoUploadProgress(null);
+      }
+
+      if (failedNames.length > 0) {
+        setLogoUploadError(`Không thể đọc ${failedNames.length} file: ${failedNames.join(', ')}`);
+      }
     } catch (err: unknown) {
-      console.error('Failed to process/upload brand logos:', err);
+      console.error('Failed to process brand logos:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
       setLogoUploadError(`Lỗi xử lý logo: ${errMsg}`);
+      setLogoUploadProgress(null);
     } finally {
       setProcessingLogos(false);
       if (brandLogoFileInputRef.current) {
         brandLogoFileInputRef.current.value = '';
       }
     }
+  };
+
+  const handleUploadBrandLogos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    await processBrandLogoFiles(files);
+  };
+
+  const handleLogoDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    logoDragDepthRef.current += 1;
+    if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.items?.length) {
+      setIsDraggingLogos(true);
+    }
+  };
+
+  const handleLogoDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (!isDraggingLogos) {
+      setIsDraggingLogos(true);
+    }
+  };
+
+  const handleLogoDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    logoDragDepthRef.current = Math.max(0, logoDragDepthRef.current - 1);
+    if (logoDragDepthRef.current === 0) {
+      setIsDraggingLogos(false);
+    }
+  };
+
+  const handleLogoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    logoDragDepthRef.current = 0;
+    setIsDraggingLogos(false);
+    if (processingLogos) return;
+
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    if (droppedFiles.length === 0) return;
+    await processBrandLogoFiles(droppedFiles);
   };
 
   const handleRemoveBrandLogo = (indexToRemove: number) => {
@@ -784,8 +844,30 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
               onChange={handleUploadBrandLogos}
             />
 
-            {/* PHẦN 1: TẢI TRỰC TIẾP NHIỀU FILE LOGO .PNG & XỬ LÝ CANVAS TRẮNG */}
-            <div className="bg-[#F9F9FB] p-5 rounded-2xl border border-black/[0.07] space-y-4">
+            {/* PHẦN 1: KÉO THẢ HOẶC TẢI TRỰC TIẾP NHIỀU FILE LOGO .PNG & XỬ LÝ CANVAS TRẮNG */}
+            <div
+              onDragEnter={handleLogoDragEnter}
+              onDragOver={handleLogoDragOver}
+              onDragLeave={handleLogoDragLeave}
+              onDrop={handleLogoDrop}
+              className={`relative p-5 rounded-2xl border-2 transition-all duration-200 space-y-4 ${
+                isDraggingLogos
+                  ? 'border-dashed border-blue-500 bg-blue-500/10 shadow-[0_0_0_4px_rgba(59,130,246,0.12)]'
+                  : 'border-black/[0.07] bg-[#F9F9FB]'
+              }`}
+            >
+              {/* Drag & Drop Active Overlay */}
+              {isDraggingLogos && (
+                <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-2 border-dashed border-blue-500 bg-blue-500/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg mb-3">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm sm:text-base font-bold text-[#111111] bg-white/95 px-4 py-2 rounded-xl border border-blue-500/30 shadow-sm">
+                    Thả các file Logo (.png) vào đây để tự động chuyển sang màu trắng
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
@@ -793,7 +875,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                     <span>Quản lý Logo PNG màu trắng ({brandLogos.length})</span>
                   </h3>
                   <p className="text-[11px] text-black/60 mt-0.5">
-                    Tải trực tiếp nhiều file .png lên Cloudflare R2 (không cần gõ tên). Hệ thống dùng Canvas tự động đục thủng chi tiết âm bản bên trong, đổi toàn bộ sang trắng tinh (#FFFFFF) và xén sát viền thừa.
+                    Kéo thả trực tiếp nhiều file .png vào khung này hoặc bấm nút tải lên. Hệ thống tự động nén chiều cao tối đa 140px, khoét âm bản, chuyển trắng tinh (#FFFFFF), xén sát viền và lưu dạng WebP siêu nhẹ (3–8KB) hiển thị tức thì.
                   </p>
                 </div>
 
@@ -853,26 +935,33 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 </div>
               )}
 
-              {/* Gallery of Uploaded White Logos */}
+              {/* Gallery of Uploaded White Logos (also accepts direct Drag & Drop) */}
               {brandLogos.length > 0 ? (
                 <div className="space-y-3">
-                  <div className="p-4 bg-[#0B0B0D] rounded-xl border border-white/10">
-                    <div className="flex items-center justify-between mb-3 text-[11px] text-white/60">
-                      <span className="font-medium">Xem trước trên nền đen thực tế:</span>
+                  <div
+                    className={`p-4 bg-[#0B0B0D] rounded-xl border transition-colors ${
+                      isDraggingLogos ? 'border-blue-500 bg-blue-950/40' : 'border-white/10'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3 text-[11px] text-white/60">
+                      <span className="font-medium">
+                        Xem trước trên nền đen thực tế (có thể kéo thả thêm file .png trực tiếp vào đây):
+                      </span>
                       <span>Dùng mũi tên để đổi vị trí, dấu X để xóa</span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
                       {brandLogos.map((url, idx) => (
                         <div
-                          key={`${url}-${idx}`}
+                          key={`brand-logo-${idx}-${url.slice(-24)}`}
                           className="relative group bg-[#16161A] hover:bg-[#1E1E24] rounded-lg border border-white/10 hover:border-white/20 p-2.5 flex flex-col items-center justify-between w-32 h-24 shrink-0 transition-all shadow-xs"
                         >
-                          <div className="flex-1 w-full flex items-center justify-center p-1">
+                          <div className="flex-1 w-full flex items-center justify-center p-1 overflow-hidden">
                             <img
                               src={url}
                               alt={`Logo ${idx + 1}`}
                               className="max-h-10 w-auto max-w-[100px] object-contain drop-shadow select-none"
+                              draggable={false}
                             />
                           </div>
 
@@ -887,7 +976,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                               >
                                 <ArrowLeft className="w-3 h-3" />
                               </button>
-                              <span className="font-mono text-[9px] text-white/40">#{idx + 1}</span>
+                              <span className="font-mono text-[9px] text-white/40 tabular-nums">#{idx + 1}</span>
                               <button
                                 type="button"
                                 disabled={idx === brandLogos.length - 1}
@@ -920,11 +1009,12 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                     </p>
                     <div className="flex items-center overflow-x-auto py-2 scrollbar-none gap-0">
                       {brandLogos.map((url, idx) => (
-                        <div key={`sim-${url}-${idx}`} className="flex items-center shrink-0">
+                        <div key={`sim-${idx}-${url.slice(-24)}`} className="flex items-center shrink-0">
                           <img
                             src={url}
                             alt="Logo preview"
                             className="h-8 w-auto max-w-[120px] object-contain opacity-90"
+                            draggable={false}
                           />
                           <span className="flex items-center mx-6 text-[#3B82F6] text-lg font-bold leading-none select-none">
                             *
@@ -935,13 +1025,28 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   </div>
                 </div>
               ) : (
-                <div className="p-6 rounded-xl border border-dashed border-black/15 bg-white text-center space-y-2">
-                  <Image className="w-8 h-8 text-black/30 mx-auto" />
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => !processingLogos && brandLogoFileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !processingLogos) {
+                      e.preventDefault();
+                      brandLogoFileInputRef.current?.click();
+                    }
+                  }}
+                  className={`p-7 rounded-xl border-2 border-dashed text-center space-y-2 transition-all cursor-pointer ${
+                    isDraggingLogos
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-black/15 bg-white hover:border-blue-500/60 hover:bg-blue-50/40'
+                  }`}
+                >
+                  <Upload className="w-8 h-8 text-blue-600/70 mx-auto" />
                   <p className="text-xs font-semibold text-[#111111]">
-                    Chưa có file Logo .PNG nào — Dải băng đang tự động ẩn trên trang chủ
+                    Kéo thả các file Logo (.png) vào đây hoặc bấm để chọn từ máy tính
                   </p>
-                  <p className="text-[11px] text-black/50 max-w-md mx-auto">
-                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để tải logo đối tác. Khi có ít nhất 1 logo, dải băng sẽ tự động hiển thị trên trang chủ.
+                  <p className="text-[11px] text-black/55 max-w-md mx-auto">
+                    Chưa có file Logo .PNG nào — Dải băng đang tự động ẩn trên trang chủ. Khi bạn thả ít nhất 1 logo vào đây, dải băng sẽ tự động xuất hiện với logo màu trắng sắc nét.
                   </p>
                 </div>
               )}

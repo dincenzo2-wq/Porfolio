@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { processLogoPixels } from './logoProcessing';
+import {
+  processLogoPixels,
+  computeScaledDimensions,
+  computeSafeTrimBox,
+} from './logoProcessing';
 
 describe('processLogoPixels', () => {
   it('punches out white negative space inside a colored logo and turns colored pixels pure white', () => {
-    // Create a 5x5 image
-    // Background: transparent (alpha = 0)
-    // Outer border of 3x3 at center: Blue (R: 0, G: 100, B: 255, A: 255)
-    // Center pixel at (2, 2): White tooth (R: 255, G: 255, B: 255, A: 255)
     const width = 5;
     const height = 5;
     const data = new Uint8ClampedArray(width * height * 4);
@@ -16,14 +16,14 @@ describe('processLogoPixels', () => {
     for (let y = 1; y <= 3; y++) {
       for (let x = 1; x <= 3; x++) {
         const idx = (y * width + x) * 4;
-        data[idx] = 0;     // R
-        data[idx + 1] = 100; // G
-        data[idx + 2] = 255; // B
-        data[idx + 3] = 255; // A
+        data[idx] = 0;
+        data[idx + 1] = 100;
+        data[idx + 2] = 255;
+        data[idx + 3] = 255;
       }
     }
 
-    // Set center pixel (2,2) to white
+    // Center pixel (2,2): white tooth inside blue plus
     const centerIdx = (2 * width + 2) * 4;
     data[centerIdx] = 255;
     data[centerIdx + 1] = 255;
@@ -32,17 +32,14 @@ describe('processLogoPixels', () => {
 
     const bbox = processLogoPixels(data, width, height);
 
-    // Center pixel should be punched out to transparent (alpha = 0)
     assert.strictEqual(data[centerIdx + 3], 0, 'Center white pixel must be punched out to alpha = 0');
 
-    // Surrounding colored pixels should be converted to pure white (#FFFFFF)
     const bluePixelIdx = (1 * width + 1) * 4;
     assert.strictEqual(data[bluePixelIdx], 255);
     assert.strictEqual(data[bluePixelIdx + 1], 255);
     assert.strictEqual(data[bluePixelIdx + 2], 255);
     assert.strictEqual(data[bluePixelIdx + 3], 255);
 
-    // Bounding box should span from x: 1..3, y: 1..3
     assert.strictEqual(bbox.minX, 1);
     assert.strictEqual(bbox.minY, 1);
     assert.strictEqual(bbox.maxX, 3);
@@ -53,7 +50,6 @@ describe('processLogoPixels', () => {
   });
 
   it('preserves an already all-white logo on transparent background', () => {
-    // 4x4 image with a 2x2 white square at (1,1) to (2,2)
     const width = 4;
     const height = 4;
     const data = new Uint8ClampedArray(width * height * 4);
@@ -70,7 +66,6 @@ describe('processLogoPixels', () => {
 
     const bbox = processLogoPixels(data, width, height);
 
-    // White pixels should NOT be erased since there were no colored pixels
     const px = (1 * width + 1) * 4;
     assert.strictEqual(data[px], 255);
     assert.strictEqual(data[px + 1], 255);
@@ -84,26 +79,63 @@ describe('processLogoPixels', () => {
     assert.strictEqual(bbox.hasContent, true);
   });
 
-  it('turns dark/black logos into pure white with intact alpha', () => {
+  it('clears faint pixels with alpha <= 25 and keeps visible semi-transparent pixels intact', () => {
     const width = 3;
     const height = 3;
     const data = new Uint8ClampedArray(width * height * 4);
 
-    // One semi-transparent black pixel at (1, 1)
+    // Faint halo pixel at (0,0) with alpha = 25 -> must be cleared
+    data[0] = 20;
+    data[1] = 20;
+    data[2] = 20;
+    data[3] = 25;
+
+    // Visible pixel at (1,1) with alpha = 180 -> must turn pure white preserving alpha
     const idx = (1 * width + 1) * 4;
     data[idx] = 20;
     data[idx + 1] = 20;
     data[idx + 2] = 20;
-    data[idx + 3] = 180; // semi-transparent
+    data[idx + 3] = 180;
 
     const bbox = processLogoPixels(data, width, height);
 
+    assert.strictEqual(data[3], 0, 'Pixels with alpha <= 25 should be cleared');
     assert.strictEqual(data[idx], 255);
     assert.strictEqual(data[idx + 1], 255);
     assert.strictEqual(data[idx + 2], 255);
-    assert.strictEqual(data[idx + 3], 180, 'Original alpha should be preserved for anti-aliasing');
+    assert.strictEqual(data[idx + 3], 180);
     assert.strictEqual(bbox.hasContent, true);
     assert.strictEqual(bbox.minX, 1);
     assert.strictEqual(bbox.maxX, 1);
+  });
+
+  it('handles fully transparent images safely without returning negative dimensions', () => {
+    const width = 10;
+    const height = 8;
+    const data = new Uint8ClampedArray(width * height * 4);
+
+    const bbox = processLogoPixels(data, width, height);
+    assert.strictEqual(bbox.hasContent, false);
+    assert.strictEqual(bbox.width, 0);
+    assert.strictEqual(bbox.height, 0);
+
+    const safeTrim = computeSafeTrimBox(bbox, width, height);
+    assert.strictEqual(safeTrim.isTrimmed, false);
+    assert.strictEqual(safeTrim.x, 0);
+    assert.strictEqual(safeTrim.y, 0);
+    assert.strictEqual(safeTrim.width, 10);
+    assert.strictEqual(safeTrim.height, 8);
+  });
+});
+
+describe('computeScaledDimensions', () => {
+  it('caps height at 140px while preserving aspect ratio for large logos', () => {
+    const scaled = computeScaledDimensions(1400, 700, 140);
+    assert.deepStrictEqual(scaled, { width: 280, height: 140 });
+  });
+
+  it('does not upscale logos already <= 140px tall', () => {
+    const scaled = computeScaledDimensions(220, 80, 140);
+    assert.deepStrictEqual(scaled, { width: 220, height: 80 });
   });
 });
