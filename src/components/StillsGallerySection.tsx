@@ -309,7 +309,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       ref={sectionRef}
       id="stills"
       aria-label="Khung hình chọn lọc 3D Depth Blur Carousel"
-      className="relative w-full bg-[#09090B] pt-16 sm:pt-20 md:pt-24 pb-0 select-none overflow-hidden"
+      className="relative w-full bg-transparent pt-16 sm:pt-20 md:pt-24 pb-10 sm:pb-14 md:pb-16 select-none overflow-hidden"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
@@ -326,7 +326,11 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1106] bg-gradient-to-b from-[#09090B] via-[#09090B]/65 to-transparent"
+        style={{
+          background:
+            'linear-gradient(to bottom, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 55%, transparent 100%)',
+        }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1106]"
       />
 
       {/* 3D Depth Blur Stage: Continuous smooth glide, hover pause, drag/swipe & click-to-zoom */}
@@ -381,7 +385,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           ))}
         </div>
 
-        {/* Cinematic Depth-of-Field Edge Blur (Left 22% — soft bokeh blur + subtle #09090B fade revealing 5-7 cards) */}
+        {/* Cinematic Depth-of-Field Edge Blur (Left 22% — follows live --morph-bg seamlessly) */}
         <div
           aria-hidden="true"
           style={{
@@ -394,10 +398,14 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[13%] z-[1101] bg-gradient-to-r from-[#09090B] via-[#09090B]/45 to-transparent"
+          style={{
+            background:
+              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 50%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[13%] z-[1101]"
         />
 
-        {/* Cinematic Depth-of-Field Edge Blur (Right 22% — soft bokeh blur + subtle #09090B fade revealing 5-7 cards) */}
+        {/* Cinematic Depth-of-Field Edge Blur (Right 22% — follows live --morph-bg seamlessly) */}
         <div
           aria-hidden="true"
           style={{
@@ -410,33 +418,11 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[13%] z-[1101] bg-gradient-to-l from-[#09090B] via-[#09090B]/45 to-transparent"
-        />
-
-        {/* Subtle Bottom Edge Progressive Blur mist softly dissolving the 3D stage into the transition bridge */}
-        <div
-          aria-hidden="true"
-          style={{
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            maskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.45) 50%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.45) 50%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-16 sm:h-20 z-[1102]"
-        />
-      </div>
-
-      {/* Multi-Stop Eased Soft Gradient Bridge: seamlessly melts #09090B Dark Cinema Stage into #F7F6F2 Studio Gallery */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none relative w-full h-28 sm:h-36 md:h-44 -mt-4 z-[1103] bg-[#F7F6F2]"
-      >
-        <div
           style={{
             background:
-              'linear-gradient(to bottom, rgba(9, 9, 11, 1) 0%, rgba(9, 9, 11, 0.96) 14%, rgba(9, 9, 11, 0.86) 28%, rgba(9, 9, 11, 0.68) 42%, rgba(9, 9, 11, 0.46) 56%, rgba(9, 9, 11, 0.25) 70%, rgba(9, 9, 11, 0.1) 84%, rgba(9, 9, 11, 0.02) 94%, rgba(9, 9, 11, 0) 100%)',
+              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 50%, transparent 100%)',
           }}
-          className="absolute inset-0"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[13%] z-[1101]"
         />
       </div>
 

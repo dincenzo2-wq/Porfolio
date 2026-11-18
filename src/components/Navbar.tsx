@@ -74,8 +74,9 @@ export function Navbar({ onOpenContact, branding, email, location }: NavbarProps
       const duAnEl = document.getElementById('du-an');
       if (duAnEl) {
         const rect = duAnEl.getBoundingClientRect();
-        // Switch from dark hero bar to frosted studio light bar cleanly as the light #du-an gallery enters below the header
-        setIsDarkStage(rect.top > 110);
+        const vh = window.innerHeight || 900;
+        // Sync sticky Navbar dark/light switch right with the Scroll-Linked Background Morph midpoint (~52% viewport)
+        setIsDarkStage(rect.top > vh * 0.52);
       } else {
         setIsDarkStage(window.scrollY < window.innerHeight * 0.8);
       }

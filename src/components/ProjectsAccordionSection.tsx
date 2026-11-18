@@ -137,14 +137,17 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
             {project.clientOrAgency.trim()}
           </p>
         )}
-        <h4 className="font-bold text-base sm:text-lg md:text-xl text-[#111111] group-hover:text-[#2563EB] transition-colors line-clamp-2 tracking-tight leading-snug">
+        <h4 className="font-bold text-base sm:text-lg md:text-xl text-[var(--morph-ink,#111111)] group-hover:text-[#2563EB] transition-colors line-clamp-2 tracking-tight leading-snug">
           {project.title}
         </h4>
-        <div className="mt-auto pt-1 flex items-center justify-between gap-2 text-xs sm:text-sm text-[#555555]">
-          <span className="truncate font-medium text-[#555555]">
+        <div
+          style={{ color: 'var(--morph-ink-muted, #555555)' }}
+          className="mt-auto pt-1 flex items-center justify-between gap-2 text-xs sm:text-sm"
+        >
+          <span className="truncate font-medium">
             {formatDeliverableRoles(project.deliverableRole)}
           </span>
-          <span className="inline-flex items-center gap-1 shrink-0 tabular-nums font-semibold text-[#555555] ml-auto pl-1">
+          <span className="inline-flex items-center gap-1 shrink-0 tabular-nums font-semibold ml-auto pl-1">
             <Play className="w-2.5 h-2.5 fill-current text-[#2563EB] shrink-0" aria-hidden="true" />
             <span>
               {project.duration} · {project.year}
@@ -210,24 +213,34 @@ export function ProjectsAccordionSection({
     <section
       id="du-an"
       aria-label="Dự án đã thực hiện theo nhóm loại hình"
-      className="w-full bg-[#F7F6F2] text-[#111111] pt-10 sm:pt-14 md:pt-16 pb-20 sm:pb-24 md:pb-28 border-b border-black/8"
+      style={{
+        color: 'var(--morph-ink, #111111)',
+        borderColor: 'var(--morph-border, rgba(0,0,0,0.08))',
+      }}
+      className="w-full bg-transparent pt-16 sm:pt-20 md:pt-24 pb-20 sm:pb-24 md:pb-28 border-b"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 space-y-10 sm:space-y-12">
-        {/* Section Header: Minimal Studio Heading */}
+        {/* Section Header: Minimal Studio Heading (adapts smoothly to Scroll-Linked Background Morph) */}
         <div className="space-y-2">
           <MaskedRevealTitle
             as="h2"
-            className="font-bricolage text-2xl md:text-3xl text-[#111111] font-extrabold tracking-tight uppercase leading-[1.25]"
+            className="font-bricolage text-2xl md:text-3xl font-extrabold tracking-tight uppercase leading-[1.25] text-[var(--morph-ink,#111111)]"
           >
             Dự án đã thực hiện
           </MaskedRevealTitle>
-          <p className="text-sm sm:text-base text-[#555555] font-normal leading-relaxed max-w-2xl">
+          <p
+            style={{ color: 'var(--morph-ink-muted, #555555)' }}
+            className="text-sm sm:text-base font-normal leading-relaxed max-w-2xl"
+          >
             {subtitle || 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.'}
           </p>
         </div>
 
         {/* Dynamic Category Accordion Rows with Staggered Scroll Reveal (110ms, Bidirectional) */}
-        <RevealGroup staggerMs={110} className="divide-y divide-black/12 border-t border-black/12">
+        <RevealGroup
+          staggerMs={110}
+          className="divide-y divide-[var(--morph-border,rgba(0,0,0,0.12))] border-t border-[var(--morph-border,rgba(0,0,0,0.12))]"
+        >
           {categoryGroups.map((group, groupIdx) => {
             const projectsInGroup = allProjects.filter(
               (p) => p.category === group.categoryFilter && !p.hidden
@@ -258,13 +271,16 @@ export function ProjectsAccordionSection({
                     </span>
 
                     {/* Category Title in Bricolage Grotesque */}
-                    <h3 className="font-bricolage text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#111111] group-hover:text-[#2563EB] transition-colors tracking-tight uppercase">
+                    <h3 className="font-bricolage text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--morph-ink,#111111)] group-hover:text-[#2563EB] transition-colors tracking-tight uppercase">
                       {group.title}
                     </h3>
 
                     {/* Subtitle / Description (Hidden on mobile; only show when subtitle is not empty) */}
                     {group.subtitle?.trim() && (
-                      <span className="hidden lg:inline-block text-sm sm:text-base text-[#555555] font-normal truncate">
+                      <span
+                        style={{ color: 'var(--morph-ink-muted, #555555)' }}
+                        className="hidden lg:inline-block text-sm sm:text-base font-normal truncate"
+                      >
                         — {group.subtitle.trim()}
                       </span>
                     )}

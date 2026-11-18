@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MotionConfig } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { HeroShowreel } from './components/HeroShowreel';
@@ -19,6 +19,78 @@ function PortfolioApp() {
   const { content } = usePortfolioData();
   const [selectedProject, setSelectedProject] = useState<PortfolioProject | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [currentPath, setCurrentPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+  const morphStageRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-Linked Background Morph: smoothly transitions shared canvas from #09090B -> #F7F6F2 as #du-an enters viewport
+  useEffect(() => {
+    let rafId = 0;
+
+    const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+
+    const updateMorph = () => {
+      const stage = morphStageRef.current;
+      const duAnEl = document.getElementById('du-an');
+      if (!stage || !duAnEl) return;
+
+      const vh = window.innerHeight || 900;
+      const rect = duAnEl.getBoundingClientRect();
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let t = 0;
+      if (reducedMotion) {
+        t = rect.top < vh * 0.5 ? 1 : 0;
+      } else {
+        const startY = vh * 0.78; // 100% dark while viewing Hero + 3D Carousel
+        const endY = vh * 0.30;   // 100% studio off-white once Projects reaches reading zone
+        const raw = Math.min(1, Math.max(0, (startY - rect.top) / Math.max(1, startY - endY)));
+        // Smoothstep easing curve
+        t = raw * raw * (3 - 2 * raw);
+      }
+
+      // Interpolate background: #09090B (9, 9, 11) -> #F7F6F2 (247, 246, 242)
+      const bgR = lerp(9, 247, t);
+      const bgG = lerp(9, 246, t);
+      const bgB = lerp(11, 242, t);
+      stage.style.setProperty('--morph-bg', `rgb(${bgR}, ${bgG}, ${bgB})`);
+      stage.style.setProperty('--morph-bg-mid', `rgba(${bgR}, ${bgG}, ${bgB}, 0.52)`);
+
+      // High-contrast ink switch: #F7F6F2 (247,246,242) -> #111111 (17,17,17)
+      // Slightly steeper curve around midpoint so text never sits low-contrast against mid-gray
+      const inkT = Math.min(1, Math.max(0, (t - 0.32) / 0.36));
+      const inkSmooth = inkT * inkT * (3 - 2 * inkT);
+      const inkR = lerp(247, 17, inkSmooth);
+      const inkG = lerp(246, 17, inkSmooth);
+      const inkB = lerp(242, 17, inkSmooth);
+      stage.style.setProperty('--morph-ink', `rgb(${inkR}, ${inkG}, ${inkB})`);
+
+      const mutedR = lerp(195, 85, inkSmooth);
+      const mutedG = lerp(195, 85, inkSmooth);
+      const mutedB = lerp(198, 85, inkSmooth);
+      stage.style.setProperty('--morph-ink-muted', `rgb(${mutedR}, ${mutedG}, ${mutedB})`);
+
+      stage.style.setProperty(
+        '--morph-border',
+        inkSmooth > 0.5 ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.14)'
+      );
+    };
+
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateMorph);
+    };
+
+    updateMorph();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [currentPath]);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
     const initialCats =
       content.categories && content.categories.length > 0
@@ -49,10 +121,6 @@ function PortfolioApp() {
   }, [content.categories]);
 
   // Client-side simple routing for Cloudflare Pages
-  const [currentPath, setCurrentPath] = useState(() =>
-    typeof window !== 'undefined' ? window.location.pathname : '/'
-  );
-
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname);
@@ -139,34 +207,38 @@ function PortfolioApp() {
             heroVideoEnd={content.profile.heroVideoEnd}
           />
 
-          {/* Mảng nội dung bên dưới (z-10) nối liền mạch nền #09090B với đáy Hero (xóa hoàn toàn vết cắt ngang) */}
-          <div className="relative z-10 bg-[#09090B]">
-            {/* PHẦN 2: Khu vực Stills & Color Frames (6 khung hình accordion nền #09090B liền mạch) */}
+          {/* Mảng nội dung bên dưới (z-10): Scroll-Linked Background Morph từ #09090B -> #F7F6F2 */}
+          <div
+            ref={morphStageRef}
+            style={{ backgroundColor: 'var(--morph-bg, #09090B)' }}
+            className="relative z-10"
+          >
+            {/* PHẦN 2: 3D Depth Blur Carousel nền trong suốt ăn theo --morph-bg */}
             <StillsGallerySection stills={content.stills} />
 
-            {/* Khối nội dung nền sáng #F7F6F2 bên dưới Stills */}
-            <div className="bg-[#F7F6F2]">
-              {/* PHẦN 3: Dự án dạng danh sách bấm mở rộng (Expandable Accordion List trên nền sáng #F7F6F2) */}
-              <ViewportFocusSection>
-                <ProjectsAccordionSection
-                  projects={content.projects}
-                  categories={content.categories}
-                  categorySubtitles={content.categorySubtitles}
-                  subtitle={content.profile.projectsSubtitle}
-                  openCategories={openCategories}
-                  onToggleCategory={handleToggleCategory}
-                  onSelectProject={setSelectedProject}
-                />
-              </ViewportFocusSection>
+            {/* PHẦN 3: Dự án dạng danh sách bấm mở rộng (ăn trực tiếp theo nền chuyển sắc --morph-bg) */}
+            <ViewportFocusSection>
+              <ProjectsAccordionSection
+                projects={content.projects}
+                categories={content.categories}
+                categorySubtitles={content.categorySubtitles}
+                subtitle={content.profile.projectsSubtitle}
+                openCategories={openCategories}
+                onToggleCategory={handleToggleCategory}
+                onSelectProject={setSelectedProject}
+              />
+            </ViewportFocusSection>
 
-              {/* Dải băng chữ/logo chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
+            {/* Khối dưới ổn định trên nền sáng #F7F6F2 */}
+            <div className="bg-[#F7F6F2]">
+              {/* Dải băng chữ/logo chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC */}
               <BrandMarquee
                 showBrandMarquee={content.profile.showBrandMarquee}
                 collaboratorsText={content.profile.collaboratorsText}
                 brandLogos={content.profile.brandLogos}
               />
 
-              {/* PHẦN 4: Giới thiệu năng lực thực chiến, 5 icon công cụ, Kinh nghiệm & Học vấn */}
+              {/* PHẦN 4: Giới thiệu năng lực thực chiến, công cụ, Kinh nghiệm & Học vấn */}
               <ViewportFocusSection>
                 <OverviewAndSkills
                   onOpenContact={() => setContactOpen(true)}
