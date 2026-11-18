@@ -377,9 +377,13 @@ export function OverviewAndSkills({
                       {edu.period}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-[#3F3F46] font-medium">
-                    {edu.institution}
-                  </p>
+                  {edu.institution &&
+                    edu.institution.trim() !== '' &&
+                    edu.institution.trim() !== '[Tên trường Đại học của bạn]' && (
+                      <p className="text-xs sm:text-sm text-[#3F3F46] font-medium">
+                        {edu.institution}
+                      </p>
+                    )}
                   <p className="text-sm sm:text-base text-[#71717A] leading-relaxed">
                     {edu.description}
                   </p>

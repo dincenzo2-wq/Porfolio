@@ -7,9 +7,13 @@ import { cleanSvgWhiteBackground, invertSvgColors, autoCropSvgViewBox } from '..
 interface NavbarProps {
   onOpenContact: () => void;
   branding?: SiteBrandingData;
+  email?: string;
+  location?: string;
 }
 
-export function Navbar({ onOpenContact, branding }: NavbarProps) {
+export function Navbar({ onOpenContact, branding, email, location }: NavbarProps) {
+  const contactEmail = (email && email.trim()) || ARTIST_PROFILE.email;
+  const displayLocation = (location && location.trim()) || ARTIST_PROFILE.location;
   const [isDarkStage, setIsDarkStage] = useState(true);
   const [vietnamTime, setVietnamTime] = useState('');
 
@@ -126,7 +130,7 @@ export function Navbar({ onOpenContact, branding }: NavbarProps) {
               isDarkStage ? 'text-white/80' : 'text-[#111111]'
             }`}
           >
-            <span>TP. Hồ Chí Minh</span>
+            <span>{displayLocation}</span>
             <span className={isDarkStage ? 'text-white/40' : 'text-black/30'}>·</span>
             <span
               className={`tabular-nums font-semibold ${
@@ -139,7 +143,7 @@ export function Navbar({ onOpenContact, branding }: NavbarProps) {
 
           {/* Direct Email Link */}
           <a
-            href={`mailto:${ARTIST_PROFILE.email}`}
+            href={`mailto:${contactEmail}`}
             className={`hidden lg:inline-flex items-center gap-2 text-sm font-medium transition-colors ${
               isDarkStage
                 ? 'text-white/80 hover:text-white'
@@ -151,7 +155,7 @@ export function Navbar({ onOpenContact, branding }: NavbarProps) {
                 isDarkStage ? 'text-white/80' : 'text-[#111111]'
               }`}
             />
-            <span>{ARTIST_PROFILE.email}</span>
+            <span>{contactEmail}</span>
           </a>
         </div>
 

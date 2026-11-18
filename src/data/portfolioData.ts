@@ -29,7 +29,7 @@ export const ARTIST_PROFILE = {
     'Chuyên quay phim thương mại, dựng hậu kỳ tốc độ cao và motion graphics cho Agency, Brand & Production House.',
   bioDetail:
     'Quy trình làm việc thực chiến, đáp ứng brief chuẩn xác. Nhận brief và xuất bản nháp nhanh trong 24–48h. Tối ưu hoàn hảo cả hai định dạng TVC ngang 16:9 và Social dọc 9:16.',
-  email: 'vinh.film@gmail.com',
+  email: 'dincenzo2@gmail.com',
   phone: '[Số Zalo thực tế]',
   zalo: '[Số Zalo thực tế]',
   telegram: '@quocvinhfilm',

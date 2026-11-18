@@ -98,7 +98,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     <section
       id="stills"
       aria-label="Khung hình chọn lọc Stills Gallery"
-      className="relative w-full bg-[#0A0A0A] py-12 sm:py-14 md:py-16 border-b border-white/10 select-none overflow-hidden"
+      className="relative w-full bg-[#09090B] py-12 sm:py-14 md:py-16 border-b border-white/10 select-none overflow-hidden"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 

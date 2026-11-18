@@ -220,7 +220,7 @@ export function HeroShowreel({
   return (
     <section
       aria-label="Hero Showreel"
-      className="hero-viewport-pinned sticky top-0 z-0 h-[100svh] w-full overflow-hidden bg-[#0B0B0D]"
+      className="hero-viewport-pinned sticky top-0 z-0 h-[100svh] w-full overflow-hidden bg-[#09090B]"
     >
       <div
         ref={curtainContentRef}
@@ -268,6 +268,12 @@ export function HeroShowreel({
               'linear-gradient(to top, #09090B 0%, rgba(9, 9, 11, 0.92) 28%, rgba(9, 9, 11, 0.65) 58%, rgba(9, 9, 11, 0.2) 82%, transparent 100%)',
           }}
           className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] z-[1] will-change-[opacity]"
+        />
+
+        {/* Lớp nối đáy đặc (#09090B) xóa hoàn toàn vết cắt ngang giữa đáy Hero và dải 6 khung hình Stills */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-36 z-[2] bg-gradient-to-t from-[#09090B] via-[#09090B]/80 to-transparent"
         />
 
         {/* 2. Centered Editorial Distilled Hero Content với khoảng cách an toàn, không bị cấn đáy hoặc che khuất */}

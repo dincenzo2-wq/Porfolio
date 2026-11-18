@@ -83,11 +83,13 @@ function PortfolioApp() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-[#0A0A0A] text-[#111111] selection:bg-[#2563EB] selection:text-white font-sans">
+      <div className="min-h-screen bg-[#09090B] text-[#111111] selection:bg-[#2563EB] selection:text-white font-sans">
         {/* Adaptive Navbar */}
         <Navbar
           onOpenContact={() => setContactOpen(true)}
           branding={content.branding}
+          email={content.profile.email}
+          location={content.profile.location}
         />
 
         <main className="w-full [overflow-x:clip]">
@@ -107,42 +109,45 @@ function PortfolioApp() {
             heroVideoEnd={content.profile.heroVideoEnd}
           />
 
-          {/* Mảng nội dung bên dưới (z-10) trượt lên phủ qua Hero như một tấm màn (Hero Curtain Cover) */}
-          <div className="relative z-10 shadow-[0_-24px_48px_rgba(0,0,0,0.85)] bg-[#F7F6F2]">
-            {/* PHẦN 2: Khu vực Stills & Color Frames (1 hàng chạy ngang vô tận 55s ngay dưới phần Hero) */}
+          {/* Mảng nội dung bên dưới (z-10) nối liền mạch nền #09090B với đáy Hero (xóa hoàn toàn vết cắt ngang) */}
+          <div className="relative z-10 bg-[#09090B]">
+            {/* PHẦN 2: Khu vực Stills & Color Frames (6 khung hình accordion nền #09090B liền mạch) */}
             <StillsGallerySection stills={content.stills} />
 
-            {/* PHẦN 3: Dự án dạng danh sách bấm mở rộng (Expandable Accordion List trên nền sáng #F7F6F2) */}
-            <ViewportFocusSection>
-              <ProjectsAccordionSection
-                projects={content.projects}
-                categories={content.categories}
-                categorySubtitles={content.categorySubtitles}
-                subtitle={content.profile.projectsSubtitle}
-                openCategories={openCategories}
-                onToggleCategory={handleToggleCategory}
-                onSelectProject={setSelectedProject}
-              />
-            </ViewportFocusSection>
+            {/* Khối nội dung nền sáng #F7F6F2 bên dưới Stills */}
+            <div className="bg-[#F7F6F2]">
+              {/* PHẦN 3: Dự án dạng danh sách bấm mở rộng (Expandable Accordion List trên nền sáng #F7F6F2) */}
+              <ViewportFocusSection>
+                <ProjectsAccordionSection
+                  projects={content.projects}
+                  categories={content.categories}
+                  categorySubtitles={content.categorySubtitles}
+                  subtitle={content.profile.projectsSubtitle}
+                  openCategories={openCategories}
+                  onToggleCategory={handleToggleCategory}
+                  onSelectProject={setSelectedProject}
+                />
+              </ViewportFocusSection>
 
-            {/* Dải băng chữ/logo chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
-            <BrandMarquee
-              showBrandMarquee={content.profile.showBrandMarquee}
-              collaboratorsText={content.profile.collaboratorsText}
-              brandLogos={content.profile.brandLogos}
-            />
-
-            {/* PHẦN 4: Giới thiệu năng lực thực chiến, 5 icon công cụ, Kinh nghiệm & Học vấn */}
-            <ViewportFocusSection>
-              <OverviewAndSkills
-                onOpenContact={() => setContactOpen(true)}
-                gear={content.gear}
-                agencySubtitle={content.profile.agencySubtitle}
-                tools={content.tools}
-                experience={content.experience}
-                education={content.education}
+              {/* Dải băng chữ/logo chạy ngang vô tận: THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (Độc lập, ngăn cách Dự án và Năng lực Agency) */}
+              <BrandMarquee
+                showBrandMarquee={content.profile.showBrandMarquee}
+                collaboratorsText={content.profile.collaboratorsText}
+                brandLogos={content.profile.brandLogos}
               />
-            </ViewportFocusSection>
+
+              {/* PHẦN 4: Giới thiệu năng lực thực chiến, 5 icon công cụ, Kinh nghiệm & Học vấn */}
+              <ViewportFocusSection>
+                <OverviewAndSkills
+                  onOpenContact={() => setContactOpen(true)}
+                  gear={content.gear}
+                  agencySubtitle={content.profile.agencySubtitle}
+                  tools={content.tools}
+                  experience={content.experience}
+                  education={content.education}
+                />
+              </ViewportFocusSection>
+            </div>
           </div>
         </main>
 
