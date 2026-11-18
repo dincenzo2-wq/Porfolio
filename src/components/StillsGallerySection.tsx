@@ -115,9 +115,10 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     const isTablet = vw >= 640 && vw < 1024;
 
     // ArcWave Cylindrical Radius (R) & Angular Step (deltaTheta)
-    // Tuned with generous angular step so cards maintain crisp, elegant breathing gaps
-    const R = isMobile ? 800 : isTablet ? 1150 : 1420;
-    const deltaThetaDeg = isMobile ? 24 : isTablet ? 21 : 19;
+    // Calibrated for portrait cards (~280x400) with 5 cards visible across viewport in amphitheater arc
+    // Slit gap is ~13-14px between adjacent frames (matching Framer ArcWave reference)
+    const R = isMobile ? 640 : isTablet ? 920 : 1180;
+    const deltaThetaDeg = isMobile ? 16.8 : isTablet ? 15.2 : 14.3;
     const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
 
     const currentOffset = offsetRef.current;
@@ -151,9 +152,10 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       const rotY = thetaDeg;
 
       // Depth blur & atmospheric opacity degradation on flanks
-      const normalizedAngle = absThetaDeg / 70; // 0 at center, 1 at flank
-      const blurPx = Math.min(5, Math.pow(normalizedAngle, 1.3) * 6);
-      const opacity = Math.max(0.35, 1 - Math.pow(normalizedAngle, 1.5) * 0.6);
+      // Center (0 deg) has full clarity; flank 1 (14 deg) stays bright; flank 2 (28 deg) dims subtly; outer horizon dims into vignette
+      const normalizedAngle = absThetaDeg / 55;
+      const blurPx = Math.min(4, Math.pow(Math.max(0, normalizedAngle - 0.25), 1.4) * 4.5);
+      const opacity = Math.max(0.3, 1 - Math.pow(normalizedAngle, 1.4) * 0.7);
 
       // Scale: keep scale at 1.0 to preserve generous, uniform breathing gaps between cards
       const scale = 1;
@@ -268,7 +270,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           } catch {}
         }
       }
-      const pxPerCard = window.innerWidth < 640 ? 220 : 320;
+      const pxPerCard = window.innerWidth < 640 ? 180 : window.innerWidth < 1024 ? 240 : 290;
       const deltaCards = -dx / pxPerCard;
       offsetRef.current += deltaCards;
       velocityRef.current = Math.max(-2.8, Math.min(2.8, deltaCards / dt));
@@ -359,7 +361,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       ref={sectionRef}
       id="stills"
       aria-label="Khung hình chọn lọc ArcWave Cylindrical Carousel"
-      className="relative w-full bg-transparent pt-14 sm:pt-16 md:pt-20 pb-12 sm:pb-16 md:pb-20 select-none overflow-x-clip overflow-y-visible"
+      className="relative w-full bg-[#09090B] pt-10 sm:pt-12 md:pt-16 pb-12 sm:pb-14 md:pb-16 select-none overflow-x-clip overflow-y-visible"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
@@ -380,7 +382,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           perspectiveOrigin: '50% 50%',
           touchAction: 'pan-y',
         }}
-        className={`relative w-full h-[320px] sm:h-[410px] md:h-[480px] lg:h-[540px] xl:h-[570px] flex items-center justify-center overflow-visible ${
+        className={`relative w-full h-[330px] sm:h-[390px] md:h-[440px] lg:h-[490px] xl:h-[510px] flex items-center justify-center overflow-visible ${
           isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
@@ -402,7 +404,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 willChange: 'transform, opacity, filter',
                 backfaceVisibility: 'hidden',
               }}
-              className="group absolute w-[220px] h-[148px] sm:w-[280px] sm:h-[188px] md:w-[340px] md:h-[228px] lg:w-[400px] lg:h-[268px] rounded-[16px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
+              className="group absolute w-[175px] h-[250px] sm:w-[205px] sm:h-[295px] md:w-[230px] md:h-[330px] lg:w-[280px] lg:h-[400px] rounded-[14px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
             >
               <img
                 src={slot.item.src}
@@ -424,7 +426,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
               {/* ArcWave Hover Caption Veil (.thr3-veil) */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-4 sm:p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-3.5 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
               >
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
@@ -442,28 +444,16 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           ))}
         </div>
 
-        {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg with bottom feather */}
+        {/* Clean Horizon Fade (Left) — Fades outer arc edges into dark theatre stage */}
         <div
           aria-hidden="true"
-          style={{
-            background:
-              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[14%] md:w-[18%] z-[600] bg-gradient-to-r from-[#09090B] via-[#09090B]/60 to-transparent"
         />
 
-        {/* Dynamic Horizon Fade (Right) — Follows live --morph-bg with bottom feather */}
+        {/* Clean Horizon Fade (Right) — Fades outer arc edges into dark theatre stage */}
         <div
           aria-hidden="true"
-          style={{
-            background:
-              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-          }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[14%] md:w-[18%] z-[600] bg-gradient-to-l from-[#09090B] via-[#09090B]/60 to-transparent"
         />
       </div>
 
