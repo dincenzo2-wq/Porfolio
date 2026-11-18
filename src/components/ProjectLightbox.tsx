@@ -172,10 +172,10 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
             {/* Top Bar: Category pill + Ratio badge at left, Close button at right */}
             <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[#F7F6F2] text-xs font-semibold uppercase tracking-wider font-mono truncate">
+                <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[#F7F6F2] text-xs font-bold uppercase tracking-wider font-sans truncate">
                   {project.category}
                 </span>
-                <span className="text-xs font-mono tabular-nums text-white/70 shrink-0">
+                <span className="text-xs font-semibold tabular-nums text-white/70 font-sans shrink-0">
                   {isVertical ? '9:16' : '16:9'}
                 </span>
               </div>
@@ -224,28 +224,22 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
                     : 'flex-col sm:flex-row sm:items-center justify-between'
                 }`}
               >
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 leading-relaxed">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 leading-relaxed">
                   {project.clientOrAgency?.trim() && (
-                    <>
-                      <div>
-                        <span className="text-white/55">Khách hàng:</span>{' '}
-                        <span className="font-semibold text-[#F7F6F2]">
-                          {project.clientOrAgency.trim()}
-                        </span>
-                      </div>
-                      <span className="text-white/25" aria-hidden="true">·</span>
-                    </>
+                    <div>
+                      <span className="text-white/55">Khách hàng:</span>{' '}
+                      <span className="font-semibold text-[#F7F6F2]">
+                        {project.clientOrAgency.trim()}
+                      </span>
+                    </div>
                   )}
                   {formattedRoles && (
-                    <>
-                      <div>
-                        <span className="text-white/55">Vai trò:</span>{' '}
-                        <span className="font-semibold text-[#F7F6F2]">
-                          {formattedRoles}
-                        </span>
-                      </div>
-                      <span className="text-white/25" aria-hidden="true">·</span>
-                    </>
+                    <div>
+                      <span className="text-white/55">Vai trò:</span>{' '}
+                      <span className="font-semibold text-[#F7F6F2]">
+                        {formattedRoles}
+                      </span>
+                    </div>
                   )}
                   <div>
                     <span className="text-white/55">Năm:</span>{' '}
@@ -253,7 +247,6 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
                       {project.year}
                     </span>
                   </div>
-                  <span className="text-white/25" aria-hidden="true">·</span>
                   <div>
                     <span className="text-white/55">Thời lượng:</span>{' '}
                     <span className="font-semibold text-[#F7F6F2] tabular-nums">

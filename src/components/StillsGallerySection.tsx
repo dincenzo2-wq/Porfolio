@@ -203,7 +203,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="hidden md:inline-block text-xs text-white/40 font-mono">
+              <span className="hidden md:inline-block text-xs text-white/55 font-sans font-medium">
                 [ESC] Đóng · [← / →] Chuyển ảnh
               </span>
               <button
@@ -260,7 +260,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             <p className="line-clamp-1">
               {currentLightboxFrame.alt || currentLightboxFrame.title}
             </p>
-            <span className="text-white/40 font-mono text-xs tabular-nums shrink-0 ml-4">
+            <span className="text-white/60 font-sans font-semibold text-xs tabular-nums shrink-0 ml-4">
               {currentLightboxFrame.year || '2025'}
             </span>
           </div>

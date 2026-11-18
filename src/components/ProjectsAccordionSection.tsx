@@ -30,14 +30,14 @@ interface CategoryGroup {
 /**
  * Chia lưới thông minh theo số lượng dự án:
  * - Dự án dọc (9:16): lưới 4 cột (grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5)
- * - Dự án ngang (16:9): nếu đúng 2 dự án -> lưới 2 cột lớn (grid-cols-1 md:grid-cols-2 gap-8)
- * - Dự án ngang (16:9): từ 3 dự án trở lên -> lưới 3 cột (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6)
+ * - Dự án ngang (16:9): nếu đúng 2 hoặc 4 dự án -> lưới 2 cột đều (2x1 hoặc 2x2) để không bị lẻ 1 thẻ mồ côi
+ * - Dự án ngang (16:9): 3, 5, 6+ dự án -> lưới 3 cột (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6)
  */
 function getDynamicGridClass(isVertical: boolean, count: number): string {
   if (isVertical) {
     return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5';
   }
-  if (count === 2) {
+  if (count === 2 || count === 4) {
     return 'grid-cols-1 md:grid-cols-2 gap-8';
   }
   return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
@@ -86,7 +86,7 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       aria-label={`Xem chi tiết dự án ${project.title}`}
-      className="group flex flex-col text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-[#111111] focus-visible:outline-offset-2 rounded-xl transition-all"
+      className="group h-full flex flex-col text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-[#111111] focus-visible:outline-offset-2 rounded-xl transition-all"
     >
       {/* 1. Pure Footage Frame: 100% clean at rest, subtle hover play disc only before video plays */}
       <div
@@ -130,8 +130,8 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
         </div>
       </div>
 
-      {/* 2. Metadata cleanly positioned BELOW the media frame */}
-      <div className="mt-3 sm:mt-3.5 space-y-1.5">
+      {/* 2. Metadata cleanly positioned BELOW the media frame (bottom row aligned across neighbors) */}
+      <div className="mt-3 sm:mt-3.5 flex-1 flex flex-col gap-1.5">
         {project.clientOrAgency?.trim() && (
           <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#2563EB] truncate">
             {project.clientOrAgency.trim()}
@@ -140,7 +140,7 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
         <h4 className="font-bold text-base sm:text-lg md:text-xl text-[#111111] group-hover:text-[#2563EB] transition-colors line-clamp-2 tracking-tight leading-snug">
           {project.title}
         </h4>
-        <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-[#555555] pt-0.5">
+        <div className="mt-auto pt-1 flex items-center justify-between gap-2 text-xs sm:text-sm text-[#555555]">
           <span className="truncate font-medium text-[#555555]">
             {formatDeliverableRoles(project.deliverableRole)}
           </span>
@@ -311,7 +311,7 @@ export function ProjectsAccordionSection({
                           className={`grid ${dynamicGridClass}`}
                         >
                           {projectsInGroup.map((project, cardIdx) => (
-                            <RevealItem key={project.id} index={cardIdx}>
+                            <RevealItem key={project.id} index={cardIdx} className="h-full">
                               <ProjectCard
                                 project={project}
                                 isVertical={group.isVertical}
