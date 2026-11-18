@@ -429,12 +429,16 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       {/* Multi-Stop Eased Soft Gradient Bridge: seamlessly melts #09090B Dark Cinema Stage into #F7F6F2 Studio Gallery */}
       <div
         aria-hidden="true"
-        style={{
-          background:
-            'linear-gradient(to bottom, #09090B 0%, #111114 14%, #1D1D20 26%, #343336 39%, #575657 52%, #868583 64%, #B8B7B3 76%, #DFDED9 88%, #F1F0EC 95%, #F7F6F2 100%)',
-        }}
-        className="pointer-events-none relative w-full h-28 sm:h-36 md:h-44 -mt-4 z-[1103]"
-      />
+        className="pointer-events-none relative w-full h-28 sm:h-36 md:h-44 -mt-4 z-[1103] bg-[#F7F6F2]"
+      >
+        <div
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(9, 9, 11, 1) 0%, rgba(9, 9, 11, 0.96) 14%, rgba(9, 9, 11, 0.86) 28%, rgba(9, 9, 11, 0.68) 42%, rgba(9, 9, 11, 0.46) 56%, rgba(9, 9, 11, 0.25) 70%, rgba(9, 9, 11, 0.1) 84%, rgba(9, 9, 11, 0.02) 94%, rgba(9, 9, 11, 0) 100%)',
+          }}
+          className="absolute inset-0"
+        />
+      </div>
 
       {/* Lightbox phóng to xem ảnh gốc toàn màn hình */}
       {lightboxIndex !== null && currentLightboxFrame && (
