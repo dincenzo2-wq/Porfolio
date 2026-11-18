@@ -13,17 +13,30 @@ interface CarouselSlot {
   item: StillsItem;
 }
 
-const MIN_RING_SLOTS = 9;
-const AUTO_GLIDE_SPEED = 0.25; // cards per second (~4s per frame, calm cinematic glide)
+const MIN_RING_SLOTS = 12;
+const AUTO_GLIDE_SPEED = 0.22; // cards per second (~4.5s per frame, serene cinematic drift)
 
 export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   // 1. Source frames from Admin (Tab 3 Stills) or default frames
   const sourceFrames = useMemo(() => {
     const raw = stills && stills.length > 0 ? stills : DEFAULT_STILLS;
-    return raw.filter((item) => Boolean(item && item.src));
+    return raw
+      .map((item, idx) => {
+        const defaultMatch = DEFAULT_STILLS.find((d) => d.id === item.id) || DEFAULT_STILLS[idx];
+        let src = item.src;
+        // Fallback to active asset import if saved src is a stale production hashed path
+        if (src && src.startsWith('/assets/') && defaultMatch?.src) {
+          src = defaultMatch.src;
+        }
+        return {
+          ...item,
+          src: src || defaultMatch?.src || '',
+        };
+      })
+      .filter((item) => Boolean(item && item.src));
   }, [stills]);
 
-  // Repeat frames seamlessly if fewer than MIN_RING_SLOTS so the 3D arc never shows gaps
+  // Repeat frames seamlessly so the cylindrical ArcWave concave arc never has gaps
   const ringSlots: CarouselSlot[] = useMemo(() => {
     if (sourceFrames.length === 0) return [];
     const slots: CarouselSlot[] = [];
@@ -48,6 +61,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   // Continuous physics state stored in refs for zero-jank 60fps updates (no React re-render per frame)
   const offsetRef = useRef<number>(0);
   const velocityRef = useRef<number>(AUTO_GLIDE_SPEED);
+  const targetOffsetRef = useRef<number | null>(null);
   const isHoveredRef = useRef<boolean>(false);
   const isInViewRef = useRef<boolean>(true);
   const isDraggingRef = useRef<boolean>(false);
@@ -91,7 +105,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Apply 3D depth-blur arc transforms directly to card DOM nodes
+  // Apply ArcWave 3D Cylindrical Concave Arc transforms directly to card DOM nodes
   const layoutCards = useCallback(() => {
     const count = ringSlots.length;
     if (count === 0) return;
@@ -100,10 +114,11 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     const isMobile = vw < 640;
     const isTablet = vw >= 640 && vw < 1024;
 
-    // Responsive 3D spacing tuned so center card blooms cleanly with crisp breathing gaps around flanking 3D cards
-    const centerGap = isMobile ? 250 : isTablet ? 355 : 460;
-    const sideStep = isMobile ? 168 : isTablet ? 225 : 275;
-    const zStep = isMobile ? 150 : 195;
+    // ArcWave Cylindrical Radius (R) & Angular Step (deltaTheta)
+    // R creates a concave arc cradling the viewer tangent at Z = 0
+    const R = isMobile ? 800 : isTablet ? 1150 : 1420;
+    const deltaThetaDeg = isMobile ? 22 : isTablet ? 19.5 : 18;
+    const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
 
     const currentOffset = offsetRef.current;
 
@@ -115,45 +130,54 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       let d = ((i - currentOffset) % count + count) % count;
       if (d > count / 2) d -= count;
 
-      const absD = Math.abs(d);
-      const sign = d < 0 ? -1 : d > 0 ? 1 : 0;
+      const thetaRad = d * deltaThetaRad;
+      const thetaDeg = d * deltaThetaDeg;
+      const absThetaDeg = Math.abs(thetaDeg);
 
-      // Hide far-side cards behind the ring to save GPU paint
-      if (absD > 4.6) {
+      // Hide cards beyond visible horizon arc (> 75 degrees) to save GPU rasterization
+      if (absThetaDeg > 76) {
         el.style.opacity = '0';
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
         continue;
       }
 
-      const firstUnit = Math.min(absD, 1);
-      const restUnits = Math.max(0, absD - 1);
-      const tx = sign * (firstUnit * centerGap + restUnits * sideStep);
-      const tz = -Math.min(absD * zStep, 1100);
-      const rotY = -sign * Math.min(72, absD * 34);
+      // ArcWave Cylindrical coordinates:
+      // X = R * sin(theta)
+      // Z = R * (cos(theta) - 1)  (Z <= 0: center is at 0, flanks curve backwards into depth)
+      // rotateY = theta (card is mathematically tangent to cylinder)
+      const tx = R * Math.sin(thetaRad);
+      const tz = R * (Math.cos(thetaRad) - 1);
+      const rotY = thetaDeg;
 
-      // Center foreground focal bloom (1.22x at d=0, smoothly settling to 1.0x at |d|>=1)
-      const centerProximity = Math.max(0, 1 - absD);
-      const smoothBloom = centerProximity * centerProximity * (3 - 2 * centerProximity);
-      const scale = 1 + smoothBloom * (isMobile ? 0.14 : 0.22);
+      // Depth blur & atmospheric opacity degradation on flanks
+      const normalizedAngle = absThetaDeg / 70; // 0 at center, 1 at flank
+      const blurPx = Math.min(5, Math.pow(normalizedAngle, 1.3) * 6);
+      const opacity = Math.max(0.35, 1 - Math.pow(normalizedAngle, 1.5) * 0.6);
 
-      // Smooth horizon fade past ±3.1 cards
-      let opacity = 1;
-      if (absD > 3.1) {
-        opacity = Math.max(0, 1 - (absD - 3.1) / 1.4);
-      }
+      // Scale: subtle natural optical bloom at center (1.08x at center, settling smoothly to 1.0x)
+      const centerProximity = Math.max(0, 1 - Math.abs(d));
+      const scale = 1 + centerProximity * (isMobile ? 0.08 : 0.12);
 
-      const zIndex = Math.round(1000 - absD * 100);
+      const zIndex = Math.round(500 - absThetaDeg * 5);
 
       el.style.visibility = 'visible';
-      el.style.pointerEvents = opacity > 0.15 ? 'auto' : 'none';
+      el.style.pointerEvents = opacity > 0.4 ? 'auto' : 'none';
       el.style.opacity = opacity.toFixed(3);
+      el.style.filter = blurPx > 0.3 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
       el.style.zIndex = String(zIndex);
       el.style.transform = `translate3d(${tx.toFixed(2)}px, 0px, ${tz.toFixed(2)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+
+      // Update inner darkening overlay if present
+      const overlay = el.querySelector<HTMLElement>('.arcwave-darkness');
+      if (overlay) {
+        const darkness = Math.min(0.55, normalizedAngle * 0.6);
+        overlay.style.opacity = darkness.toFixed(3);
+      }
     }
   }, [ringSlots.length]);
 
-  // Continuous 60fps requestAnimationFrame loop with velvety hover deceleration & drag inertia
+  // Continuous 60fps requestAnimationFrame loop with velvety hover deceleration, drag inertia & click-to-center spring
   useEffect(() => {
     if (ringSlots.length === 0) return;
 
@@ -169,15 +193,29 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
       if (isInViewRef.current && !lightboxOpenRef.current && !document.hidden) {
         if (!isDraggingRef.current) {
-          const targetSpeed =
-            reducedMotionRef.current || isHoveredRef.current ? 0 : AUTO_GLIDE_SPEED;
-          // Smooth exponential easing toward target velocity (silky brake on hover, smooth inertia after drag)
-          const damping = 1 - Math.exp(-5.5 * dt);
-          velocityRef.current += (targetSpeed - velocityRef.current) * damping;
-
-          if (Math.abs(velocityRef.current) > 0.0004) {
-            offsetRef.current += velocityRef.current * dt;
+          // If animating to center via click on flanking card
+          if (targetOffsetRef.current !== null) {
+            const diff = targetOffsetRef.current - offsetRef.current;
+            if (Math.abs(diff) < 0.003) {
+              offsetRef.current = targetOffsetRef.current;
+              targetOffsetRef.current = null;
+              velocityRef.current = 0;
+            } else {
+              // Silky smooth exponential spring toward target
+              offsetRef.current += diff * Math.min(1, 10 * dt);
+            }
             layoutCards();
+          } else {
+            const targetSpeed =
+              reducedMotionRef.current || isHoveredRef.current ? 0 : AUTO_GLIDE_SPEED;
+            // Smooth exponential easing toward target velocity (silky brake on hover, smooth inertia after drag)
+            const damping = 1 - Math.exp(-5.5 * dt);
+            velocityRef.current += (targetSpeed - velocityRef.current) * damping;
+
+            if (Math.abs(velocityRef.current) > 0.0004) {
+              offsetRef.current += velocityRef.current * dt;
+              layoutCards();
+            }
           }
         }
       }
@@ -201,6 +239,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     isDraggingRef.current = true;
+    targetOffsetRef.current = null; // Cancel any active click-to-center animation
     activePointerIdRef.current = e.pointerId;
     dragStartXRef.current = e.clientX;
     dragLastXRef.current = e.clientX;
@@ -250,10 +289,22 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     } catch {}
   };
 
-  const handleCardClick = (sourceIndex: number) => {
+  // ArcWave signature: Click flanking card to bring to center; Click center card to open Lightbox
+  const handleCardClick = (sourceIndex: number, slotIndex: number) => {
     // Ignore click if the user just dragged/swiped the carousel
     if (dragTotalDistRef.current > 8) return;
-    setLightboxIndex(sourceIndex);
+
+    const count = ringSlots.length;
+    let d = ((slotIndex - offsetRef.current) % count + count) % count;
+    if (d > count / 2) d -= count;
+
+    // If card is already at center (|d| <= 0.35), open Lightbox to view full-screen
+    if (Math.abs(d) <= 0.35) {
+      setLightboxIndex(sourceIndex);
+    } else {
+      // Otherwise smoothly bring this card to dead center
+      targetOffsetRef.current = offsetRef.current + d;
+    }
   };
 
   // Lock page scroll & enable keyboard navigation inside full-screen Lightbox
@@ -308,12 +359,12 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     <section
       ref={sectionRef}
       id="stills"
-      aria-label="Khung hình chọn lọc 3D Depth Blur Carousel"
+      aria-label="Khung hình chọn lọc ArcWave Cylindrical Carousel"
       className="relative w-full bg-transparent pt-14 sm:pt-16 md:pt-20 pb-12 sm:pb-16 md:pb-20 select-none overflow-x-clip overflow-y-visible"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
-      {/* Top Progressive Blur & Seamless Feather connecting Hero (#09090B) into 3D Stage */}
+      {/* Top Progressive Blur & Seamless Feather connecting Hero into ArcWave Stage */}
       <div
         aria-hidden="true"
         style={{
@@ -333,7 +384,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 z-[1106]"
       />
 
-      {/* 3D Depth Blur Stage: Continuous smooth glide, hover pause, drag/swipe & click-to-zoom */}
+      {/* ArcWave 3D Cylindrical Concave Arc Stage: Continuous drift, drag/swipe & click-to-center */}
       <div
         onMouseEnter={() => {
           isHoveredRef.current = true;
@@ -346,7 +397,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{
-          perspective: '820px',
+          perspective: '1200px',
           perspectiveOrigin: '50% 50%',
           touchAction: 'pan-y',
         }}
@@ -354,13 +405,13 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
-        {/* Cinematic Ambient Floor Shadow Pool (Grounded depth anchor for 3D carousel) */}
+        {/* Cinematic Ambient Floor Shadow Pool (Grounded depth anchor for ArcWave carousel) */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute bottom-2 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[85%] sm:w-[78%] md:w-[72%] max-w-5xl h-20 sm:h-24 md:h-28 rounded-full bg-black/45 blur-[45px] sm:blur-[65px] md:blur-[80px] -z-10"
         />
 
-        {/* 3D Preserve Space */}
+        {/* 3D Cylindrical Preserve Space */}
         <div
           style={{ transformStyle: 'preserve-3d' }}
           className="relative w-full h-full flex items-center justify-center"
@@ -372,13 +423,13 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 cardRefs.current[i] = el;
               }}
               type="button"
-              onClick={() => handleCardClick(slot.sourceIndex)}
-              aria-label={`Phóng to khung hình ${slot.item.title || formatIndex(slot.sourceIndex)}`}
+              onClick={() => handleCardClick(slot.sourceIndex, i)}
+              aria-label={`Khung hình ${slot.item.title || formatIndex(slot.sourceIndex)} — Bấm để đưa về tâm`}
               style={{
-                willChange: 'transform, opacity',
+                willChange: 'transform, opacity, filter',
                 backfaceVisibility: 'hidden',
               }}
-              className="group absolute w-[220px] h-[148px] sm:w-[310px] sm:h-[206px] md:w-[380px] md:h-[252px] lg:w-[420px] lg:h-[278px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_12px_24px_-6px_rgba(0,0,0,0.5),0_28px_56px_-10px_rgba(0,0,0,0.72),0_60px_96px_-16px_rgba(0,0,0,0.65)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2"
+              className="group absolute w-[240px] h-[160px] sm:w-[320px] sm:h-[215px] md:w-[380px] md:h-[254px] lg:w-[430px] lg:h-[288px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_12px_24px_-6px_rgba(0,0,0,0.5),0_28px_56px_-10px_rgba(0,0,0,0.72),0_60px_96px_-16px_rgba(0,0,0,0.65)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[box-shadow,border-color] duration-300 hover:border-white/30"
             >
               <img
                 src={slot.item.src}
@@ -388,50 +439,74 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.opacity = '0';
                 }}
-                className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-700 ease-out group-hover:scale-[1.04]"
               />
+
+              {/* ArcWave Atmospheric Depth Darkening Overlay */}
+              <div
+                aria-hidden="true"
+                className="arcwave-darkness pointer-events-none absolute inset-0 bg-black opacity-0 transition-opacity duration-300"
+              />
+
+              {/* ArcWave Hover Caption Veil (.thr3-veil) */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-4 sm:p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
+                    {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
+                  </h4>
+                  <span className="text-[11px] font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
+                    {slot.item.year || '2025'}
+                  </span>
+                </div>
+                <p className="text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
+                  {slot.item.alt || 'Khung hình điện ảnh chọn lọc'}
+                </p>
+              </div>
             </button>
           ))}
         </div>
 
-        {/* Cinematic Depth-of-Field Edge Blur (Left 22% — follows live --morph-bg seamlessly) */}
+        {/* Cinematic Horizon Edge Vignette (Left) */}
         <div
           aria-hidden="true"
           style={{
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            maskImage: 'linear-gradient(to right, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            maskImage: 'linear-gradient(to right, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[21%] md:w-[23%] z-[1100]"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[20%] md:w-[22%] z-[900]"
         />
         <div
           aria-hidden="true"
           style={{
             background:
-              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 50%, transparent 100%)',
+              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, rgba(9,9,11,0.6) 50%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[13%] z-[1101]"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[12%] sm:w-[15%] z-[901]"
         />
 
-        {/* Cinematic Depth-of-Field Edge Blur (Right 22% — follows live --morph-bg seamlessly) */}
+        {/* Cinematic Horizon Edge Vignette (Right) */}
         <div
           aria-hidden="true"
           style={{
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            maskImage: 'linear-gradient(to left, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to left, black 12%, rgba(0,0,0,0.55) 52%, transparent 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            maskImage: 'linear-gradient(to left, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to left, black 15%, rgba(0,0,0,0.5) 55%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[21%] md:w-[23%] z-[1100]"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[20%] md:w-[22%] z-[900]"
         />
         <div
           aria-hidden="true"
           style={{
             background:
-              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg-mid, rgba(9,9,11,0.52)) 50%, transparent 100%)',
+              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, rgba(9,9,11,0.6) 50%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[13%] z-[1101]"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[12%] sm:w-[15%] z-[901]"
         />
       </div>
 
