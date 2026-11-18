@@ -822,7 +822,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                       type="button"
                       onClick={handleClearAllBrandLogos}
                       className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
-                      title="Xóa tất cả logo để quay về dải băng chữ"
+                      title="Xóa tất cả logo (tự động ẩn dải băng trên trang chủ)"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Xóa tất cả logo</span>
@@ -938,10 +938,10 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 <div className="p-6 rounded-xl border border-dashed border-black/15 bg-white text-center space-y-2">
                   <Image className="w-8 h-8 text-black/30 mx-auto" />
                   <p className="text-xs font-semibold text-[#111111]">
-                    Chưa có file Logo .PNG nào
+                    Chưa có file Logo .PNG nào — Dải băng đang tự động ẩn trên trang chủ
                   </p>
                   <p className="text-[11px] text-black/50 max-w-md mx-auto">
-                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để chọn đồng thời nhiều file logo thương hiệu màu trắng trên nền trong suốt.
+                    Bấm nút <strong>&quot;Tải nhiều Logo (.png)&quot;</strong> ở trên để tải logo đối tác. Khi có ít nhất 1 logo, dải băng sẽ tự động hiển thị trên trang chủ.
                   </p>
                 </div>
               )}

@@ -71,8 +71,7 @@ export const DEFAULT_PROFILE: SiteProfileData = {
   projectsSubtitle: 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.',
   agencySubtitle: 'Nhận từng hạng mục lẻ hoặc trọn gói từ ghi hình đến dựng hoàn thiện.',
   showBrandMarquee: true,
-  collaboratorsText:
-    'Dentsu Redder · PepsiCo Vietnam · Havas Vietnam · VinFast · Ogilvy Vietnam · Heineken Silver · Studio 09 · VNG Games · Tech In Asia · T&A Ogilvy · L\'OFFICIEL Vietnam · Vibe Nation · Tiger Beer Vietnam',
+  collaboratorsText: '',
   brandLogos: [],
   footerTitle: 'Gửi brief dự án của bạn',
   footerDescription:

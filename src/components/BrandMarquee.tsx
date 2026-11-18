@@ -25,8 +25,6 @@ interface BrandMarqueeProps {
 
 export function BrandMarquee({
   showBrandMarquee = true,
-  collaboratorsText,
-  brands,
   brandLogos,
 }: BrandMarqueeProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -43,26 +41,9 @@ export function BrandMarquee({
     return result;
   }, [brandLogos]);
 
-  // Fallback text brands with spelling correction for 'LOUTUS' -> 'LOTUS'
-  const brandsList = useMemo(() => {
-    const fixSpelling = (name: string) => name.replace(/LOUTUS/i, 'LOTUS');
-
-    if (brands && brands.length > 0) {
-      return brands.map((b) => fixSpelling(b.toUpperCase()));
-    }
-    if (collaboratorsText && collaboratorsText.trim()) {
-      const parsed = collaboratorsText
-        .split(/[·•,\n]/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-      if (parsed.length > 0) {
-        return parsed.map((b) => fixSpelling(b.toUpperCase()));
-      }
-    }
-    return DEFAULT_BRAND_MARQUEE;
-  }, [brands, collaboratorsText]);
-
-  if (showBrandMarquee === false) {
+  // Only render the marquee when enabled AND at least one logo image has been uploaded.
+  // Do NOT fall back to old collaboratorsText or hardcoded default brand names when empty.
+  if (showBrandMarquee === false || !hasLogos) {
     return null;
   }
 
@@ -103,43 +84,26 @@ export function BrandMarquee({
               aria-hidden={copyIdx > 0}
               className="flex shrink-0 items-center"
             >
-              {hasLogos
-                ? displayLogos.map((logoUrl, idx) => (
-                    <span
-                      key={`${copyIdx}-${logoUrl}-${idx}`}
-                      className="inline-flex items-center shrink-0"
-                    >
-                      <img
-                        src={logoUrl}
-                        alt="Logo đối tác"
-                        className="h-10 md:h-12 w-auto max-w-[180px] object-contain opacity-90 hover:opacity-100 transition-opacity filter drop-shadow-sm select-none"
-                        loading="lazy"
-                        draggable={false}
-                      />
-                      <span
-                        className="flex items-center mx-8 md:mx-12 text-[#3B82F6] text-xl md:text-2xl font-bold leading-none select-none shrink-0"
-                        aria-hidden="true"
-                      >
-                        *
-                      </span>
-                    </span>
-                  ))
-                : brandsList.map((brand, idx) => (
-                    <span
-                      key={`${copyIdx}-${brand}-${idx}`}
-                      className="inline-flex items-center shrink-0"
-                    >
-                      <span className="font-bricolage text-xl md:text-2xl font-bold tracking-wider uppercase text-[#F7F6F2]/85 hover:text-white hover:scale-105 transition-all duration-200 cursor-default px-2 py-1 whitespace-nowrap">
-                        {brand}
-                      </span>
-                      <span
-                        className="flex items-center mx-8 md:mx-12 text-[#3B82F6] text-xl md:text-2xl font-bold leading-none select-none shrink-0"
-                        aria-hidden="true"
-                      >
-                        *
-                      </span>
-                    </span>
-                  ))}
+              {displayLogos.map((logoUrl, idx) => (
+                <span
+                  key={`${copyIdx}-${logoUrl}-${idx}`}
+                  className="inline-flex items-center shrink-0"
+                >
+                  <img
+                    src={logoUrl}
+                    alt="Logo đối tác"
+                    className="h-10 md:h-12 w-auto max-w-[180px] object-contain opacity-90 hover:opacity-100 transition-opacity filter drop-shadow-sm select-none"
+                    loading="lazy"
+                    draggable={false}
+                  />
+                  <span
+                    className="flex items-center mx-8 md:mx-12 text-[#3B82F6] text-xl md:text-2xl font-bold leading-none select-none shrink-0"
+                    aria-hidden="true"
+                  >
+                    *
+                  </span>
+                </span>
+              ))}
             </div>
           ))}
         </div>
