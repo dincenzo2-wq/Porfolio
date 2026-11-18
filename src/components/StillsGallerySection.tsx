@@ -442,6 +442,30 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             </button>
           ))}
         </div>
+
+        {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg with bottom feather */}
+        <div
+          aria-hidden="true"
+          style={{
+            background:
+              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 left-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+        />
+
+        {/* Dynamic Horizon Fade (Right) — Follows live --morph-bg with bottom feather */}
+        <div
+          aria-hidden="true"
+          style={{
+            background:
+              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 right-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+        />
       </div>
 
       {/* Lightbox phóng to xem ảnh gốc toàn màn hình */}
