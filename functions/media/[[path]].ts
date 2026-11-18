@@ -109,7 +109,21 @@ export async function onRequestGet(context: {
       rangeHeader ? { range: context.request.headers } : undefined
     );
     if (!object) {
-      return new Response('File not found in R2', { status: 404 });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'File not found in R2',
+          key,
+        }),
+        {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
     const headers = new Headers();

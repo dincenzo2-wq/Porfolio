@@ -93,6 +93,7 @@ export function ProjectsTab({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [compressionInfo, setCompressionInfo] = useState<CompressionResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
 
   // Video Frame Capture State
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
@@ -1609,12 +1610,29 @@ export function ProjectsTab({
                           : 'w-40 h-24 sm:w-48 sm:h-28 aspect-[16/9]'
                       } rounded-xl overflow-hidden border border-black/10 bg-black/5 shrink-0 relative flex items-center justify-center shadow-md transition-all`}
                     >
-                      {editingProject.coverImage ? (
+                      {editingProject.coverImage && failedCoverUrl !== editingProject.coverImage ? (
                         <img
+                          key={editingProject.coverImage}
                           src={editingProject.coverImage}
                           alt="Xem trước ảnh bìa"
+                          onError={() => {
+                            setFailedCoverUrl(editingProject.coverImage);
+                            setUploadError(
+                              'Ảnh bìa không tồn tại trên R2 (404) hoặc đường dẫn không hợp lệ. Vui lòng bấm "Chụp frame này làm ảnh bìa" hoặc tải ảnh mới.'
+                            );
+                          }}
+                          onLoad={() => {
+                            if (failedCoverUrl === editingProject.coverImage) {
+                              setFailedCoverUrl(null);
+                            }
+                          }}
                           className="w-full h-full object-cover"
                         />
+                      ) : editingProject.coverImage && failedCoverUrl === editingProject.coverImage ? (
+                        <div className="flex flex-col items-center justify-center text-rose-600 text-[10px] font-semibold gap-1 text-center p-2 bg-rose-50 w-full h-full">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Ảnh không tồn tại (404)</span>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center text-black/35 text-[10px] font-medium gap-1 text-center p-1">
                           <Upload className="w-4 h-4 opacity-50" />
