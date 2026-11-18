@@ -126,7 +126,8 @@ export async function onRequestGet(context: {
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Accept-Ranges', 'bytes');
 
-    if (object.range) {
+    const isPartialRange = Boolean(rangeHeader && object.range);
+    if (isPartialRange && object.range) {
       headers.set(
         'Content-Range',
         `bytes ${object.range.offset}-${object.range.offset + object.range.length - 1}/${object.size}`
@@ -134,7 +135,7 @@ export async function onRequestGet(context: {
     }
 
     return new Response(object.body, {
-      status: object.range ? 206 : 200,
+      status: isPartialRange ? 206 : 200,
       headers,
     });
   } catch (err: any) {
