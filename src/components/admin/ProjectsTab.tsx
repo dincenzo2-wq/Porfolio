@@ -16,7 +16,12 @@ import {
   Camera,
 } from 'lucide-react';
 import type { AspectRatioType, PortfolioProject } from '../../types/portfolio';
-import { compressImageToWebP, formatBytes, type CompressionResult } from '../../utils/imageCompression';
+import {
+  compressImageToWebP,
+  formatBytes,
+  resolveSafeUploadedImageUrl,
+  type CompressionResult,
+} from '../../utils/imageCompression';
 import {
   parseVideoUrl,
   formatVideoDuration,
@@ -570,15 +575,27 @@ export function ProjectsTab({
 
       const file = new File([blob], fileName, { type: 'image/webp' });
 
+      // Direct canvas WebP fallback (0.82) guaranteed to render even if R2 is unavailable
+      const canvasFallbackDataUrl = (() => {
+        try {
+          const url = canvas.toDataURL('image/webp', 0.82);
+          return url && url.startsWith('data:image/') ? url : '';
+        } catch {
+          return '';
+        }
+      })();
+
       // Compress to WebP < 500KB (handles resize/compression if raw 4K frame is large)
       const compressionResult = await compressImageToWebP(file, 1920, 500 * 1024);
       setCompressionInfo(compressionResult);
 
-      // Upload to Cloudflare R2
+      const safeInlineFallback = compressionResult.dataUrl || canvasFallbackDataUrl;
+
+      // Upload to Cloudflare R2 and verify that the returned URL actually loads as an image
       const formData = new FormData();
       formData.append('file', compressionResult.file);
 
-      let finalUrl = compressionResult.dataUrl;
+      let uploadedUrl: string | undefined;
 
       try {
         const res = await fetch('/api/upload', {
@@ -588,12 +605,14 @@ export function ProjectsTab({
         if (res.ok) {
           const uploadRes = await res.json();
           if (uploadRes && uploadRes.success && uploadRes.url) {
-            finalUrl = uploadRes.url;
+            uploadedUrl = uploadRes.url;
           }
         }
       } catch (uploadErr) {
         console.warn('R2 upload notice, using local WebP preview:', uploadErr);
       }
+
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, safeInlineFallback);
 
       // Optionally delete old R2 cover image if present
       const oldCover = editingProject.coverImage;
@@ -761,45 +780,50 @@ export function ProjectsTab({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let compressedResult: CompressionResult | null = null;
+
     try {
       setUploadingImage(true);
       setUploadError(null);
 
       // 1. Compress image to WebP under 500KB on the client
-      const result = await compressImageToWebP(file, 1920, 500 * 1024);
-      setCompressionInfo(result);
+      compressedResult = await compressImageToWebP(file, 1920, 500 * 1024);
+      setCompressionInfo(compressedResult);
 
-      // 2. Upload compressed file to Cloudflare R2
+      // 2. Upload compressed file to Cloudflare R2 and verify image actually renders
       const formData = new FormData();
-      formData.append('file', result.file);
+      formData.append('file', compressedResult.file);
 
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Upload thất bại (HTTP ${res.status})`);
+      let uploadedUrl: string | undefined;
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const uploadRes = await res.json();
+          if (uploadRes && uploadRes.success && uploadRes.url) {
+            uploadedUrl = uploadRes.url;
+          }
+        }
+      } catch (networkErr) {
+        console.warn('R2 upload network notice, falling back to inline WebP:', networkErr);
       }
 
-      const uploadRes = await res.json();
-      if (uploadRes && uploadRes.success && uploadRes.url) {
-        if (editingProject) {
-          setEditingProject({ ...editingProject, coverImage: uploadRes.url });
-        }
-      } else {
-        // Fallback to compressed DataURL if R2 is not bound in dev
-        if (editingProject) {
-          setEditingProject({ ...editingProject, coverImage: result.dataUrl });
-        }
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, compressedResult.dataUrl);
+      if (editingProject) {
+        setEditingProject((prev) => (prev ? { ...prev, coverImage: finalUrl } : null));
       }
     } catch (err: any) {
       console.warn('Image upload notice:', err);
-      // Even if network upload fails, use the compressed WebP dataUrl for immediate local preview
-      if (editingProject && compressionInfo) {
-        setEditingProject({ ...editingProject, coverImage: compressionInfo.dataUrl });
+      // Even if compression/upload encounters an error, fall back to compressed DataURL if available
+      if (editingProject && compressedResult?.dataUrl) {
+        setEditingProject((prev) =>
+          prev ? { ...prev, coverImage: compressedResult!.dataUrl } : null
+        );
+      } else {
+        setUploadError(err?.message || 'Không thể xử lý ảnh đã chọn');
       }
-      setUploadError(err?.message || 'Không thể upload ảnh lên Cloudflare R2');
     } finally {
       setUploadingImage(false);
     }

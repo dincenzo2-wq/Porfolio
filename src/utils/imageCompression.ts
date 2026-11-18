@@ -137,3 +137,60 @@ export function formatBytes(bytes: number, decimals: number = 1): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
+
+/**
+ * Verifies in the browser that an image URL actually loads into an HTMLImageElement
+ * with naturalWidth > 0 (catches HTML SPA fallback, 404s, or unbound R2 paths).
+ */
+export function verifyImageUrlLoads(url: string, timeoutMs: number = 4500): Promise<boolean> {
+  if (!url || typeof window === 'undefined') return Promise.resolve(false);
+  if (url.startsWith('data:image/')) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const img = new Image();
+
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+      resolve(ok);
+    };
+
+    const timer = window.setTimeout(() => finish(false), timeoutMs);
+
+    img.onload = () => finish(img.naturalWidth > 0 && img.naturalHeight > 0);
+    img.onerror = () => finish(false);
+    img.src = url;
+  });
+}
+
+/**
+ * Safely resolves an uploaded R2 image URL by verifying it actually renders via `new Image()`.
+ * If the R2 route fails (e.g., SPA fallback or unbound R2 bucket), automatically falls back to
+ * the compressed inline WebP DataURL so the preview and saved cover NEVER break.
+ */
+export async function resolveSafeUploadedImageUrl(
+  uploadedUrl: string | undefined,
+  fallbackDataUrl: string
+): Promise<string> {
+  if (!uploadedUrl || !uploadedUrl.trim()) {
+    return fallbackDataUrl;
+  }
+  const candidate = uploadedUrl.trim();
+  if (candidate.startsWith('data:image/')) {
+    return candidate;
+  }
+
+  const loadsCleanly = await verifyImageUrlLoads(candidate);
+  if (loadsCleanly) {
+    return candidate;
+  }
+
+  console.warn(
+    `[Image Verification] Uploaded URL failed to load as image (${candidate}). Falling back to inline WebP DataURL.`
+  );
+  return fallbackDataUrl;
+}

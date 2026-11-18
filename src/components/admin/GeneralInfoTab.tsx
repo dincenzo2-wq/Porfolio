@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { SiteProfileData } from '../../types/portfolio';
 import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
-import { compressImageToWebP } from '../../utils/imageCompression';
+import { compressImageToWebP, resolveSafeUploadedImageUrl } from '../../utils/imageCompression';
 import { convertLogoToWhiteWebP } from '../../utils/logoProcessing';
 
 interface GeneralInfoTabProps {
@@ -337,7 +337,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
       const tempFile = new File([blob], `hero-poster-${safeTimeName}.webp`, { type: 'image/webp' });
       const compResult = await compressImageToWebP(tempFile, 1920, 400 * 1024);
 
-      let finalUrl = compResult.dataUrl;
+      let uploadedUrl: string | undefined;
       const formData = new FormData();
       formData.append('file', compResult.file);
 
@@ -349,12 +349,14 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
         if (res.ok) {
           const uploadRes = await res.json();
           if (uploadRes && uploadRes.success && uploadRes.url) {
-            finalUrl = uploadRes.url;
+            uploadedUrl = uploadRes.url;
           }
         }
       } catch (uploadErr) {
         console.warn('Upload notice, using local WebP preview:', uploadErr);
       }
+
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, compResult.dataUrl);
 
       onChange({
         heroPosterUrl: finalUrl,

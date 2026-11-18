@@ -33,6 +33,7 @@ import type {
 import {
   compressImageToWebP,
   formatBytes,
+  resolveSafeUploadedImageUrl,
   type CompressionResult,
 } from '../../utils/imageCompression';
 import { DEFAULT_SOFTWARE_TOOLS } from '../../data/defaultContent';
@@ -205,14 +206,26 @@ export function StillsAndGearTab({
         throw new Error('Chụp frame thất bại. Trình duyệt không thể trích xuất dữ liệu ảnh từ video.');
       }
 
+      // Direct canvas WebP fallback (0.82)
+      const canvasFallbackDataUrl = (() => {
+        try {
+          const url = canvas.toDataURL('image/webp', 0.82);
+          return url && url.startsWith('data:image/') ? url : '';
+        } catch {
+          return '';
+        }
+      })();
+
       // Compress to WebP < 500KB
       const frameTimeStr = formatVideoDuration(video.currentTime);
       const safeTimeName = frameTimeStr.replace(':', '-');
       const tempFile = new File([blob], `frame-${safeTimeName}.webp`, { type: 'image/webp' });
       const compResult = await compressImageToWebP(tempFile, 1920, 500 * 1024);
 
-      // Upload to R2 or dataUrl
-      let finalUrl = compResult.dataUrl;
+      const safeInlineFallback = compResult.dataUrl || canvasFallbackDataUrl;
+
+      // Upload to R2 and verify via Image() before accepting the URL
+      let uploadedUrl: string | undefined;
       const formData = new FormData();
       formData.append('file', compResult.file);
 
@@ -224,12 +237,14 @@ export function StillsAndGearTab({
         if (res.ok) {
           const uploadRes = await res.json();
           if (uploadRes && uploadRes.success && uploadRes.url) {
-            finalUrl = uploadRes.url;
+            uploadedUrl = uploadRes.url;
           }
         }
       } catch (uploadErr) {
         console.warn('Upload notice, using local WebP preview:', uploadErr);
       }
+
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, safeInlineFallback);
 
       // Title determination
       const title = extractorFrameTitle.trim() || `Frame at ${frameTimeStr}`;
@@ -298,11 +313,11 @@ export function StillsAndGearTab({
         const result = await compressImageToWebP(file, 1920, 500 * 1024);
         lastCompressionResult = result;
 
-        // 2. Upload to Cloudflare R2
+        // 2. Upload to Cloudflare R2 and verify URL loads cleanly as an image
         const formData = new FormData();
         formData.append('file', result.file);
 
-        let finalUrl = result.dataUrl;
+        let uploadedUrl: string | undefined;
 
         try {
           const res = await fetch('/api/upload', {
@@ -313,12 +328,14 @@ export function StillsAndGearTab({
           if (res.ok) {
             const uploadRes = await res.json();
             if (uploadRes && uploadRes.success && uploadRes.url) {
-              finalUrl = uploadRes.url;
+              uploadedUrl = uploadRes.url;
             }
           }
         } catch (uploadErr) {
           console.warn('R2 upload notice, using local WebP preview:', uploadErr);
         }
+
+        const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, result.dataUrl);
 
         // 3. Determine alt/title: if empty, automatically use filename without extension
         const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
