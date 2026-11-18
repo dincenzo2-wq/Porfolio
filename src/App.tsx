@@ -207,17 +207,15 @@ function PortfolioApp() {
             heroVideoEnd={content.profile.heroVideoEnd}
           />
 
-          {/* PHẦN 2: ArcWave 3D Cylindrical Carousel trên nền đen điện ảnh thuần khiết #09090B */}
-          <div className="relative z-10 bg-[#09090B]">
-            <StillsGallerySection stills={content.stills} />
-          </div>
-
-          {/* Mảng nội dung bên dưới (z-10): Scroll-Linked Background Morph từ #09090B -> #F7F6F2 khi cuộn vào Dự án */}
+          {/* Mảng nội dung bên dưới (z-10): Scroll-Linked Background Morph từ #09090B -> #F7F6F2 */}
           <div
             ref={morphStageRef}
             style={{ backgroundColor: 'var(--morph-bg, #09090B)' }}
             className="relative z-10"
           >
+            {/* PHẦN 2: ArcWave 3D Cylindrical Carousel nền trong suốt ăn theo --morph-bg */}
+            <StillsGallerySection stills={content.stills} />
+
             {/* PHẦN 3: Dự án dạng danh sách bấm mở rộng (ăn trực tiếp theo nền chuyển sắc --morph-bg) */}
             <ViewportFocusSection>
               <ProjectsAccordionSection

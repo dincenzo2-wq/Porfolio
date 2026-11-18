@@ -361,7 +361,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       ref={sectionRef}
       id="stills"
       aria-label="Khung hình chọn lọc ArcWave Cylindrical Carousel"
-      className="relative w-full bg-[#09090B] pt-10 sm:pt-12 md:pt-16 pb-12 sm:pb-14 md:pb-16 select-none overflow-x-clip overflow-y-visible"
+      className="relative w-full bg-transparent pt-10 sm:pt-12 md:pt-16 pb-12 sm:pb-14 md:pb-16 select-none overflow-x-clip overflow-y-visible"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
@@ -444,16 +444,28 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           ))}
         </div>
 
-        {/* Clean Horizon Fade (Left) — Fades outer arc edges into dark theatre stage */}
+        {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg with bottom feather */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-[10%] sm:w-[14%] md:w-[18%] z-[600] bg-gradient-to-r from-[#09090B] via-[#09090B]/60 to-transparent"
+          style={{
+            background:
+              'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 left-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
         />
 
-        {/* Clean Horizon Fade (Right) — Fades outer arc edges into dark theatre stage */}
+        {/* Dynamic Horizon Fade (Right) — Follows live --morph-bg with bottom feather */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-[10%] sm:w-[14%] md:w-[18%] z-[600] bg-gradient-to-l from-[#09090B] via-[#09090B]/60 to-transparent"
+          style={{
+            background:
+              'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 right-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
         />
       </div>
 
