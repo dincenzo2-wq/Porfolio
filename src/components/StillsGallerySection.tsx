@@ -405,12 +405,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
-        {/* Cinematic Ambient Floor Shadow Pool (Grounded depth anchor for ArcWave carousel) */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-2 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[85%] sm:w-[78%] md:w-[72%] max-w-5xl h-20 sm:h-24 md:h-28 rounded-full bg-black/45 blur-[45px] sm:blur-[65px] md:blur-[80px] -z-10"
-        />
-
         {/* 3D Cylindrical Preserve Space */}
         <div
           style={{ transformStyle: 'preserve-3d' }}
@@ -429,7 +423,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 willChange: 'transform, opacity, filter',
                 backfaceVisibility: 'hidden',
               }}
-              className="group absolute w-[240px] h-[160px] sm:w-[320px] sm:h-[215px] md:w-[380px] md:h-[254px] lg:w-[430px] lg:h-[288px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_12px_24px_-6px_rgba(0,0,0,0.5),0_28px_56px_-10px_rgba(0,0,0,0.72),0_60px_96px_-16px_rgba(0,0,0,0.65)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[box-shadow,border-color] duration-300 hover:border-white/30"
+              className="group absolute w-[240px] h-[160px] sm:w-[320px] sm:h-[215px] md:w-[380px] md:h-[254px] lg:w-[430px] lg:h-[288px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
             >
               <img
                 src={slot.item.src}
