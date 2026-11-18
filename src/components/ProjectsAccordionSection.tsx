@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Play, Plus } from 'lucide-react';
 import { MaskedRevealTitle } from './MaskedRevealTitle';
 import { RevealGroup, RevealItem } from './ScrollReveal';
 import { PORTFOLIO_PROJECTS } from '../data/portfolioData';
 import type { PortfolioProject, ProjectCategory } from '../types/portfolio';
 import { parseVideoUrl } from '../utils/videoEmbed';
-import { formatDeliverableRoles, getCategoryMeta } from '../utils/portfolioLogic';
+import { formatDeliverableRoles, getCategoryMeta, normalizeCategoryKey } from '../utils/portfolioLogic';
 
 interface ProjectsAccordionSectionProps {
   onSelectProject: (project: PortfolioProject) => void;
@@ -41,15 +41,6 @@ function getDynamicGridClass(isVertical: boolean, count: number): string {
     return 'grid-cols-1 md:grid-cols-2 gap-8';
   }
   return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-}
-
-function slugifyCategory(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
 }
 
 interface ProjectCardProps {
@@ -97,7 +88,7 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
       aria-label={`Xem chi tiết dự án ${project.title}`}
       className="group flex flex-col text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-[#111111] focus-visible:outline-offset-2 rounded-xl transition-all"
     >
-      {/* 1. Pure Footage Frame: 100% clean, zero gradient, zero text superimposed */}
+      {/* 1. Pure Footage Frame: 100% clean at rest, subtle hover play disc only before video plays */}
       <div
         className={`relative w-full ${
           isCardVertical ? 'aspect-[9/16]' : 'aspect-video'
@@ -125,6 +116,18 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
             }`}
           />
         )}
+
+        {/* Quiet frosted Play indicator on desktop hover only (fades away while hover video is playing) */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none hidden md:flex absolute inset-0 items-center justify-center transition-opacity duration-300 ${
+            isPlaying ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-md border border-white/25 text-white flex items-center justify-center shadow-lg">
+            <Play className="w-4 h-4 fill-current translate-x-0.5" />
+          </span>
+        </div>
       </div>
 
       {/* 2. Metadata cleanly positioned BELOW the media frame */}
@@ -134,15 +137,18 @@ function ProjectCard({ project, isVertical, onSelect }: ProjectCardProps) {
             {project.clientOrAgency.trim()}
           </p>
         )}
-        <h4 className="font-bold text-base sm:text-lg md:text-xl text-[#111111] group-hover:text-[#2563EB] transition-colors truncate tracking-tight leading-snug">
+        <h4 className="font-bold text-base sm:text-lg md:text-xl text-[#111111] group-hover:text-[#2563EB] transition-colors line-clamp-2 tracking-tight leading-snug">
           {project.title}
         </h4>
-        <div className="flex items-center justify-between text-xs sm:text-sm text-[#555555] pt-0.5">
+        <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-[#555555] pt-0.5">
           <span className="truncate font-medium text-[#555555]">
             {formatDeliverableRoles(project.deliverableRole)}
           </span>
-          <span className="shrink-0 tabular-nums font-semibold text-[#777777] ml-auto pl-2">
-            {project.duration} · {project.year}
+          <span className="inline-flex items-center gap-1 shrink-0 tabular-nums font-semibold text-[#555555] ml-auto pl-1">
+            <Play className="w-2.5 h-2.5 fill-current text-[#2563EB] shrink-0" aria-hidden="true" />
+            <span>
+              {project.duration} · {project.year}
+            </span>
           </span>
         </div>
       </div>
@@ -166,10 +172,10 @@ export function ProjectsAccordionSection({
 
   const categoryGroups: CategoryGroup[] = activeCategories.map((cat, idx) => {
     const meta = getCategoryMeta(cat, categorySubtitles);
-    const defaultSlug = slugifyCategory(cat);
+    const normalizedId = normalizeCategoryKey(cat) || `cat-${idx + 1}`;
 
     return {
-      id: defaultSlug,
+      id: normalizedId,
       index: String(idx + 1).padStart(2, '0'),
       title: meta.title || cat,
       subtitle: meta.subtitle,
@@ -178,9 +184,9 @@ export function ProjectsAccordionSection({
     };
   });
 
-  // Default open first two categories ('tvc-commercial' and 'social-916')
-  const firstCatId = categoryGroups[0]?.id || 'tvc-commercial';
-  const secondCatId = categoryGroups[1]?.id || 'social-916';
+  // Default open first two categories cleanly using unified normalized keys
+  const firstCatId = categoryGroups[0]?.id || 'tvc';
+  const secondCatId = categoryGroups[1]?.id || 'social916';
   const [internalOpenCategories, setInternalOpenCategories] = useState<Record<string, boolean>>({
     [firstCatId]: true,
     [secondCatId]: true,
@@ -231,7 +237,12 @@ export function ProjectsAccordionSection({
             const dynamicGridClass = getDynamicGridClass(isGroupVertical, projectsInGroup.length);
 
             return (
-              <RevealItem key={group.id} index={groupIdx} className="transition-colors">
+              <RevealItem
+                key={group.id}
+                index={groupIdx}
+                className="transition-colors scroll-mt-24"
+              >
+                <div id={`category-row-${group.id}`} className="scroll-mt-24">
                 {/* Accordion Row Header Button */}
                 <button
                   type="button"
@@ -313,6 +324,7 @@ export function ProjectsAccordionSection({
                     </motion.div>
                   )}
                 </AnimatePresence>
+                </div>
               </RevealItem>
             );
           })}

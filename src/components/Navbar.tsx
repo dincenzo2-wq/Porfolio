@@ -74,7 +74,8 @@ export function Navbar({ onOpenContact, branding, email, location }: NavbarProps
       const duAnEl = document.getElementById('du-an');
       if (duAnEl) {
         const rect = duAnEl.getBoundingClientRect();
-        setIsDarkStage(rect.top > 60);
+        // Switch from dark hero bar to frosted studio light bar the instant #du-an touches the bottom of the sticky header (~88px)
+        setIsDarkStage(rect.top > 88);
       } else {
         setIsDarkStage(window.scrollY < window.innerHeight * 0.8);
       }

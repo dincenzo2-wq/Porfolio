@@ -13,16 +13,40 @@ import { ContactModal } from './components/ContactModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PortfolioDataProvider, usePortfolioData } from './context/PortfolioDataContext';
 import type { PortfolioProject } from './types/portfolio';
-import { getAdjacentProject } from './utils/portfolioLogic';
+import { getAdjacentProject, normalizeCategoryKey } from './utils/portfolioLogic';
 
 function PortfolioApp() {
   const { content } = usePortfolioData();
   const [selectedProject, setSelectedProject] = useState<PortfolioProject | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    'tvc-commercial': true,
-    'social-916': true,
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
+    const initialCats =
+      content.categories && content.categories.length > 0
+        ? content.categories
+        : ['TVC', 'Social 9:16'];
+    const map: Record<string, boolean> = {};
+    initialCats.slice(0, 2).forEach((cat, idx) => {
+      const key = normalizeCategoryKey(cat) || `cat-${idx + 1}`;
+      map[key] = true;
+    });
+    return map;
   });
+
+  // Ensure the first two categories stay initialized cleanly if D1 loads different category names
+  useEffect(() => {
+    const cats = content.categories;
+    if (!cats || cats.length === 0) return;
+    setOpenCategories((prev) => {
+      const validKeys = cats.map((cat, idx) => normalizeCategoryKey(cat) || `cat-${idx + 1}`);
+      const anyOpen = validKeys.some((k) => prev[k]);
+      if (anyOpen) return prev;
+      const next = { ...prev };
+      validKeys.slice(0, 2).forEach((k) => {
+        next[k] = true;
+      });
+      return next;
+    });
+  }, [content.categories]);
 
   // Client-side simple routing for Cloudflare Pages
   const [currentPath, setCurrentPath] = useState(() =>
@@ -57,16 +81,21 @@ function PortfolioApp() {
       ...prev,
       [categoryId]: true,
     }));
-    const el = document.getElementById('du-an');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    window.requestAnimationFrame(() => {
+      const targetRow =
+        document.getElementById(`category-row-${categoryId}`) ||
+        document.getElementById('du-an');
+      if (targetRow) {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
   }, []);
 
   const handleNavigateProject = useCallback(
     (direction: 'prev' | 'next') => {
       if (!selectedProject) return;
-      const next = getAdjacentProject(content.projects, selectedProject.id, direction);
+      const visibleProjects = content.projects.filter((p) => !p.hidden);
+      const next = getAdjacentProject(visibleProjects, selectedProject.id, direction);
       if (next) setSelectedProject(next);
     },
     [selectedProject, content.projects]
@@ -96,6 +125,7 @@ function PortfolioApp() {
           {/* PHẦN 1: Hero Showreel tinh gọn toàn khung (sticky top-0 z-0, scale 1 -> 0.96 & opacity 1 -> 0.4) */}
           <HeroShowreel
             onSelectCategory={handleSelectCategoryFromHero}
+            categories={content.categories}
             headline={content.profile.fullName}
             roleTitle={content.profile.roleTitle}
             intro={content.profile.heroIntro}

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseVideoUrl } from '../utils/videoEmbed';
+import { getCategoryMeta, normalizeCategoryKey } from '../utils/portfolioLogic';
 import type { HeroBgType } from '../types/portfolio';
 import defaultCinemaPoster from '../assets/images/reel_saigon_neon_1794581940924.jpg';
 
@@ -8,15 +9,17 @@ interface ServiceChipItem {
   label: string;
 }
 
-const SERVICE_CHIPS: ServiceChipItem[] = [
-  { id: 'tvc-commercial', label: 'TVC Commercial' },
-  { id: 'social-916', label: 'Social 9:16' },
-  { id: 'motion-graphics', label: 'Motion Graphics' },
-  { id: 'event-recap', label: 'Event Recap' },
+const DEFAULT_HERO_CATEGORIES: string[] = [
+  'TVC',
+  'Social 9:16',
+  'Event Recap',
+  'Wedding',
+  'Cá Nhân',
 ];
 
 interface HeroShowreelProps {
   onSelectCategory?: (categoryId: string) => void;
+  categories?: string[];
   headline?: string;
   roleTitle?: string;
   intro?: string;
@@ -32,6 +35,7 @@ interface HeroShowreelProps {
 
 export function HeroShowreel({
   onSelectCategory,
+  categories,
   headline,
   roleTitle,
   intro,
@@ -41,6 +45,16 @@ export function HeroShowreel({
   heroVideoStart = 0,
   heroVideoEnd = 15,
 }: HeroShowreelProps) {
+  const serviceChips: ServiceChipItem[] = useMemo(() => {
+    const source = categories && categories.length > 0 ? categories : DEFAULT_HERO_CATEGORIES;
+    return source.slice(0, 5).map((cat, idx) => {
+      const meta = getCategoryMeta(cat);
+      return {
+        id: normalizeCategoryKey(cat) || `cat-${idx + 1}`,
+        label: meta.title || cat,
+      };
+    });
+  }, [categories]);
   const curtainContentRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -296,7 +310,7 @@ export function HeroShowreel({
             role="list"
             aria-label="Danh mục dịch vụ chính"
           >
-            {SERVICE_CHIPS.map((chip) => (
+            {serviceChips.map((chip) => (
               <button
                 key={chip.id}
                 type="button"

@@ -32,14 +32,14 @@ export function ViewportFocusSection({
       return;
     }
 
-    // Viewport Focus Dimming: Active when within central 70% of viewport (-15% top, -15% bottom)
+    // Gentle Viewport Focus: Active whenever comfortably visible (-6% top/bottom margin)
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsFocused(entry.isIntersecting);
       },
       {
         root: null,
-        rootMargin: '-15% 0px -15% 0px',
+        rootMargin: '-6% 0px -6% 0px',
         threshold: 0,
       }
     );
@@ -49,9 +49,9 @@ export function ViewportFocusSection({
   }, []);
 
   const focusStyle: CSSProperties = {
-    opacity: isFocused ? 1 : 0.28,
-    transform: isFocused ? 'translateY(0) scale(1)' : 'scale(0.985)',
-    transition: 'opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+    opacity: isFocused ? 1 : 0.92,
+    transform: isFocused ? 'translateY(0) scale(1)' : 'scale(0.996)',
+    transition: 'opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
     transformOrigin: 'center center',
     willChange: 'opacity, transform',
   };
