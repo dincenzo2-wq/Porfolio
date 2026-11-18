@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { StillsItem } from '../types/portfolio';
 import { DEFAULT_STILLS } from '../data/defaultContent';
@@ -7,49 +7,258 @@ interface StillsGallerySectionProps {
   stills?: StillsItem[];
 }
 
+interface CarouselSlot {
+  slotKey: string;
+  sourceIndex: number;
+  item: StillsItem;
+}
+
+const MIN_RING_SLOTS = 9;
+const AUTO_GLIDE_SPEED = 0.25; // cards per second (~4s per frame, calm cinematic glide)
+
 export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
-  // 1. 6 khung hình chọn lọc nhất (Zero-text gallery frames)
-  const activeStills = useMemo(() => {
-    const source = stills && stills.length > 0 ? stills : DEFAULT_STILLS;
-    return source.slice(0, 6);
+  // 1. Source frames from Admin (Tab 3 Stills) or default frames
+  const sourceFrames = useMemo(() => {
+    const raw = stills && stills.length > 0 ? stills : DEFAULT_STILLS;
+    return raw.filter((item) => Boolean(item && item.src));
   }, [stills]);
 
-  // 2. Trạng thái mặc định: activeIndex = 1 (khung hình thứ 2 bung rộng sẵn khi tải trang)
-  const [activeIndex, setActiveIndex] = useState<number>(1);
+  // Repeat frames seamlessly if fewer than MIN_RING_SLOTS so the 3D arc never shows gaps
+  const ringSlots: CarouselSlot[] = useMemo(() => {
+    if (sourceFrames.length === 0) return [];
+    const slots: CarouselSlot[] = [];
+    let repeat = 0;
+    while (slots.length < Math.max(MIN_RING_SLOTS, sourceFrames.length)) {
+      for (let i = 0; i < sourceFrames.length; i++) {
+        slots.push({
+          slotKey: `${sourceFrames[i].id || i}-r${repeat}-${slots.length}`,
+          sourceIndex: i,
+          item: sourceFrames[i],
+        });
+      }
+      repeat++;
+      if (repeat > 10) break;
+    }
+    return slots;
+  }, [sourceFrames]);
 
-  // 3. Trạng thái tạm dừng chuyển cảnh tự động khi người dùng rê chuột vào khu vực dải ảnh
-  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const cardRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // 4. Trạng thái Lightbox phóng to xem chi tiết ảnh gốc toàn màn hình sạch sẽ
+  // Continuous physics state stored in refs for zero-jank 60fps updates (no React re-render per frame)
+  const offsetRef = useRef<number>(0);
+  const velocityRef = useRef<number>(AUTO_GLIDE_SPEED);
+  const isHoveredRef = useRef<boolean>(false);
+  const isInViewRef = useRef<boolean>(true);
+  const isDraggingRef = useRef<boolean>(false);
+  const dragStartXRef = useRef<number>(0);
+  const dragLastXRef = useRef<number>(0);
+  const dragLastTimeRef = useRef<number>(0);
+  const dragTotalDistRef = useRef<number>(0);
+  const reducedMotionRef = useRef<boolean>(false);
+
+  const [isDraggingUI, setIsDraggingUI] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  // Nhận diện kích thước màn hình để kích hoạt Accordion giãn nở trên Desktop (>= 768px)
-  const [isDesktop, setIsDesktop] = useState(false);
+  const lightboxOpenRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const checkIsDesktop = () => {
-      setIsDesktop(typeof window !== 'undefined' && window.innerWidth >= 768);
+    lightboxOpenRef.current = lightboxIndex !== null;
+  }, [lightboxIndex]);
+
+  // Honor prefers-reduced-motion
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => {
+      reducedMotionRef.current = mq.matches;
     };
-    checkIsDesktop();
-    window.addEventListener('resize', checkIsDesktop);
-    return () => window.removeEventListener('resize', checkIsDesktop);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
   }, []);
 
-  // Motion kép 1: Auto-Cycle Accordion - Tự động chuyển activeIndex tuần hoàn mỗi 3500ms khi không rê chuột
+  // Pause GPU animation automatically when scrolled out of view
   useEffect(() => {
-    if (isPaused || lightboxIndex !== null) return;
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isInViewRef.current = entry.isIntersecting;
+      },
+      { rootMargin: '120px 0px 120px 0px', threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % activeStills.length);
-    }, 3500);
+  // Apply 3D depth-blur arc transforms directly to card DOM nodes
+  const layoutCards = useCallback(() => {
+    const count = ringSlots.length;
+    if (count === 0) return;
 
-    return () => clearInterval(interval);
-  }, [isPaused, lightboxIndex, activeStills.length]);
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1440;
+    const isMobile = vw < 640;
+    const isTablet = vw >= 640 && vw < 1024;
 
-  // Khóa cuộn trang và lắng nghe phím tắt điều hướng khi Lightbox đang mở
+    // Responsive 3D spacing tuned so center card blooms cleanly with flanking cards tilted inward
+    const centerGap = isMobile ? 210 : isTablet ? 290 : 365;
+    const sideStep = isMobile ? 148 : isTablet ? 200 : 242;
+    const zStep = isMobile ? 150 : 195;
+
+    const currentOffset = offsetRef.current;
+
+    for (let i = 0; i < count; i++) {
+      const el = cardRefs.current[i];
+      if (!el) continue;
+
+      // Wrap signed distance cleanly into [-count/2, +count/2]
+      let d = ((i - currentOffset) % count + count) % count;
+      if (d > count / 2) d -= count;
+
+      const absD = Math.abs(d);
+      const sign = d < 0 ? -1 : d > 0 ? 1 : 0;
+
+      // Hide far-side cards behind the ring to save GPU paint
+      if (absD > 4.6) {
+        el.style.opacity = '0';
+        el.style.visibility = 'hidden';
+        el.style.pointerEvents = 'none';
+        continue;
+      }
+
+      const firstUnit = Math.min(absD, 1);
+      const restUnits = Math.max(0, absD - 1);
+      const tx = sign * (firstUnit * centerGap + restUnits * sideStep);
+      const tz = -Math.min(absD * zStep, 1100);
+      const rotY = -sign * Math.min(72, absD * 34);
+
+      // Center foreground focal bloom (1.22x at d=0, smoothly settling to 1.0x at |d|>=1)
+      const centerProximity = Math.max(0, 1 - absD);
+      const smoothBloom = centerProximity * centerProximity * (3 - 2 * centerProximity);
+      const scale = 1 + smoothBloom * (isMobile ? 0.14 : 0.22);
+
+      // Smooth horizon fade past ±3.1 cards
+      let opacity = 1;
+      if (absD > 3.1) {
+        opacity = Math.max(0, 1 - (absD - 3.1) / 1.4);
+      }
+
+      const zIndex = Math.round(1000 - absD * 100);
+
+      el.style.visibility = 'visible';
+      el.style.pointerEvents = opacity > 0.15 ? 'auto' : 'none';
+      el.style.opacity = opacity.toFixed(3);
+      el.style.zIndex = String(zIndex);
+      el.style.transform = `translate3d(${tx.toFixed(2)}px, 0px, ${tz.toFixed(2)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+    }
+  }, [ringSlots.length]);
+
+  // Continuous 60fps requestAnimationFrame loop with velvety hover deceleration & drag inertia
+  useEffect(() => {
+    if (ringSlots.length === 0) return;
+
+    let rafId = 0;
+    let lastTime = performance.now();
+
+    // Initial synchronous layout
+    layoutCards();
+
+    const tick = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.05); // clamp dt on tab resume
+      lastTime = now;
+
+      if (isInViewRef.current && !lightboxOpenRef.current && !document.hidden) {
+        if (!isDraggingRef.current) {
+          const targetSpeed =
+            reducedMotionRef.current || isHoveredRef.current ? 0 : AUTO_GLIDE_SPEED;
+          // Smooth exponential easing toward target velocity (silky brake on hover, smooth inertia after drag)
+          const damping = 1 - Math.exp(-5.5 * dt);
+          velocityRef.current += (targetSpeed - velocityRef.current) * damping;
+
+          if (Math.abs(velocityRef.current) > 0.0004) {
+            offsetRef.current += velocityRef.current * dt;
+            layoutCards();
+          }
+        }
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    const handleResize = () => layoutCards();
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [layoutCards, ringSlots.length]);
+
+  const activePointerIdRef = useRef<number | null>(null);
+
+  // Pointer drag / touch swipe handlers with natural momentum (captures only after real drag > 5px so button clicks never get swallowed)
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDraggingRef.current = true;
+    activePointerIdRef.current = e.pointerId;
+    dragStartXRef.current = e.clientX;
+    dragLastXRef.current = e.clientX;
+    dragLastTimeRef.current = performance.now();
+    dragTotalDistRef.current = 0;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const now = performance.now();
+    const dx = e.clientX - dragLastXRef.current;
+    const dt = Math.max((now - dragLastTimeRef.current) / 1000, 0.008);
+
+    const prevDist = dragTotalDistRef.current;
+    dragTotalDistRef.current += Math.abs(dx);
+    dragLastXRef.current = e.clientX;
+    dragLastTimeRef.current = now;
+
+    // Activate grab state & capture only once real horizontal drag begins (> 5px)
+    if (dragTotalDistRef.current > 5) {
+      if (prevDist <= 5) {
+        setIsDraggingUI(true);
+        velocityRef.current = 0;
+        if (activePointerIdRef.current !== null) {
+          try {
+            e.currentTarget.setPointerCapture?.(activePointerIdRef.current);
+          } catch {}
+        }
+      }
+      const pxPerCard = window.innerWidth < 640 ? 220 : 320;
+      const deltaCards = -dx / pxPerCard;
+      offsetRef.current += deltaCards;
+      velocityRef.current = Math.max(-2.8, Math.min(2.8, deltaCards / dt));
+      layoutCards();
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    activePointerIdRef.current = null;
+    setIsDraggingUI(false);
+    try {
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+        e.currentTarget.releasePointerCapture?.(e.pointerId);
+      }
+    } catch {}
+  };
+
+  const handleCardClick = (sourceIndex: number) => {
+    // Ignore click if the user just dragged/swiped the carousel
+    if (dragTotalDistRef.current > 8) return;
+    setLightboxIndex(sourceIndex);
+  };
+
+  // Lock page scroll & enable keyboard navigation inside full-screen Lightbox
   useEffect(() => {
     if (lightboxIndex === null) return;
-
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -58,148 +267,160 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         setLightboxIndex(null);
       } else if (e.key === 'ArrowLeft') {
         setLightboxIndex((prev) =>
-          prev !== null ? (prev - 1 + activeStills.length) % activeStills.length : null
+          prev !== null ? (prev - 1 + sourceFrames.length) % sourceFrames.length : null
         );
       } else if (e.key === 'ArrowRight') {
         setLightboxIndex((prev) =>
-          prev !== null ? (prev + 1) % activeStills.length : null
+          prev !== null ? (prev + 1) % sourceFrames.length : null
         );
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [lightboxIndex, activeStills.length]);
+  }, [lightboxIndex, sourceFrames.length]);
 
   const handlePrevLightbox = () => {
     setLightboxIndex((prev) =>
-      prev !== null ? (prev - 1 + activeStills.length) % activeStills.length : null
+      prev !== null ? (prev - 1 + sourceFrames.length) % sourceFrames.length : null
     );
   };
 
   const handleNextLightbox = () => {
     setLightboxIndex((prev) =>
-      prev !== null ? (prev + 1) % activeStills.length : null
+      prev !== null ? (prev + 1) % sourceFrames.length : null
     );
   };
 
   const formatIndex = (idx: number) => String(idx + 1).padStart(2, '0');
 
   const currentLightboxFrame =
-    lightboxIndex !== null && activeStills[lightboxIndex]
-      ? activeStills[lightboxIndex]
+    lightboxIndex !== null && sourceFrames[lightboxIndex]
+      ? sourceFrames[lightboxIndex]
       : null;
+
+  if (sourceFrames.length === 0) return null;
 
   return (
     <section
+      ref={sectionRef}
       id="stills"
-      aria-label="Khung hình chọn lọc Stills Gallery"
-      className="relative w-full bg-[#09090B] py-12 sm:py-14 md:py-16 border-b border-white/10 select-none overflow-hidden"
+      aria-label="Khung hình chọn lọc 3D Depth Blur Carousel"
+      className="relative w-full bg-[#09090B] py-14 sm:py-16 md:py-20 border-b border-white/10 select-none overflow-hidden"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
-      {/* 
-        Dải 6 khung hình thuần thị giác (Zero-text) kết hợp Motion kép:
-        - Auto-Cycle Accordion: tự động chuyển tuần hoàn mỗi 3500ms (tạm dừng khi rê chuột).
-        - Ken Burns Dolly Zoom: ảnh active tự động zoom chậm scale-100 -> scale-110 (4000ms ease-out).
-        - Thuần thị giác: 100% không chứa số thứ tự, tiêu đề hay gradient đè lên ảnh như phòng trưng bày tranh.
-      */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+      {/* 3D Depth Blur Stage: Continuous smooth glide, hover pause, drag/swipe & click-to-zoom */}
+      <div
+        onMouseEnter={() => {
+          isHoveredRef.current = true;
+        }}
+        onMouseLeave={() => {
+          isHoveredRef.current = false;
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          perspective: '820px',
+          perspectiveOrigin: '50% 50%',
+          touchAction: 'pan-y',
+        }}
+        className={`relative w-full h-[270px] sm:h-[340px] md:h-[400px] lg:h-[430px] flex items-center justify-center overflow-hidden ${
+          isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
+        {/* 3D Preserve Space */}
         <div
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          className="w-full flex gap-3.5 overflow-x-auto md:overflow-hidden snap-x snap-mandatory md:snap-none md:h-[420px] lg:h-[460px] pb-3 md:pb-0 [scrollbar-width:none] [-ms-overflow-style:none]"
+          style={{ transformStyle: 'preserve-3d' }}
+          className="relative w-full h-full flex items-center justify-center"
         >
-          {activeStills.map((frame, idx) => {
-            const isActive = activeIndex === idx;
-
-            return (
-              <div
-                key={frame.id || idx}
-                role="button"
-                tabIndex={0}
-                aria-label={`Khung hình điện ảnh ${idx + 1}${
-                  isActive ? ' (Đang mở rộng, bấm để phóng to)' : ''
-                }`}
-                onMouseEnter={() => {
-                  if (isDesktop) setActiveIndex(idx);
-                }}
-                onClick={() => {
-                  if (!isDesktop) {
-                    setLightboxIndex(idx);
-                  } else if (isActive) {
-                    setLightboxIndex(idx);
-                  } else {
-                    setActiveIndex(idx);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    if (!isDesktop || isActive) {
-                      setLightboxIndex(idx);
-                    } else {
-                      setActiveIndex(idx);
-                    }
-                  }
-                }}
-                style={isDesktop ? { flex: isActive ? 6.5 : 1 } : undefined}
-                className={`group relative overflow-hidden rounded-xl md:rounded-2xl border transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 bg-[#0A0A0A] ${
-                  /* Mobile: 85vw, snap-center, aspect-video */
-                  'flex-none w-[85vw] sm:w-[70vw] aspect-video snap-center md:snap-align-none md:w-auto md:aspect-auto md:h-full'
-                } ${
-                  isDesktop && isActive
-                    ? 'md:flex-[6.5] border-white/40 shadow-2xl cursor-zoom-in'
-                    : isDesktop
-                    ? 'md:flex-1 border-white/10 hover:border-white/25 cursor-pointer'
-                    : 'border-white/15 cursor-pointer shadow-lg'
-                }`}
-              >
-                {/* Ảnh điện ảnh thuần túy, zero-text, scale-[1.01] triệt tiêu viền mép trên, kết hợp Ken Burns Dolly Zoom */}
-                <img
-                  src={frame.src}
-                  alt={frame.alt || `Khung hình chọn lọc ${idx + 1}`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  className={`w-full h-full object-cover transition-all ease-out ${
-                    isDesktop
-                      ? isActive
-                        ? 'scale-110 brightness-100 duration-[4000ms]'
-                        : 'scale-100 brightness-75 duration-700 group-hover:brightness-90'
-                      : 'scale-100 brightness-100 duration-700'
-                  }`}
-                />
-              </div>
-            );
-          })}
+          {ringSlots.map((slot, i) => (
+            <button
+              key={slot.slotKey}
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+              type="button"
+              onClick={() => handleCardClick(slot.sourceIndex)}
+              aria-label={`Phóng to khung hình ${slot.item.title || formatIndex(slot.sourceIndex)}`}
+              style={{
+                willChange: 'transform, opacity',
+                backfaceVisibility: 'hidden',
+              }}
+              className="group absolute w-[220px] h-[148px] sm:w-[310px] sm:h-[206px] md:w-[380px] md:h-[252px] lg:w-[420px] lg:h-[278px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_24px_60px_rgba(0,0,0,0.72)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2"
+            >
+              <img
+                src={slot.item.src}
+                alt={slot.item.alt || slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
+                loading="eager"
+                draggable={false}
+                className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+              />
+            </button>
+          ))}
         </div>
+
+        {/* Cinematic Depth-of-Field Edge Blur (Left 24% — smooth backdrop blur + #09090B fade) */}
+        <div
+          aria-hidden="true"
+          style={{
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            maskImage: 'linear-gradient(to right, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 left-0 w-[18%] sm:w-[23%] md:w-[25%] z-[1100]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[16%] sm:w-[20%] z-[1101] bg-gradient-to-r from-[#09090B] via-[#09090B]/70 to-transparent"
+        />
+
+        {/* Cinematic Depth-of-Field Edge Blur (Right 24% — smooth backdrop blur + #09090B fade) */}
+        <div
+          aria-hidden="true"
+          style={{
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            maskImage: 'linear-gradient(to left, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to left, black 18%, rgba(0,0,0,0.65) 55%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-y-0 right-0 w-[18%] sm:w-[23%] md:w-[25%] z-[1100]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[16%] sm:w-[20%] z-[1101] bg-gradient-to-l from-[#09090B] via-[#09090B]/70 to-transparent"
+        />
       </div>
 
-      {/* 3. Cửa sổ Lightbox phóng to ảnh gốc toàn màn hình kèm tiêu đề dự án */}
+      {/* Lightbox phóng to xem ảnh gốc toàn màn hình */}
       {lightboxIndex !== null && currentLightboxFrame && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Xem ảnh gốc toàn màn hình khung số ${lightboxIndex + 1} - ${currentLightboxFrame.title}`}
-          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 md:p-8 animate-fadeIn"
+          aria-label="Xem khung hình chọn lọc toàn màn hình"
+          className="fixed inset-0 z-50 bg-[#09090B]/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 md:p-8"
           onClick={() => setLightboxIndex(null)}
         >
-          {/* Thanh trên cùng: Số thứ tự + Tên dự án góc trái & Phím tắt + Nút đóng góc phải */}
+          {/* Thanh điều khiển trên cùng */}
           <div
-            className="max-w-7xl w-full mx-auto flex items-center justify-between text-white pb-3 sm:pb-4 border-b border-white/10"
+            className="max-w-7xl w-full mx-auto flex items-center justify-between gap-4 pb-2"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 rounded-md bg-white/10 border border-white/15 font-bricolage text-xs sm:text-sm font-bold text-white/90 tracking-wider">
-                {formatIndex(lightboxIndex)} / {formatIndex(activeStills.length - 1)}
+              <span className="px-2.5 py-1 rounded-md bg-white/10 border border-white/15 font-bricolage text-xs sm:text-sm font-bold text-white/90 tracking-wider tabular-nums">
+                {formatIndex(lightboxIndex)} / {formatIndex(sourceFrames.length - 1)}
               </span>
-              <h3 className="font-bricolage text-sm sm:text-base md:text-lg font-bold text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-sm md:max-w-lg">
-                {currentLightboxFrame.title}
-              </h3>
+              {currentLightboxFrame.title && (
+                <h3 className="font-bricolage text-sm sm:text-base md:text-lg font-bold text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-sm md:max-w-lg">
+                  {currentLightboxFrame.title}
+                </h3>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -222,7 +443,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             className="relative flex-1 flex items-center justify-center py-2 px-2 sm:px-12 select-none"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Nút lùi ảnh trước */}
             <button
               type="button"
               onClick={handlePrevLightbox}
@@ -232,7 +452,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
               <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            {/* Khung ảnh phóng to */}
             <div className="relative max-h-[80vh] md:max-h-[82vh] max-w-full flex items-center justify-center">
               <img
                 src={currentLightboxFrame.src}
@@ -241,7 +460,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
               />
             </div>
 
-            {/* Nút tiến ảnh kế tiếp */}
             <button
               type="button"
               onClick={handleNextLightbox}
@@ -252,13 +470,13 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             </button>
           </div>
 
-          {/* Dòng chú thích đáy Lightbox: bối cảnh ánh sáng & bối cảnh quay */}
+          {/* Dòng chú thích đáy Lightbox */}
           <div
             className="max-w-7xl w-full mx-auto pt-3 border-t border-white/10 flex items-center justify-between text-xs sm:text-sm text-white/70"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="line-clamp-1">
-              {currentLightboxFrame.alt || currentLightboxFrame.title}
+              {currentLightboxFrame.alt || currentLightboxFrame.title || 'Khung hình chọn lọc'}
             </p>
             <span className="text-white/60 font-sans font-semibold text-xs tabular-nums shrink-0 ml-4">
               {currentLightboxFrame.year || '2025'}
