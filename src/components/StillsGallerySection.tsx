@@ -309,7 +309,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       ref={sectionRef}
       id="stills"
       aria-label="Khung hình chọn lọc 3D Depth Blur Carousel"
-      className="relative w-full bg-transparent pt-16 sm:pt-20 md:pt-24 pb-10 sm:pb-14 md:pb-16 select-none overflow-hidden"
+      className="relative w-full bg-transparent pt-14 sm:pt-16 md:pt-20 pb-12 sm:pb-16 md:pb-20 select-none overflow-x-clip overflow-y-visible"
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
@@ -350,10 +350,16 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           perspectiveOrigin: '50% 50%',
           touchAction: 'pan-y',
         }}
-        className={`relative w-full h-[270px] sm:h-[340px] md:h-[400px] lg:h-[430px] flex items-center justify-center overflow-hidden ${
+        className={`relative w-full h-[320px] sm:h-[410px] md:h-[480px] lg:h-[540px] xl:h-[570px] flex items-center justify-center overflow-visible ${
           isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
+        {/* Cinematic Ambient Floor Shadow Pool (Grounded depth anchor for 3D carousel) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-2 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[85%] sm:w-[78%] md:w-[72%] max-w-5xl h-20 sm:h-24 md:h-28 rounded-full bg-black/45 blur-[45px] sm:blur-[65px] md:blur-[80px] -z-10"
+        />
+
         {/* 3D Preserve Space */}
         <div
           style={{ transformStyle: 'preserve-3d' }}
@@ -372,13 +378,16 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 willChange: 'transform, opacity',
                 backfaceVisibility: 'hidden',
               }}
-              className="group absolute w-[220px] h-[148px] sm:w-[310px] sm:h-[206px] md:w-[380px] md:h-[252px] lg:w-[420px] lg:h-[278px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_24px_60px_rgba(0,0,0,0.72)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2"
+              className="group absolute w-[220px] h-[148px] sm:w-[310px] sm:h-[206px] md:w-[380px] md:h-[252px] lg:w-[420px] lg:h-[278px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/12 shadow-[0_12px_24px_-6px_rgba(0,0,0,0.5),0_28px_56px_-10px_rgba(0,0,0,0.72),0_60px_96px_-16px_rgba(0,0,0,0.65)] focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2"
             >
               <img
                 src={slot.item.src}
                 alt={slot.item.alt || slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
                 loading="eager"
                 draggable={false}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.opacity = '0';
+                }}
                 className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-500 ease-out group-hover:scale-[1.03]"
               />
             </button>
