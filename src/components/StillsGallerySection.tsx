@@ -115,9 +115,9 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     const isTablet = vw >= 640 && vw < 1024;
 
     // ArcWave Cylindrical Radius (R) & Angular Step (deltaTheta)
-    // R creates a concave arc cradling the viewer tangent at Z = 0
+    // Tuned with generous angular step so cards maintain crisp, elegant breathing gaps
     const R = isMobile ? 800 : isTablet ? 1150 : 1420;
-    const deltaThetaDeg = isMobile ? 22 : isTablet ? 19.5 : 18;
+    const deltaThetaDeg = isMobile ? 24 : isTablet ? 21 : 19;
     const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
 
     const currentOffset = offsetRef.current;
@@ -155,9 +155,8 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       const blurPx = Math.min(5, Math.pow(normalizedAngle, 1.3) * 6);
       const opacity = Math.max(0.35, 1 - Math.pow(normalizedAngle, 1.5) * 0.6);
 
-      // Scale: subtle natural optical bloom at center (1.08x at center, settling smoothly to 1.0x)
-      const centerProximity = Math.max(0, 1 - Math.abs(d));
-      const scale = 1 + centerProximity * (isMobile ? 0.08 : 0.12);
+      // Scale: keep scale at 1.0 to preserve generous, uniform breathing gaps between cards
+      const scale = 1;
 
       const zIndex = Math.round(500 - absThetaDeg * 5);
 
@@ -403,7 +402,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 willChange: 'transform, opacity, filter',
                 backfaceVisibility: 'hidden',
               }}
-              className="group absolute w-[240px] h-[160px] sm:w-[320px] sm:h-[215px] md:w-[380px] md:h-[254px] lg:w-[430px] lg:h-[288px] rounded-[18px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
+              className="group absolute w-[220px] h-[148px] sm:w-[280px] sm:h-[188px] md:w-[340px] md:h-[228px] lg:w-[400px] lg:h-[268px] rounded-[16px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
             >
               <img
                 src={slot.item.src}
