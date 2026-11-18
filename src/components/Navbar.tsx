@@ -59,8 +59,7 @@ const NAV_ITEMS = [
   { href: '#ho-so', label: 'Hồ sơ', desc: 'Thiết bị & Kinh nghiệm' },
 ];
 
-export function Navbar({ onOpenContact, branding, email, location }: NavbarProps) {
-  const contactEmail = (email && email.trim()) || ARTIST_PROFILE.email;
+export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
   const displayLocation = (location && location.trim()) || ARTIST_PROFILE.location;
   const [vietnamTime, setVietnamTime] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -185,14 +184,6 @@ export function Navbar({ onOpenContact, branding, email, location }: NavbarProps
 
           {/* Right: Quick CTA & Mobile Hamburger Toggle */}
           <div className="flex items-center gap-2">
-            {/* Direct Email link on Desktop */}
-            <a
-              href={`mailto:${contactEmail}`}
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/60 hover:text-white transition-colors"
-            >
-              <span>{contactEmail}</span>
-            </a>
-
             {/* Desktop Contact CTA Button with Rolling Text & Arrow */}
             <button
               type="button"
