@@ -137,11 +137,11 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
       <div
         ref={navRef}
         className={`pointer-events-auto w-full max-w-5xl bg-[#09090B]/92 backdrop-blur-2xl border border-white/12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-          mobileMenuOpen ? 'rounded-[26px] p-3 sm:p-3.5' : 'rounded-full p-2 sm:p-2.5'
+          mobileMenuOpen ? 'rounded-[26px] p-3 sm:p-3.5' : 'rounded-full p-1.5 sm:p-2'
         }`}
       >
         {/* Main Capsule Row */}
-        <div className="flex items-center justify-between gap-3 sm:gap-4 pl-3 sm:pl-4 pr-1.5 sm:pr-2">
+        <div className="flex items-center justify-between gap-3 sm:gap-4 pl-3 sm:pl-3.5 pr-1.5 sm:pr-2">
           {/* Left: Brand Logo & Wordmark */}
           <a
             href="#"
@@ -155,11 +155,11 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
               />
             )}
             {branding?.showBrandName !== false && (
-              <span className="font-bricolage text-base sm:text-lg md:text-xl tracking-[-0.03em] font-extrabold uppercase text-white transition-opacity group-hover:opacity-85">
+              <span className="font-bricolage text-sm sm:text-[15px] md:text-base tracking-[-0.025em] font-extrabold uppercase text-white transition-opacity group-hover:opacity-85">
                 {branding?.brandName || 'QUỐC VINH'}
               </span>
             )}
-            <span className="hidden xl:inline-flex items-center gap-1.5 pl-3 border-l border-white/10 text-xs font-medium text-white/50">
+            <span className="hidden lg:inline-flex items-center gap-1.5 pl-3 border-l border-white/10 text-[11px] font-medium text-white/50">
               <span>{displayLocation}</span>
               <span className="text-white/30">·</span>
               <span className="tabular-nums font-semibold text-white/70">{vietnamTime || '00:00:00'}</span>
@@ -175,7 +175,7 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
               <a
                 key={item.href}
                 href={item.href}
-                className="group relative px-4 py-1.5 rounded-full text-xs lg:text-sm font-semibold text-white/80 hover:text-white hover:bg-white/15 transition-all duration-300 focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
+                className="group relative px-3.5 py-1.5 rounded-full text-[13px] font-semibold text-white/80 hover:text-white hover:bg-white/15 transition-all duration-300 focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
               >
                 <RollingText text={item.label} highlightClass="text-[#3B82F6]" />
               </a>
@@ -188,7 +188,7 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
             <button
               type="button"
               onClick={onOpenContact}
-              className="group hidden sm:inline-flex items-center gap-2 px-5 py-2 md:py-2.5 rounded-full bg-white text-black text-xs md:text-sm font-bold tracking-wide hover:bg-[#3B82F6] hover:text-white transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
+              className="group hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 md:py-2 rounded-full bg-white text-black text-[13px] font-bold tracking-wide hover:bg-[#3B82F6] hover:text-white transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
             >
               <RollingText text="Liên hệ" highlightClass="text-white" />
               <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
