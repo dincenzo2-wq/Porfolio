@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, ArrowUpRight } from 'lucide-react';
-import { ARTIST_PROFILE } from '../data/portfolioData';
 import type { SiteBrandingData } from '../types/portfolio';
 import { cleanSvgWhiteBackground, invertSvgColors, autoCropSvgViewBox } from '../utils/brandingLogic';
 
@@ -59,9 +58,7 @@ const NAV_ITEMS = [
   { href: '#ho-so', label: 'Hồ sơ', desc: 'Thiết bị & Kinh nghiệm' },
 ];
 
-export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
-  const displayLocation = (location && location.trim()) || ARTIST_PROFILE.location;
-  const [vietnamTime, setVietnamTime] = useState('');
+export function Navbar({ onOpenContact, branding }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +75,8 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
     // Luôn hiển thị màu trắng/sáng trên nền đen capsule
     svg = invertSvgColors(svg, '#F7F6F2');
 
-    const height = branding.logoHeight || 22;
+    // Tỉ lệ chiều cao biểu tượng cân bằng quang học với cap-height của chữ
+    const height = branding.logoHeight || 21;
     svg = svg.replace(/<svg\b([^>]*)>/i, (_match, attrs) => {
       const cleanAttrs = attrs
         .replace(/\bwidth\s*=\s*["'][^"']*["']/gi, '')
@@ -92,25 +90,6 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
     branding?.autoRemoveWhiteBg,
     branding?.logoHeight,
   ]);
-
-  // Live ticking clock in Vietnam timezone (Asia/Ho_Chi_Minh)
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const formatter = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      });
-      setVietnamTime(formatter.format(now));
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Close mobile menu on Escape key or click outside
   useEffect(() => {
@@ -155,15 +134,10 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
               />
             )}
             {branding?.showBrandName !== false && (
-              <span className="font-bricolage text-sm sm:text-[15px] md:text-base tracking-[-0.025em] font-extrabold uppercase text-white transition-opacity group-hover:opacity-85">
+              <span className="font-bricolage text-[14px] sm:text-[15px] tracking-[0.035em] font-bold uppercase text-white transition-opacity group-hover:opacity-90 inline-flex items-center leading-none">
                 {branding?.brandName || 'QUỐC VINH'}
               </span>
             )}
-            <span className="hidden lg:inline-flex items-center gap-1.5 pl-3 border-l border-white/10 text-[11px] font-medium text-white/50">
-              <span>{displayLocation}</span>
-              <span className="text-white/30">·</span>
-              <span className="tabular-nums font-semibold text-white/70">{vietnamTime || '00:00:00'}</span>
-            </span>
           </a>
 
           {/* Center: Framer-style Sub-Pill Navigation with Staggered Rolling Text */}
@@ -238,11 +212,6 @@ export function Navbar({ onOpenContact, branding, location }: NavbarProps) {
                 <span>Liên hệ dự án</span>
                 <ArrowUpRight className="w-4 h-4" />
               </button>
-
-              <div className="flex items-center justify-between px-3 text-[11px] text-white/50 pt-0.5">
-                <span>{displayLocation}</span>
-                <span className="tabular-nums font-semibold text-white/70">{vietnamTime}</span>
-              </div>
             </div>
           </div>
         )}
