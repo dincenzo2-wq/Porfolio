@@ -192,10 +192,6 @@
   will-change: transform;
 }
 
-.brand-marquee-container:hover .animate-brand-marquee {
-  animation-play-state: paused;
-}
-
 .brand-marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);

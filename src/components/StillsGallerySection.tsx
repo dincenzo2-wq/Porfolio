@@ -62,7 +62,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   const offsetRef = useRef<number>(0);
   const velocityRef = useRef<number>(AUTO_GLIDE_SPEED);
   const targetOffsetRef = useRef<number | null>(null);
-  const isHoveredRef = useRef<boolean>(false);
   const isInViewRef = useRef<boolean>(true);
   const isDraggingRef = useRef<boolean>(false);
   const dragStartXRef = useRef<number>(0);
@@ -207,9 +206,8 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
             }
             layoutCards();
           } else {
-            const targetSpeed =
-              reducedMotionRef.current || isHoveredRef.current ? 0 : AUTO_GLIDE_SPEED;
-            // Smooth exponential easing toward target velocity (silky brake on hover, smooth inertia after drag)
+            const targetSpeed = reducedMotionRef.current ? 0 : AUTO_GLIDE_SPEED;
+            // Smooth exponential easing toward target velocity (natural inertia after drag, unhindered continuous drift)
             const damping = 1 - Math.exp(-5.5 * dt);
             velocityRef.current += (targetSpeed - velocityRef.current) * damping;
 
@@ -367,12 +365,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
       {/* ArcWave 3D Cylindrical Concave Arc Stage: Continuous drift, drag/swipe & click-to-center */}
       <div
-        onMouseEnter={() => {
-          isHoveredRef.current = true;
-        }}
-        onMouseLeave={() => {
-          isHoveredRef.current = false;
-        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -383,7 +375,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           touchAction: 'pan-y',
         }}
         className={`relative w-full h-[330px] sm:h-[390px] md:h-[440px] lg:h-[490px] xl:h-[510px] flex items-center justify-center overflow-visible ${
-          isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
+          isDraggingUI ? 'cursor-grabbing' : ''
         }`}
       >
         {/* 3D Cylindrical Preserve Space */}
@@ -432,7 +424,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                   <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
                     {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
                   </h4>
-                  <span className="text-[11px] font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
+                  <span className="text-xs font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
                     {slot.item.year || '2025'}
                   </span>
                 </div>

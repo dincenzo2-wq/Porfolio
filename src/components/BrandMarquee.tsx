@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 export const DEFAULT_BRAND_MARQUEE: string[] = [
   'DENTSU REDDER',
@@ -27,8 +27,6 @@ export function BrandMarquee({
   showBrandMarquee = true,
   brandLogos,
 }: BrandMarqueeProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const hasLogos = Boolean(brandLogos && brandLogos.length > 0);
 
   // When logo images are provided, repeat logos to ensure smooth infinite loop without blank gaps
@@ -70,13 +68,8 @@ export function BrandMarquee({
           maskImage: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
           WebkitMaskImage: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
         }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
-        <div
-          className="flex w-max animate-brand-marquee"
-          style={{ animationPlayState: isHovered ? 'paused' : 'running' }}
-        >
+        <div className="flex w-max animate-brand-marquee">
           {/* Đúng 2 bản sao duy nhất trong DOM để chạy vòng lặp vô tận translateX(-50%) mượt 60fps */}
           {[0, 1].map((copyIdx) => (
             <div
