@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { LayoutGrid, Minus, Play, Plus, Sparkles } from 'lucide-react';
 import { MaskedRevealTitle } from './MaskedRevealTitle';
 import { RevealGroup, RevealItem } from './ScrollReveal';
-import { Category3DCarousel } from './Category3DCarousel';
+import { CategoryFanCarousel } from './CategoryFanCarousel';
 import { PORTFOLIO_PROJECTS } from '../data/portfolioData';
 import type { PortfolioProject, ProjectCategory } from '../types/portfolio';
 import { parseVideoUrl } from '../utils/videoEmbed';
@@ -332,13 +332,13 @@ export function ProjectsAccordionSection({
                         {/* Mode Switcher Pill */}
                         <div className="flex items-center justify-between pb-3 px-1 border-b border-[var(--morph-border,rgba(0,0,0,0.06))] mb-2 text-xs">
                           <span className="font-semibold text-[var(--morph-ink-muted,#555555)] uppercase tracking-wider text-[11px]">
-                            {viewModes[group.id] === 'grid' ? 'Chế độ xem lưới' : 'Slide 3D vòng cung điện ảnh'}
+                            {viewModes[group.id] === 'grid' ? 'Chế độ xem lưới' : 'CMS Fan Carousel 3D'}
                           </span>
                           <div className="flex items-center gap-1 p-0.5 rounded-full bg-black/5 border border-black/8">
                             <button
                               type="button"
                               onClick={() => setViewModes((prev) => ({ ...prev, [group.id]: '3d' }))}
-                              aria-label="Xem dạng slide 3D"
+                              aria-label="Xem dạng Fan 3D"
                               className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                                 (viewModes[group.id] || '3d') === '3d'
                                   ? 'bg-white text-black shadow-xs font-bold'
@@ -346,7 +346,7 @@ export function ProjectsAccordionSection({
                               }`}
                             >
                               <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                              <span>Slide 3D</span>
+                              <span>Fan 3D</span>
                             </button>
                             <button
                               type="button"
@@ -364,9 +364,9 @@ export function ProjectsAccordionSection({
                           </div>
                         </div>
 
-                        {/* Render 3D Cylindrical Carousel by Default, or Grid if selected */}
+                        {/* Render Fan 3D Carousel by Default, or Grid if selected */}
                         {(viewModes[group.id] || '3d') === '3d' ? (
-                          <Category3DCarousel
+                          <CategoryFanCarousel
                             projects={projectsInGroup}
                             isVertical={isGroupVertical}
                             onSelectProject={onSelectProject}
