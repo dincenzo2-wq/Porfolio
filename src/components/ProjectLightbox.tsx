@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import type { PortfolioProject } from '../types/portfolio';
 import { parseVideoUrl } from '../utils/videoEmbed';
 import { formatDeliverableRoles } from '../utils/portfolioLogic';
@@ -193,6 +193,17 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
                 <span className="text-xs font-semibold tabular-nums text-white/70 font-sans shrink-0">
                   {isVertical ? '9:16' : '16:9'}
                 </span>
+                {parsedVideo?.type === 'vk' && project.videoUrl && (
+                  <a
+                    href={project.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-white/60 hover:text-white px-2 py-0.5 rounded-full border border-white/10 hover:border-white/20 transition-all"
+                  >
+                    <span>Mở trên VK</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
               </div>
 
               <button

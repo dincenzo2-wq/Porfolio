@@ -1500,6 +1500,21 @@ export function ProjectsTab({
                     Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, VK Video &amp; VK Clip (vk.com / vkvideo.ru), Google Drive (cần bật quyền &quot;Bất kỳ ai có liên kết đều có thể xem&quot;), Dropbox MP4 và link file MP4 từ Cloudflare R2.
                   </p>
 
+                  {/* VK Video Embedding Tip */}
+                  {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'vk' && (
+                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-900">
+                          Lưu ý khi nhúng video VK để tránh bị hỏi Captcha/Robot:
+                        </p>
+                        <p className="mt-0.5 text-amber-800 leading-relaxed">
+                          VK bảo vệ video bằng mã bảo mật <code>hash</code>. Bạn nên vào video trên VK, bấm <strong>Chia sẻ (Share) &rarr; Mã nhúng (Embed)</strong> và copy cả đoạn mã iframe (hoặc link <code>video_ext.php?...&amp;hash=...</code>) dán vào đây để phát trực tiếp mượt mà.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
                   {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type !== 'none' && (() => {
                     const parsed = parseVideoUrl(editingProject.videoUrl);
