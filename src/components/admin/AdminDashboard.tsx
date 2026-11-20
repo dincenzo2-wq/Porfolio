@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -84,6 +84,25 @@ export function AdminDashboard({ onNavigateHome }: AdminDashboardProps) {
     });
     return svg;
   }, [content.branding?.logoSvg, content.branding?.autoRemoveWhiteBg]);
+
+  // Ngăn trình duyệt tự động mở/chuyển trang khi kéo thả file từ Windows Explorer
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F6F6F8] text-[#111111] font-sans antialiased selection:bg-[#2563EB] selection:text-white pb-24">

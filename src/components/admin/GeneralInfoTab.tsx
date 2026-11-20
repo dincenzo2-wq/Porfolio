@@ -204,6 +204,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   // Drag & drop state for Hero video / poster
   const [isDraggingHeroMedia, setIsDraggingHeroMedia] = useState(false);
   const [heroDragKind, setHeroDragKind] = useState<'video' | 'image' | 'unknown'>('unknown');
+  const heroDragDepthRef = useRef(0);
 
   // Core handler: Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
   const handleUploadHeroVideoFile = async (file: File) => {
@@ -339,8 +340,12 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const handleHeroDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    heroDragDepthRef.current += 1;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     setIsDraggingHeroMedia(true);
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+    if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
       const item = e.dataTransfer.items[0];
       if (item.type.startsWith('video/')) {
         setHeroDragKind('video');
@@ -355,24 +360,30 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const handleHeroDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     if (!isDraggingHeroMedia) setIsDraggingHeroMedia(true);
   };
 
   const handleHeroDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDraggingHeroMedia(false);
-    setHeroDragKind('unknown');
+    heroDragDepthRef.current = Math.max(0, heroDragDepthRef.current - 1);
+    if (heroDragDepthRef.current === 0) {
+      setIsDraggingHeroMedia(false);
+      setHeroDragKind('unknown');
+    }
   };
 
   const handleHeroDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    heroDragDepthRef.current = 0;
     setIsDraggingHeroMedia(false);
     setHeroDragKind('unknown');
 
-    const files = e.dataTransfer.files;
+    const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
@@ -597,7 +608,11 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             >
               {/* Drag & Drop Visual Overlay */}
               {isDraggingHeroMedia && (
-                <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center">
+                <div
+                  onDragOver={handleHeroDragOver}
+                  onDrop={handleHeroDrop}
+                  className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy pointer-events-auto"
+                >
                   <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-3">
                     <Upload className="w-6 h-6 animate-bounce" />
                   </div>

@@ -14,6 +14,7 @@ import {
   EyeOff,
   Check,
   Camera,
+  Loader2,
 } from 'lucide-react';
 import type { AspectRatioType, PortfolioProject } from '../../types/portfolio';
 import {
@@ -799,6 +800,9 @@ export function ProjectsTab({
 
   // Drag & drop state for Project Cover image
   const [isDraggingCover, setIsDraggingCover] = useState(false);
+  const coverDragDepthRef = useRef(0);
+  const [draggingCardProjectId, setDraggingCardProjectId] = useState<string | null>(null);
+  const [uploadingCardProjectId, setUploadingCardProjectId] = useState<string | null>(null);
 
   // Core handler: client-side WebP compression & upload to Cloudflare R2
   const handleProcessAndUploadImage = async (file: File) => {
@@ -866,29 +870,107 @@ export function ProjectsTab({
   const handleCoverDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    coverDragDepthRef.current += 1;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     setIsDraggingCover(true);
   };
 
   const handleCoverDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     if (!isDraggingCover) setIsDraggingCover(true);
   };
 
   const handleCoverDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDraggingCover(false);
+    coverDragDepthRef.current = Math.max(0, coverDragDepthRef.current - 1);
+    if (coverDragDepthRef.current === 0) {
+      setIsDraggingCover(false);
+    }
   };
 
   const handleCoverDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    coverDragDepthRef.current = 0;
     setIsDraggingCover(false);
-    const files = e.dataTransfer.files;
+    const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       await handleProcessAndUploadImage(files[0]);
+    }
+  };
+
+  // Direct Drag & Drop on Project Cards in the list
+  const handleCardDragOver = (e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (draggingCardProjectId !== projectId) {
+      setDraggingCardProjectId(projectId);
+    }
+  };
+
+  const handleCardDragLeave = (e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    if (draggingCardProjectId === projectId) {
+      setDraggingCardProjectId(null);
+    }
+  };
+
+  const handleCardDrop = async (e: React.DragEvent, project: PortfolioProject) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingCardProjectId(null);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|avif)$/i.test(file.name);
+    if (!isImage) {
+      alert('Vui lòng kéo thả file ảnh (.jpg, .png, .webp).');
+      return;
+    }
+
+    try {
+      setUploadingCardProjectId(project.id);
+      const compressed = await compressImageToWebP(file, 1920, 500 * 1024);
+      const formData = new FormData();
+      formData.append('file', compressed.file);
+
+      let uploadedUrl: string | undefined;
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const uploadRes = await res.json();
+          if (uploadRes && uploadRes.success && uploadRes.url) {
+            uploadedUrl = uploadRes.url;
+          }
+        }
+      } catch (err) {}
+
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, compressed.dataUrl);
+      onUpdateProject(project.id, { coverImage: finalUrl });
+      if (onMarkUnsaved) {
+        onMarkUnsaved();
+      }
+    } catch (err: any) {
+      console.error('Failed to upload card cover image:', err);
+      alert('Lỗi nén hoặc tải ảnh lên: ' + (err?.message || 'Lỗi không xác định'));
+    } finally {
+      setUploadingCardProjectId(null);
     }
   };
 
@@ -979,12 +1061,38 @@ export function ProjectsTab({
               }`}
             >
               <div>
-                {/* Thumbnail Preview: True 9:16 for vertical or 16:9 for horizontal */}
+                {/* Thumbnail Preview: True 9:16 for vertical or 16:9 for horizontal, supports Drag & Drop */}
                 <div
+                  onDragOver={(e) => handleCardDragOver(e, project.id)}
+                  onDragLeave={(e) => handleCardDragLeave(e, project.id)}
+                  onDrop={(e) => handleCardDrop(e, project)}
                   className={`relative ${
                     isVertical ? 'h-80 sm:h-96 bg-[#0B0B0D]' : 'aspect-[16/9] bg-[#141414]'
-                  } overflow-hidden flex items-center justify-center w-full group/thumb`}
+                  } overflow-hidden flex items-center justify-center w-full group/thumb ${
+                    draggingCardProjectId === project.id ? 'ring-4 ring-[#2563EB] ring-inset' : ''
+                  }`}
+                  title="Có thể kéo thả ảnh trực tiếp vào đây để đổi ảnh bìa Cloudflare R2"
                 >
+                  {/* Card Drag & Drop Active Overlay */}
+                  {draggingCardProjectId === project.id && (
+                    <div
+                      onDragOver={(e) => handleCardDragOver(e, project.id)}
+                      onDrop={(e) => handleCardDrop(e, project)}
+                      className="absolute inset-0 z-40 bg-[#2563EB]/90 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-white text-center cursor-copy pointer-events-auto"
+                    >
+                      <Upload className="w-8 h-8 animate-bounce mb-1" />
+                      <span className="text-xs font-bold leading-tight">Thả ảnh đổi bìa R2</span>
+                      <span className="text-[10px] opacity-90 truncate max-w-[90%] mt-0.5">{project.title}</span>
+                    </div>
+                  )}
+
+                  {/* Card Uploading Spinner Overlay */}
+                  {uploadingCardProjectId === project.id && (
+                    <div className="absolute inset-0 z-40 bg-black/85 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-white text-center pointer-events-auto">
+                      <Loader2 className="w-7 h-7 animate-spin text-[#2563EB] mb-1.5" />
+                      <span className="text-xs font-bold">Đang nén WebP &amp; tải lên R2...</span>
+                    </div>
+                  )}
                   {isVertical ? (
                     <>
                       {/* Ambient blur backdrop for 9:16 vertical smartphone frame */}
@@ -1731,7 +1839,11 @@ export function ProjectsTab({
                   >
                     {/* Drag & Drop Visual Overlay */}
                     {isDraggingCover && (
-                      <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
+                      <div
+                        onDragOver={handleCoverDragOver}
+                        onDrop={handleCoverDrop}
+                        className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center cursor-copy pointer-events-auto"
+                      >
                         <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-md mb-2">
                           <Upload className="w-5 h-5 animate-bounce" />
                         </div>
