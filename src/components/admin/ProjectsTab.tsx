@@ -683,7 +683,14 @@ export function ProjectsTab({
   // Auto-detect aspect ratio & auto-fetch YouTube cover thumbnail (0MB storage)
   // Tuyệt đối KHÔNG tự động chuyển tab/danh mục: giữ nguyên lựa chọn danh mục của người dùng
   const handleVideoUrlChange = (rawVal: string) => {
-    const normalized = normalizeDropboxUrl(rawVal);
+    let cleanVal = rawVal.trim();
+    // Tự động bóc tách đường link sạch bên trong thuộc tính src nếu người dùng dán nguyên đoạn mã <iframe ...>
+    const iframeMatch = cleanVal.match(/<iframe[^>]*\bsrc=["']([^"']+)["']/i);
+    if (iframeMatch && iframeMatch[1]) {
+      cleanVal = iframeMatch[1].trim();
+    }
+
+    const normalized = normalizeDropboxUrl(cleanVal);
     const detectedRatio = detectAspectRatioFromVideoUrl(normalized);
     const parsed = parseVideoUrl(normalized);
 
@@ -1488,31 +1495,39 @@ export function ProjectsTab({
                   </div>
 
                   <input
-                    type="url"
+                    type="text"
+                    inputMode="url"
                     value={editingProject.videoUrl || ''}
                     onChange={(e) => handleVideoUrlChange(e.target.value)}
                     onBlur={(e) => handleVideoUrlChange(e.target.value)}
-                    placeholder="https://vk.com/video... hoặc link YouTube, Vimeo, Drive, Dropbox, MP4"
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
+                    placeholder="https://vk.ru/video_ext.php... hoặc link YouTube, Vimeo, Drive, Dropbox, MP4"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono text-xs"
                   />
 
                   <p className="text-[11px] text-[#777777] leading-relaxed">
-                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, VK Video &amp; VK Clip (vk.com / vkvideo.ru), Google Drive (cần bật quyền &quot;Bất kỳ ai có liên kết đều có thể xem&quot;), Dropbox MP4 và link file MP4 từ Cloudflare R2.
+                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, VK Video &amp; VK Clip (vk.com / vk.ru / vkvideo.ru), Google Drive (cần bật quyền &quot;Bất kỳ ai có liên kết đều có thể xem&quot;), Dropbox MP4 và link file MP4 từ Cloudflare R2.
                   </p>
 
                   {/* VK Video Embedding Tip */}
                   {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'vk' && (
-                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-amber-900">
-                          Lưu ý khi nhúng video VK để tránh bị hỏi Captcha/Robot:
-                        </p>
-                        <p className="mt-0.5 text-amber-800 leading-relaxed">
-                          VK bảo vệ video bằng mã bảo mật <code>hash</code>. Bạn nên vào video trên VK, bấm <strong>Chia sẻ (Share) &rarr; Mã nhúng (Embed)</strong> và copy cả đoạn mã iframe (hoặc link <code>video_ext.php?...&amp;hash=...</code>) dán vào đây để phát trực tiếp mượt mà.
-                        </p>
+                    !parseVideoUrl(editingProject.videoUrl).embedUrl?.includes('hash=') ? (
+                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-amber-900">
+                            Lưu ý khi nhúng video VK để tránh bị hỏi Captcha/Robot:
+                          </p>
+                          <p className="mt-0.5 text-amber-800 leading-relaxed">
+                            VK bảo vệ video bằng mã bảo mật <code>hash</code>. Bạn nên vào video trên VK, bấm <strong>Chia sẻ (Share) &rarr; Mã nhúng (Embed)</strong> và copy cả đoạn mã iframe (hoặc link <code>video_ext.php?...&amp;hash=...</code>) dán vào đây để phát trực tiếp mượt mà.
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-900 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Đã nhận diện mã xác thực <strong>hash</strong> từ VK — video sẽ phát mượt mà không bị hỏi Captcha robot.</span>
+                      </div>
+                    )
                   )}
 
                   {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
