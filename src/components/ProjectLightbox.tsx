@@ -176,7 +176,7 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
             className={`w-full bg-[#09090B] border border-white/10 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.85)] text-[#F7F6F2] transition-[max-width] duration-300 ${
               isVertical
                 ? 'max-w-[420px] p-4 sm:p-5 space-y-4'
-                : 'max-w-4xl p-4 sm:p-6 space-y-4 sm:space-y-5'
+                : 'max-w-4xl xl:max-w-5xl p-4 sm:p-6 space-y-4 sm:space-y-5'
             }`}
           >
             {/* Top Bar: Category pill + Ratio badge at left, Close button at right */}
