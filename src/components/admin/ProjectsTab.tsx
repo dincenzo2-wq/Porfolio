@@ -797,11 +797,11 @@ export function ProjectsTab({
     return { label: 'Chưa có link video', hasValid: false };
   };
 
-  // Handle client-side WebP compression & upload to Cloudflare R2
-  const handleImageFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Drag & drop state for Project Cover image
+  const [isDraggingCover, setIsDraggingCover] = useState(false);
 
+  // Core handler: client-side WebP compression & upload to Cloudflare R2
+  const handleProcessAndUploadImage = async (file: File) => {
     let compressedResult: CompressionResult | null = null;
 
     try {
@@ -835,6 +835,11 @@ export function ProjectsTab({
       const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, compressedResult.dataUrl);
       if (editingProject) {
         setEditingProject((prev) => (prev ? { ...prev, coverImage: finalUrl } : null));
+        setFailedCoverUrl(null);
+      }
+      setCaptureSuccessMsg('Đã nén WebP và tải ảnh bìa lên Cloudflare R2 thành công!');
+      if (onMarkUnsaved) {
+        onMarkUnsaved();
       }
     } catch (err: any) {
       console.warn('Image upload notice:', err);
@@ -848,6 +853,42 @@ export function ProjectsTab({
       }
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleImageFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleProcessAndUploadImage(file);
+    }
+  };
+
+  const handleCoverDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCover(true);
+  };
+
+  const handleCoverDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingCover) setIsDraggingCover(true);
+  };
+
+  const handleCoverDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingCover(false);
+  };
+
+  const handleCoverDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCover(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleProcessAndUploadImage(files[0]);
     }
   };
 
@@ -1674,10 +1715,32 @@ export function ProjectsTab({
                     <label className="block font-semibold text-[#111111]">
                       Ảnh bìa dự án (Cover Image)
                     </label>
-                    <span className="text-[11px] text-black/50 font-medium">Tự động nén WebP &lt; 500KB</span>
+                    <span className="text-[11px] text-black/50 font-medium">Kéo thả ảnh hoặc tải file (Tự động nén WebP &lt; 500KB)</span>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div
+                    onDragEnter={handleCoverDragEnter}
+                    onDragOver={handleCoverDragOver}
+                    onDragLeave={handleCoverDragLeave}
+                    onDrop={handleCoverDrop}
+                    className={`relative p-3.5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start gap-4 ${
+                      isDraggingCover
+                        ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                        : 'border-black/[0.08] bg-[#FAFAFC]'
+                    }`}
+                  >
+                    {/* Drag & Drop Visual Overlay */}
+                    {isDraggingCover && (
+                      <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-md mb-2">
+                          <Upload className="w-5 h-5 animate-bounce" />
+                        </div>
+                        <p className="text-xs font-bold text-[#111111] bg-white/95 px-3 py-1.5 rounded-lg border border-[#2563EB]/30 shadow-xs">
+                          Thả ảnh vào đây để nén WebP &amp; tải lên R2
+                        </p>
+                      </div>
+                    )}
+
                     {/* Bên trái: Khung xem trước ảnh bìa (tự động 9:16 dọc hoặc 16:9 ngang) */}
                     <div
                       className={`${

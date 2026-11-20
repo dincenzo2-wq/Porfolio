@@ -285,12 +285,12 @@ export function StillsAndGearTab({
     }
   };
 
-  // Handle still upload with automatic client-side WebP compression (<500KB) and batch multiple files support
-  const handleUploadStill = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Drag & drop state for Stills
+  const [isDraggingStills, setIsDraggingStills] = useState(false);
 
-    const fileList = Array.from(files);
+  // Core handler: process and upload still files to Cloudflare R2 with WebP compression
+  const handleProcessAndUploadStillFiles = async (fileList: File[]) => {
+    if (!fileList || fileList.length === 0) return;
 
     try {
       setUploadingStill(true);
@@ -364,7 +364,43 @@ export function StillsAndGearTab({
     } finally {
       setUploadingStill(false);
       setUploadProgressText(null);
-      e.target.value = '';
+    }
+  };
+
+  // Handle still upload with automatic client-side WebP compression (<500KB) and batch multiple files support
+  const handleUploadStill = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await handleProcessAndUploadStillFiles(Array.from(files));
+    e.target.value = '';
+  };
+
+  const handleStillDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingStills(true);
+  };
+
+  const handleStillDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingStills) setIsDraggingStills(true);
+  };
+
+  const handleStillDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingStills(false);
+  };
+
+  const handleStillDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingStills(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleProcessAndUploadStillFiles(Array.from(files));
     }
   };
 
@@ -523,11 +559,36 @@ export function StillsAndGearTab({
           </span>
         </div>
 
-        {/* Upload New Frame with WebP Compression (Zero Top/Bot row selection) */}
-        <div className="bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07] space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-            Thêm ảnh Still / Frame mới (Tự động nén WebP &lt; 500KB)
-          </h3>
+        {/* Upload New Frame with WebP Compression (Kéo thả hoặc chọn file) */}
+        <div
+          onDragEnter={handleStillDragEnter}
+          onDragOver={handleStillDragOver}
+          onDragLeave={handleStillDragLeave}
+          onDrop={handleStillDrop}
+          className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-200 space-y-4 ${
+            isDraggingStills
+              ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+              : 'border-black/[0.07] bg-[#F9F9FB]'
+          }`}
+        >
+          {/* Drag & Drop Visual Overlay */}
+          {isDraggingStills && (
+            <div className="pointer-events-none absolute inset-0 z-30 rounded-xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
+              <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-md mb-2">
+                <Upload className="w-5 h-5 animate-bounce" />
+              </div>
+              <p className="text-xs font-bold text-[#111111] bg-white/95 px-3 py-1.5 rounded-lg border border-[#2563EB]/30 shadow-xs">
+                Thả một hoặc nhiều file ảnh vào đây để nén WebP &amp; tải lên Cloudflare R2
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+              Thêm ảnh Still / Frame mới (Tự động nén WebP &lt; 500KB)
+            </h3>
+            <span className="text-[11px] text-black/50 font-medium">Hỗ trợ kéo thả nhiều file</span>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs items-end">
             <div className="sm:col-span-8 space-y-1">

@@ -201,11 +201,12 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     }
   };
 
-  // Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
-  const handleUploadHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Drag & drop state for Hero video / poster
+  const [isDraggingHeroMedia, setIsDraggingHeroMedia] = useState(false);
+  const [heroDragKind, setHeroDragKind] = useState<'video' | 'image' | 'unknown'>('unknown');
 
+  // Core handler: Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
+  const handleUploadHeroVideoFile = async (file: File) => {
     // 1. Kiểm tra định dạng video (.mp4 hoặc .webm)
     const lowerName = file.name.toLowerCase();
     const isVideo =
@@ -274,26 +275,117 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     }
   };
 
-  const handlePosterFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      await handleUploadHeroVideoFile(file);
+    }
+  };
+
+  // Core handler: Nén WebP và tải ảnh Poster 0ms lên Cloudflare R2
+  const handleUploadPosterFile = async (file: File) => {
     try {
       setUploadingPoster(true);
       setPosterCaptureError(null);
       setPosterCaptureSuccess(null);
-      const res = await compressImageToWebP(file, 1920, 300 * 1024);
+
+      // 1. Nén ảnh thành WebP dưới 400KB
+      const res = await compressImageToWebP(file, 1920, 400 * 1024);
+
+      // 2. Upload lên Cloudflare R2
+      let uploadedUrl: string | undefined;
+      try {
+        const formData = new FormData();
+        formData.append('file', res.file);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data && data.success && data.url) {
+            uploadedUrl = data.url;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('R2 poster upload notice, using local WebP:', uploadErr);
+      }
+
+      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, res.dataUrl);
+
       onChange({
-        heroPosterUrl: res.dataUrl,
+        heroPosterUrl: finalUrl,
       });
-      setPosterCaptureSuccess('Đã tải và nén ảnh Poster thành công!');
+      setPosterCaptureSuccess('Đã tải và nén ảnh Poster 0ms lên Cloudflare R2 thành công!');
     } catch (err) {
-      console.error('Failed to compress poster image:', err);
+      console.error('Failed to compress/upload poster image:', err);
       setPosterCaptureError('Lỗi tải ảnh poster.');
     } finally {
       setUploadingPoster(false);
       if (posterFileInputRef.current) {
         posterFileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handlePosterFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleUploadPosterFile(file);
+    }
+  };
+
+  // Drag & drop handlers for Hero preview box
+  const handleHeroDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingHeroMedia(true);
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const item = e.dataTransfer.items[0];
+      if (item.type.startsWith('video/')) {
+        setHeroDragKind('video');
+      } else if (item.type.startsWith('image/')) {
+        setHeroDragKind('image');
+      } else {
+        setHeroDragKind('unknown');
+      }
+    }
+  };
+
+  const handleHeroDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingHeroMedia) setIsDraggingHeroMedia(true);
+  };
+
+  const handleHeroDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingHeroMedia(false);
+    setHeroDragKind('unknown');
+  };
+
+  const handleHeroDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingHeroMedia(false);
+    setHeroDragKind('unknown');
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const lowerName = file.name.toLowerCase();
+    const isVideo = lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp');
+
+    if (isVideo) {
+      await handleUploadHeroVideoFile(file);
+    } else if (isImage) {
+      await handleUploadPosterFile(file);
+    } else {
+      setHeroVideoUploadError('Vui lòng kéo thả file Video (.mp4, .webm) hoặc file Ảnh Poster (.jpg, .png, .webp).');
     }
   };
 
@@ -488,11 +580,37 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
 
             <p className="text-xs text-black/60 leading-relaxed">
-              Video nền Hero chất lượng cao lưu trữ tại Cloudflare R2 với bộ đệm CDN toàn cầu. Tải trực tiếp video mới hoặc chụp khung hình đang phát làm ảnh bìa Poster nạp tức thì 0ms.
+              Video nền Hero chất lượng cao lưu trữ tại Cloudflare R2 với bộ đệm CDN toàn cầu. Kéo thả trực tiếp file video (.mp4/.webm &lt; 15MB) hoặc ảnh Poster (.jpg/.png/.webp), hoặc dùng các nút thao tác nhanh bên dưới.
             </p>
 
-            {/* Khung duy nhất: Video 16:9 xem trước đặt cạnh 2 nút thao tác chính */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#F4F4F7] border border-black/10">
+            {/* Khung duy nhất: Video 16:9 xem trước đặt cạnh các nút thao tác chính, hỗ trợ kéo thả trực tiếp */}
+            <div
+              onDragEnter={handleHeroDragEnter}
+              onDragOver={handleHeroDragOver}
+              onDragLeave={handleHeroDragLeave}
+              onDrop={handleHeroDrop}
+              className={`relative p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 ${
+                isDraggingHeroMedia
+                  ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                  : 'border-black/10 bg-[#F4F4F7]'
+              }`}
+            >
+              {/* Drag & Drop Visual Overlay */}
+              {isDraggingHeroMedia && (
+                <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-3">
+                    <Upload className="w-6 h-6 animate-bounce" />
+                  </div>
+                  <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-2 rounded-xl border border-[#2563EB]/30 shadow-sm">
+                    {heroDragKind === 'video'
+                      ? 'Thả video vào đây để tải lên Cloudflare R2 (< 15MB)'
+                      : heroDragKind === 'image'
+                      ? 'Thả ảnh vào đây để nén WebP & đặt làm Poster 0ms (R2)'
+                      : 'Thả file Video (.mp4, .webm) hoặc Ảnh Poster (.jpg, .png, .webp) vào đây để tải lên R2'}
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
                 {/* Khung phát xem trước video nền hiện tại (16:9 gọn gàng) */}
                 <div className="lg:col-span-7">
