@@ -182,7 +182,8 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
         const oid = parsed.searchParams.get('oid') || '';
         const id = parsed.searchParams.get('id') || '';
         const hash = parsed.searchParams.get('hash') || '';
-        const hd = parsed.searchParams.get('hd') || '2';
+        // Mặc định luôn ưu tiên chất lượng cao nhất hd=4 (1080p Full HD)
+        const hd = parsed.searchParams.get('hd') || '4';
         const isClip = cleanUrl.includes('clip') || parsed.searchParams.get('clip') === '1';
 
         const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
@@ -219,7 +220,8 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
 
       const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
       const loopParam = options?.loop ? '&loop=1' : '';
-      const embedUrl = `https://${domain}/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=2&autoplay=1${loopParam}`;
+      // Luôn ghim chất lượng cao nhất hd=4 (1080p Full HD)
+      const embedUrl = `https://${domain}/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=4&autoplay=1${loopParam}`;
 
       return {
         type: 'vk',
