@@ -681,7 +681,7 @@ export function ProjectsTab({
     });
   };
 
-  // Auto-detect aspect ratio & auto-fetch YouTube cover thumbnail (0MB storage)
+  // Auto-detect aspect ratio for direct video & Dropbox links
   // Tuyệt đối KHÔNG tự động chuyển tab/danh mục: giữ nguyên lựa chọn danh mục của người dùng
   const handleVideoUrlChange = (rawVal: string) => {
     let cleanVal = rawVal.trim();
@@ -693,7 +693,6 @@ export function ProjectsTab({
 
     const normalized = normalizeDropboxUrl(cleanVal);
     const detectedRatio = detectAspectRatioFromVideoUrl(normalized);
-    const parsed = parseVideoUrl(normalized);
 
     setEditingProject((prev) => {
       if (!prev) return null;
@@ -701,13 +700,6 @@ export function ProjectsTab({
 
       if (detectedRatio && prev.aspectRatio !== detectedRatio) {
         updates.aspectRatio = detectedRatio;
-      }
-
-      // Tự động gán ảnh bìa YouTube gốc nếu chưa có ảnh bìa hoặc đang dùng ảnh từ YouTube
-      if (parsed.type === 'youtube' && parsed.videoId) {
-        if (!prev.coverImage || prev.coverImage.includes('img.youtube.com')) {
-          updates.coverImage = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
-        }
       }
 
       return { ...prev, ...updates };
@@ -777,25 +769,13 @@ export function ProjectsTab({
       return { label: 'Chưa có link video', hasValid: false };
     }
     const parsed = parseVideoUrl(videoUrl);
-    if (parsed.type === 'youtube') {
-      return { label: 'YouTube', hasValid: true };
-    }
-    if (parsed.type === 'vimeo') {
-      return { label: 'Vimeo', hasValid: true };
-    }
-    if (parsed.type === 'gdrive') {
-      return { label: 'Google Drive', hasValid: true };
-    }
-    if (parsed.type === 'vk') {
-      return { label: parsed.isShorts ? 'VK Clip 9:16' : 'VK Video', hasValid: true };
+    if (parsed.isDropbox) {
+      return { label: 'Dropbox MP4', hasValid: true };
     }
     if (parsed.type === 'direct') {
-      if (parsed.isDropbox) {
-        return { label: 'Dropbox MP4', hasValid: true };
-      }
       return { label: 'MP4 / R2', hasValid: true };
     }
-    return { label: 'Chưa có link video', hasValid: false };
+    return { label: 'Video', hasValid: true };
   };
 
   // Drag & drop state for Project Cover image
@@ -1632,14 +1612,14 @@ export function ProjectsTab({
                   </div>
                 </div>
 
-                {/* Row 3: Video URL (YouTube, Vimeo, Google Drive, MP4 direct) */}
+                {/* Row 3: Video URL (Dropbox & File MP4) */}
                 <div className="space-y-2.5 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
                   <div className="flex items-center justify-between gap-2">
                     <label className="block font-semibold text-[#111111]">
-                      Đường link Video (YouTube / Vimeo / VK Video / Google Drive / MP4)
+                      Đường link Video (Dropbox / File MP4 trực tiếp)
                     </label>
                     <span className="bg-black/5 text-black/65 px-2.5 py-0.5 rounded-md text-[11px] font-medium shrink-0">
-                      Hỗ trợ YouTube / Vimeo / VK / Drive / Dropbox / MP4
+                      Phát Plyr · Hỗ trợ Dropbox &amp; MP4
                     </span>
                   </div>
 
@@ -1649,35 +1629,14 @@ export function ProjectsTab({
                     value={editingProject.videoUrl || ''}
                     onChange={(e) => handleVideoUrlChange(e.target.value)}
                     onBlur={(e) => handleVideoUrlChange(e.target.value)}
-                    placeholder="https://vk.ru/video_ext.php... hoặc link YouTube, Vimeo, Drive, Dropbox, MP4"
+                    placeholder="https://www.dropbox.com/scl/fi/.../video.mp4 hoặc link file .mp4 từ Cloudflare R2"
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono text-xs"
                   />
 
                   <p className="text-[11px] text-[#777777] leading-relaxed">
-                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, VK Video &amp; VK Clip (vk.com / vk.ru / vkvideo.ru), Google Drive (cần bật quyền &quot;Bất kỳ ai có liên kết đều có thể xem&quot;), Dropbox MP4 và link file MP4 từ Cloudflare R2.
+                    Dán đường link video từ <strong>Dropbox</strong> hoặc link file <strong>.mp4 / .webm</strong> trực tiếp (Cloudflare R2). Hệ thống tự động kích hoạt trình phát điện ảnh <strong>Plyr</strong> với đầy đủ bộ điều khiển tua mượt mà.
                   </p>
 
-                  {/* VK Video Embedding Tip */}
-                  {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'vk' && (
-                    !parseVideoUrl(editingProject.videoUrl).embedUrl?.includes('hash=') ? (
-                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-semibold text-amber-900">
-                            Lưu ý khi nhúng video VK để tránh bị hỏi Captcha/Robot:
-                          </p>
-                          <p className="mt-0.5 text-amber-800 leading-relaxed">
-                            VK bảo vệ video bằng mã bảo mật <code>hash</code>. Bạn nên vào video trên VK, bấm <strong>Chia sẻ (Share) &rarr; Mã nhúng (Embed)</strong> và copy cả đoạn mã iframe (hoặc link <code>video_ext.php?...&amp;hash=...</code>) dán vào đây để phát trực tiếp mượt mà.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-900 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span>Đã nhận diện mã xác thực <strong>hash</strong> từ VK — video sẽ phát mượt mà không bị hỏi Captcha robot.</span>
-                      </div>
-                    )
-                  )}
 
                   {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
                   {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type !== 'none' && (() => {
@@ -1698,21 +1657,11 @@ export function ProjectsTab({
                           <p className="text-[11px] font-bold text-[#333333] flex items-center gap-1.5 flex-wrap">
                             <span>Xem trước video:</span>
                             <span className="font-semibold text-black/75">
-                              {parsed.type === 'youtube'
-                                ? parsed.isShorts
-                                  ? 'YouTube Shorts'
-                                  : 'YouTube'
-                                : parsed.type === 'vimeo'
-                                ? 'Vimeo'
-                                : parsed.type === 'gdrive'
-                                ? 'Google Drive'
-                                : parsed.type === 'vk'
-                                ? parsed.isShorts
-                                  ? 'VK Clip 9:16'
-                                  : 'VK Video'
-                                : parsed.isDropbox
-                                ? 'Dropbox MP4'
-                                : 'File MP4 / Trực tiếp'}
+                              {parsed.isDropbox
+                                ? 'Dropbox MP4 (Plyr)'
+                                : parsed.type === 'direct'
+                                ? 'File MP4 / Trực tiếp (Plyr)'
+                                : 'Video'}
                             </span>
                             <span
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
@@ -1744,24 +1693,6 @@ export function ProjectsTab({
                               >
                                 <Camera className="w-3.5 h-3.5" />
                                 <span>{isCapturingFrame ? 'Đang chụp...' : 'Chụp frame này làm ảnh bìa'}</span>
-                              </button>
-                            )}
-
-                            {/* Button: Lấy Thumbnail YouTube làm ảnh bìa */}
-                            {parsed.type === 'youtube' && parsed.videoId && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const ytCover = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
-                                  setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
-                                  setFailedCoverUrl(null);
-                                  setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng)!');
-                                }}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-red-600 hover:bg-red-700 text-white shadow-xs cursor-pointer active:scale-98 transition-all"
-                                title="Lấy ảnh bìa gốc chất lượng cao từ YouTube (tiết kiệm 100% dung lượng)"
-                              >
-                                <Camera className="w-3.5 h-3.5" />
-                                <span>Lấy bìa YouTube (0MB)</span>
                               </button>
                             )}
 
@@ -1918,32 +1849,6 @@ export function ProjectsTab({
                           />
                         </label>
 
-                        {/* Nút lấy lại ảnh bìa YouTube */}
-                        {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'youtube' && (() => {
-                          const ytParsed = parseVideoUrl(editingProject.videoUrl);
-                          if (!ytParsed.videoId) return null;
-                          const ytCover = `https://img.youtube.com/vi/${ytParsed.videoId}/maxresdefault.jpg`;
-                          const isAlreadyUsing = Boolean(editingProject.coverImage?.includes(ytParsed.videoId));
-                          return (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
-                                setFailedCoverUrl(null);
-                                setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng)!');
-                              }}
-                              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer active:scale-98 ${
-                                isAlreadyUsing
-                                  ? 'bg-red-50 text-red-700 border-red-200 shadow-xs'
-                                  : 'bg-white text-red-600 hover:bg-red-50 border-red-200'
-                              }`}
-                              title="Tự động lấy ảnh bìa gốc của video YouTube này (tiết kiệm 100% dung lượng)"
-                            >
-                              <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
-                              <span>{isAlreadyUsing ? 'Đang dùng bìa YouTube (0MB)' : 'Lấy bìa YouTube (0MB)'}</span>
-                            </button>
-                          );
-                        })()}
                       </div>
 
                       <input
