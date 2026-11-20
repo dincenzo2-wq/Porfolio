@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import {
   Plus,
   Trash2,
@@ -15,6 +15,12 @@ import {
   Check,
   Camera,
   Loader2,
+  Film,
+  Play,
+  Layers,
+  Calendar,
+  Clock,
+  FileText,
 } from 'lucide-react';
 import type { AspectRatioType, PortfolioProject } from '../../types/portfolio';
 import {
@@ -127,6 +133,18 @@ export function ProjectsTab({
   const selectedRoles = editingProject
     ? parseDeliverableRoles(editingProject.deliverableRole)
     : [];
+
+  // Handle Esc key to close modal
+  useEffect(() => {
+    if (!editingProject) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isCategoryModalOpen && !isRoleModalOpen && !isAddingCustomRole) {
+        setEditingProject(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingProject, isCategoryModalOpen, isRoleModalOpen, isAddingCustomRole]);
 
   const allVisibleRoles = Array.from(new Set([...availableRoles, ...selectedRoles]));
 
@@ -1276,374 +1294,400 @@ export function ProjectsTab({
 
       {/* 4. Edit / Create Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
-          <div className="w-full max-w-2xl bg-white border border-black/[0.07] rounded-2xl shadow-2xl text-[#111111] my-auto flex flex-col h-[90vh] max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 md:p-6 animate-in fade-in duration-200">
+          <div className="w-full max-w-3xl bg-white border border-black/[0.08] rounded-2xl shadow-2xl text-[#111111] my-auto flex flex-col h-[92vh] max-h-[92vh] overflow-hidden">
             {/* Header: Pinned at top */}
-            <div className="shrink-0 border-b border-black/[0.07] px-6 py-4 bg-white flex items-center justify-between">
-              <h2 className="font-bricolage text-xl font-bold text-[#111111] uppercase tracking-tight">
-                {isCreatingNew ? 'Thêm dự án mới' : 'Chỉnh sửa dự án'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setEditingProject(null)}
-                className="p-1.5 rounded-lg hover:bg-black/5 text-[#555555] hover:text-[#111111] transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            <div className="shrink-0 border-b border-black/[0.08] px-6 py-4 bg-white flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shadow-[0_0_8px_rgba(37,99,235,0.4)] shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight truncate">
+                      {isCreatingNew ? 'Thêm dự án mới' : 'Chỉnh sửa dự án'}
+                    </h2>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-black/5 text-black/60 border border-black/10 shrink-0">
+                      {isCreatingNew ? 'MỚI' : `ID: ${editingProject.id || '—'}`}
+                    </span>
+                  </div>
+                  {!isCreatingNew && editingProject.title && (
+                    <p className="text-xs text-black/50 truncate font-medium">
+                      {editingProject.title} {editingProject.category ? `· ${editingProject.category}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:inline-block text-[11px] font-mono text-black/40 bg-black/5 px-2 py-0.5 rounded">
+                  Esc để đóng
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="p-1.5 rounded-xl hover:bg-black/5 text-black/50 hover:text-[#111111] transition-colors cursor-pointer"
+                  title="Đóng (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Form with scrollable body and pinned footer */}
             <form onSubmit={handleSaveModal} className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5 text-xs sm:text-sm">
-                {/* Row 1: Title */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block font-semibold text-[#111111]">Tên dự án *</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (editingProject && editingProject.title) {
-                          setEditingProject({
-                            ...editingProject,
-                            title: capitalizeWords(editingProject.title),
-                          });
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-7 py-5 space-y-6 text-xs sm:text-sm">
+                {/* KHỐI 1: THÔNG TIN CƠ BẢN & PHÂN LOẠI */}
+                <div className="rounded-2xl border border-black/[0.08] bg-[#F9F9FB] p-5 sm:p-6 space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-black/5 flex items-center justify-center text-[#111111]">
+                        <FileText className="w-3.5 h-3.5" />
+                      </span>
+                      <h3 className="font-semibold text-sm text-[#111111] tracking-tight">
+                        Thông tin cơ bản &amp; Phân loại
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-medium text-black/45">Bắt buộc nhập tên &amp; danh mục</span>
+                  </div>
+
+                  {/* Tên dự án */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-[#111111]">
+                        Tên dự án <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingProject && editingProject.title) {
+                            setEditingProject({
+                              ...editingProject,
+                              title: capitalizeWords(editingProject.title),
+                            });
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-black/60 hover:text-[#111111] hover:underline cursor-pointer"
+                        title="Bấm để tự động viết hoa chữ cái đầu của mỗi từ"
+                      >
+                        <span className="font-mono bg-black/5 px-1.5 py-0.5 rounded border border-black/10 text-[10px] font-bold">
+                          Aa
+                        </span>
+                        <span>Viết hoa từng chữ</span>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={editingProject.title}
+                      onChange={(e) =>
+                        setEditingProject({ ...editingProject, title: e.target.value })
+                      }
+                      onBlur={(e) => {
+                        const val = e.target.value;
+                        const formatted = capitalizeWords(val);
+                        if (formatted !== val) {
+                          setEditingProject((prev) => (prev ? { ...prev, title: formatted } : null));
                         }
                       }}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-black/60 hover:text-[#111111] hover:underline cursor-pointer"
-                      title="Bấm để tự động viết hoa chữ cái đầu của mỗi từ"
-                    >
-                      <span className="font-mono bg-black/5 px-1.5 py-0.5 rounded border border-black/10 text-[10px] font-bold">
-                        Aa
-                      </span>
-                      <span>Viết hoa từng chữ</span>
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={editingProject.title}
-                    onChange={(e) =>
-                      setEditingProject({ ...editingProject, title: e.target.value })
-                    }
-                    onBlur={(e) => {
-                      const val = e.target.value;
-                      const formatted = capitalizeWords(val);
-                      if (formatted !== val) {
-                        setEditingProject((prev) => (prev ? { ...prev, title: formatted } : null));
-                      }
-                    }}
-                    placeholder="VD: Pepsi Electric Blue — Summer Launch..."
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F9F9FB] border border-black/10 text-sm font-semibold text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
-                  />
-                  <p className="text-[11px] text-black/45">
-                    Tự động viết hoa chữ cái đầu mỗi từ khi gõ xong hoặc dán tên dự án (Title Case)
-                  </p>
-                </div>
-
-                {/* Row 1b: Phân định riêng biệt: Khách lẻ / Độc lập HOẶC Thương hiệu & Agency */}
-                <div className="space-y-3.5 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div>
-                      <label className="block font-semibold text-[#111111]">
-                        Khách hàng / Thương hiệu
-                      </label>
-                      <span className="text-[11px] text-black/50 font-medium">
-                        Chọn riêng biệt giữa nhóm Khách lẻ (Đám cưới / Cá nhân) và Thương hiệu đối tác (Commercial)
-                      </span>
-                    </div>
-
-                    {/* Segmented Switch: Chọn 1 trong 2 nhóm riêng biệt */}
-                    <div className="inline-flex p-1 bg-black/[0.06] rounded-xl border border-black/5 text-xs font-semibold shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClientTypeMode('independent');
-                        }}
-                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                          clientTypeMode === 'independent'
-                            ? 'bg-white text-[#111111] shadow-xs'
-                            : 'text-black/60 hover:text-black'
-                        }`}
-                      >
-                        Khách lẻ / Độc lập
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClientTypeMode('commercial');
-                        }}
-                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                          clientTypeMode === 'commercial'
-                            ? 'bg-white text-[#111111] shadow-xs'
-                            : 'text-black/60 hover:text-black'
-                        }`}
-                      >
-                        Thương hiệu &amp; Agency đối tác
-                      </button>
-                    </div>
+                      placeholder="VD: Pepsi Electric Blue — Summer Launch..."
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-black/10 text-sm font-semibold text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all shadow-2xs placeholder:text-black/30 placeholder:font-normal"
+                    />
                   </div>
 
-                  {/* NHÁNH 1: KHÁCH LẺ / ĐỘC LẬP (ĐÁM CƯỚI / CÁ NHÂN) */}
-                  {clientTypeMode === 'independent' ? (
-                    <div className="space-y-2.5 pt-1 border-t border-black/[0.06]">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
-                        Tùy chọn Khách lẻ / Đám cưới (Không hiển thị Brand thương mại trên web)
-                      </span>
+                  {/* Khách hàng / Thương hiệu: Khách lẻ vs Doanh nghiệp */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#111111]">
+                          Khách hàng / Thương hiệu
+                        </label>
+                        <span className="text-[11px] text-black/50 font-medium">
+                          Tách biệt giữa nhóm Khách lẻ (Đám cưới / Cá nhân) và Brand thương mại
+                        </span>
+                      </div>
 
-                      {/* Các nút chọn nhanh riêng biệt cho Khách lẻ */}
-                      <div className="flex flex-wrap items-center gap-2">
+                      {/* Segmented Switch */}
+                      <div className="inline-flex p-1 bg-black/[0.06] rounded-xl border border-black/5 text-xs font-semibold shrink-0">
                         <button
                           type="button"
-                          onClick={() => setEditingProject({ ...editingProject, clientOrAgency: '' })}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
-                            !editingProject.clientOrAgency?.trim()
-                              ? 'bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs'
-                              : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
+                          onClick={() => setClientTypeMode('independent')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            clientTypeMode === 'independent'
+                              ? 'bg-white text-[#111111] shadow-2xs'
+                              : 'text-black/60 hover:text-black'
                           }`}
                         >
-                          <EyeOff className="w-3 h-3" />
-                          <span>Không hiển thị tên khách (Mặc định cho Đám cưới)</span>
+                          Khách lẻ / Độc lập
                         </button>
-
-                        {['Wedding · Cặp đôi', 'Khách lẻ / Cá nhân', 'Dự án độc lập'].map((preset) => {
-                          const isActive = editingProject.clientOrAgency?.trim() === preset;
-                          return (
-                            <button
-                              key={preset}
-                              type="button"
-                              onClick={() => {
-                                setEditingProject({
-                                  ...editingProject,
-                                  clientOrAgency: isActive ? '' : preset,
-                                });
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
-                                isActive
-                                  ? 'bg-[#111111] text-white shadow-xs'
-                                  : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
-                              }`}
-                            >
-                              <span>{preset}</span>
-                            </button>
-                          );
-                        })}
+                        <button
+                          type="button"
+                          onClick={() => setClientTypeMode('commercial')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            clientTypeMode === 'commercial'
+                              ? 'bg-white text-[#111111] shadow-2xs'
+                              : 'text-black/60 hover:text-black'
+                          }`}
+                        >
+                          Thương hiệu &amp; Agency
+                        </button>
                       </div>
-
-                      <p className="text-[11px] text-black/50 italic pt-0.5">
-                        * Nhóm này hoạt động độc lập: không ảnh hưởng đến phân loại danh mục, không tạo thêm tab mới và không đưa vào danh sách Brand.
-                      </p>
                     </div>
-                  ) : (
-                    /* NHÁNH 2: THƯƠNG HIỆU & AGENCY ĐỐI TÁC (DOANH NGHIỆP / AGENCY) */
-                    <div className="space-y-2.5 pt-1 border-t border-black/[0.06]">
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 block">
-                          Tên Thương hiệu / Doanh nghiệp / Agency đối tác
-                        </span>
-                        <input
-                          type="text"
-                          value={editingProject.clientOrAgency || ''}
-                          onChange={(e) =>
-                            setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
-                          }
-                          onBlur={(e) => {
-                            const val = e.target.value;
-                            const formatted = capitalizeWords(val);
-                            if (formatted !== val) {
-                              setEditingProject((prev) =>
-                                prev ? { ...prev, clientOrAgency: formatted } : null
-                              );
-                            }
-                          }}
-                          placeholder="VD: Dentsu Redder · PepsiCo Vietnam hoặc VinFast..."
-                          className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
-                        />
-                      </div>
 
-                      {/* Các thẻ Brand mẫu thuần thương mại (TUYỆT ĐỐI KHÔNG CÓ WEDDING) */}
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] text-black/50 font-medium block">
-                          Bấm chọn nhanh hoặc kết hợp Agency + Brand:
+                    {clientTypeMode === 'independent' ? (
+                      <div className="space-y-2 p-3.5 rounded-xl bg-white border border-black/[0.06]">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-black/45 block">
+                          Tùy chọn hiển thị Khách lẻ / Đám cưới:
                         </span>
                         <div className="flex flex-wrap items-center gap-2">
-                          {DEFAULT_SUGGESTED_BRANDS.map((brand) => {
-                            const cur = editingProject.clientOrAgency || '';
-                            const isActive = cur.toLowerCase().includes(brand.toLowerCase());
+                          <button
+                            type="button"
+                            onClick={() => setEditingProject({ ...editingProject, clientOrAgency: '' })}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                              !editingProject.clientOrAgency?.trim()
+                                ? 'bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs'
+                                : 'bg-[#FAFAFC] border border-black/10 text-black/75 hover:border-black hover:text-[#111111]'
+                            }`}
+                          >
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>Không hiển thị tên khách (Mặc định Đám cưới)</span>
+                          </button>
+
+                          {['Wedding · Cặp đôi', 'Khách lẻ / Cá nhân', 'Dự án độc lập'].map((preset) => {
+                            const isActive = editingProject.clientOrAgency?.trim() === preset;
                             return (
                               <button
-                                key={brand}
+                                key={preset}
                                 type="button"
                                 onClick={() => {
-                                  const next = toggleClientOrAgency(editingProject.clientOrAgency, brand);
-                                  setEditingProject({ ...editingProject, clientOrAgency: next });
+                                  setEditingProject({
+                                    ...editingProject,
+                                    clientOrAgency: isActive ? '' : preset,
+                                  });
                                 }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
                                   isActive
                                     ? 'bg-[#111111] text-white shadow-xs'
-                                    : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
+                                    : 'bg-[#FAFAFC] border border-black/10 text-black/75 hover:border-black hover:text-[#111111]'
                                 }`}
                               >
-                                <span>{brand}</span>
-                                {isActive && <Check className="w-3 h-3 text-white" />}
+                                <span>{preset}</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <div className="space-y-2.5 p-3.5 rounded-xl bg-white border border-black/[0.06]">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-black/45 block">
+                            Tên Thương hiệu / Doanh nghiệp / Agency đối tác:
+                          </span>
+                          <input
+                            type="text"
+                            value={editingProject.clientOrAgency || ''}
+                            onChange={(e) =>
+                              setEditingProject({ ...editingProject, clientOrAgency: e.target.value })
+                            }
+                            onBlur={(e) => {
+                              const val = e.target.value;
+                              const formatted = capitalizeWords(val);
+                              if (formatted !== val) {
+                                setEditingProject((prev) =>
+                                  prev ? { ...prev, clientOrAgency: formatted } : null
+                                );
+                              }
+                            }}
+                            placeholder="VD: Dentsu Redder · PepsiCo Vietnam hoặc VinFast..."
+                            className="w-full px-3.5 py-2 rounded-lg bg-[#FAFAFC] border border-black/10 text-xs sm:text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
+                          />
+                        </div>
 
-                {/* Row 2: Category Selectable Pills with Manage Button & 1-touch Auto Aspect Ratio */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block font-semibold text-[#111111]">Phân loại danh mục</label>
-                      <span className="text-[11px] text-black/50 font-medium">
-                        Bấm 1 chạm để chọn và tự động gợi ý tỷ lệ khung hình tương ứng
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCategoryActionError(null);
-                        setCategoryActionSuccess(null);
-                        setIsCategoryModalOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-black/60 hover:text-[#111111] transition-colors cursor-pointer shrink-0"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Quản lý danh mục</span>
-                    </button>
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] text-black/50 font-medium block">
+                            Bấm chọn nhanh hoặc kết hợp Agency + Brand:
+                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {DEFAULT_SUGGESTED_BRANDS.map((brand) => {
+                              const cur = editingProject.clientOrAgency || '';
+                              const isActive = cur.toLowerCase().includes(brand.toLowerCase());
+                              return (
+                                <button
+                                  key={brand}
+                                  type="button"
+                                  onClick={() => {
+                                    const next = toggleClientOrAgency(editingProject.clientOrAgency, brand);
+                                    setEditingProject({ ...editingProject, clientOrAgency: next });
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                                    isActive
+                                      ? 'bg-[#111111] text-white shadow-xs'
+                                      : 'bg-[#FAFAFC] border border-black/10 text-black/75 hover:border-black hover:text-[#111111]'
+                                  }`}
+                                >
+                                  <span>{brand}</span>
+                                  {isActive && <Check className="w-3 h-3 text-white" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Selectable Category Pills */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {categories.map((c) => {
-                      const isSelected = editingProject.category === c;
-                      const suggestedRatio = suggestAspectRatioForCategory(c);
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => {
-                            setEditingProject({
-                              ...editingProject,
-                              category: c,
-                              aspectRatio: suggestedRatio,
-                            });
-                          }}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-[#111111] text-white shadow-xs'
-                              : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
-                          }`}
-                        >
-                          <span>{c}</span>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
-                              isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-black/50'
+                  {/* Phân loại danh mục */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#111111]">Phân loại danh mục</label>
+                        <span className="text-[11px] text-black/50 font-medium">
+                          Bấm chọn để tự động gợi ý tỷ lệ khung hình tương ứng
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCategoryActionError(null);
+                          setCategoryActionSuccess(null);
+                          setIsCategoryModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-black/60 hover:text-[#111111] transition-colors cursor-pointer shrink-0"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Quản lý danh mục</span>
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {categories.map((c) => {
+                        const isSelected = editingProject.category === c;
+                        const suggestedRatio = suggestAspectRatioForCategory(c);
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                              setEditingProject({
+                                ...editingProject,
+                                category: c,
+                                aspectRatio: suggestedRatio,
+                              });
+                            }}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-98 inline-flex items-center gap-1.5 ${
+                              isSelected
+                                ? 'bg-[#111111] text-white shadow-xs'
+                                : 'bg-white border border-black/12 text-black/75 hover:border-black hover:text-[#111111]'
                             }`}
                           >
-                            {suggestedRatio}
-                          </span>
-                        </button>
-                      );
-                    })}
+                            <span>{c}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                                isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-black/50'
+                              }`}
+                            >
+                              {suggestedRatio}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3 Technical Meta Columns: Aspect Ratio, Year, Duration */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+                    <div className="space-y-1.5 p-3 rounded-xl bg-white border border-black/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-[#111111]">Tỷ lệ khung hình</label>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                          {editingProject.aspectRatio === '9:16' ? 'Dọc Social' : 'Ngang TVC'}
+                        </span>
+                      </div>
+                      <select
+                        value={editingProject.aspectRatio}
+                        onChange={(e) =>
+                          setEditingProject({
+                            ...editingProject,
+                            aspectRatio: e.target.value as AspectRatioType,
+                          })
+                        }
+                        className="w-full px-3 py-2 rounded-lg bg-[#FAFAFC] border border-black/10 text-xs sm:text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
+                      >
+                        <option value="16:9">16:9 (Ngang TVC)</option>
+                        <option value="9:16">9:16 (Dọc Social)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5 p-3 rounded-xl bg-white border border-black/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-[#111111]">Năm thực hiện</label>
+                        <Calendar className="w-3.5 h-3.5 text-black/40" />
+                      </div>
+                      <input
+                        type="text"
+                        value={editingProject.year}
+                        onChange={(e) =>
+                          setEditingProject({ ...editingProject, year: e.target.value })
+                        }
+                        placeholder="2025"
+                        className="w-full px-3 py-2 rounded-lg bg-[#FAFAFC] border border-black/10 text-xs sm:text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 p-3 rounded-xl bg-white border border-black/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-[#111111]">Thời lượng video</label>
+                        <Clock className="w-3.5 h-3.5 text-black/40" />
+                      </div>
+                      <input
+                        type="text"
+                        value={editingProject.duration}
+                        onChange={(e) =>
+                          setEditingProject({ ...editingProject, duration: e.target.value })
+                        }
+                        placeholder="00:30, 04:14..."
+                        className="w-full px-3 py-2 rounded-lg bg-[#FAFAFC] border border-black/10 text-xs sm:text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-medium font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Row 2b: Aspect Ratio, Year & Duration in 3 Equal Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block font-semibold text-[#111111]">Tỷ lệ khung hình</label>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
-                        {editingProject.aspectRatio === '9:16' ? 'Dọc Social' : 'Ngang TVC'}
+                {/* KHỐI 2: ĐƯỜNG LINK VIDEO & TRÌNH PHÁT PLYR */}
+                <div className="rounded-2xl border border-black/[0.08] bg-[#F9F9FB] p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-black/5 flex items-center justify-center text-[#111111]">
+                        <Film className="w-3.5 h-3.5" />
                       </span>
+                      <h3 className="font-semibold text-sm text-[#111111] tracking-tight">
+                        Đường link Video &amp; Trình phát Plyr
+                      </h3>
                     </div>
-                    <select
-                      value={editingProject.aspectRatio}
-                      onChange={(e) =>
-                        setEditingProject({
-                          ...editingProject,
-                          aspectRatio: e.target.value as AspectRatioType,
-                        })
-                      }
-                      className="w-full px-3 py-2.5 rounded-lg bg-[#F9F9FB] border border-black/10 text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
-                    >
-                      <option value="16:9">16:9 (Ngang TVC)</option>
-                      <option value="9:16">9:16 (Dọc Social)</option>
-                    </select>
-                    <p className="text-[11px] text-black/45">
-                      Tự động gợi ý từ danh mục ({editingProject.category})
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block font-semibold text-[#111111]">Năm thực hiện</label>
-                    <input
-                      type="text"
-                      value={editingProject.year}
-                      onChange={(e) =>
-                        setEditingProject({ ...editingProject, year: e.target.value })
-                      }
-                      placeholder="2025"
-                      className="w-full px-3.5 py-2.5 rounded-lg bg-[#F9F9FB] border border-black/10 text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block font-semibold text-[#111111]">Thời lượng video</label>
-                    </div>
-                    <input
-                      type="text"
-                      value={editingProject.duration}
-                      onChange={(e) =>
-                        setEditingProject({ ...editingProject, duration: e.target.value })
-                      }
-                      placeholder="00:30, 00:45..."
-                      className="w-full px-3.5 py-2.5 rounded-lg bg-[#F9F9FB] border border-black/10 text-sm text-[#111111] focus:bg-white focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
-                    />
-                    <p className="text-[11px] text-black/50">
-                      Tự động bắt từ file MP4 / Dropbox
-                    </p>
-                  </div>
-                </div>
-
-                {/* Row 3: Video URL (Dropbox & File MP4) */}
-                <div className="space-y-2.5 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="block font-semibold text-[#111111]">
-                      Đường link Video (Dropbox / File MP4 trực tiếp)
-                    </label>
                     <span className="bg-black/5 text-black/65 px-2.5 py-0.5 rounded-md text-[11px] font-medium shrink-0">
-                      Phát Plyr · Hỗ trợ Dropbox &amp; MP4
+                      Hỗ trợ Dropbox &amp; Cloudflare R2
                     </span>
                   </div>
 
-                  <input
-                    type="text"
-                    inputMode="url"
-                    value={editingProject.videoUrl || ''}
-                    onChange={(e) => handleVideoUrlChange(e.target.value)}
-                    onBlur={(e) => handleVideoUrlChange(e.target.value)}
-                    placeholder="https://www.dropbox.com/scl/fi/.../video.mp4 hoặc link file .mp4 từ Cloudflare R2"
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono text-xs"
-                  />
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-[#111111]">
+                      Đường link Video trực tiếp (Dropbox MP4 / Cloudflare R2)
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="url"
+                      value={editingProject.videoUrl || ''}
+                      onChange={(e) => handleVideoUrlChange(e.target.value)}
+                      onBlur={(e) => handleVideoUrlChange(e.target.value)}
+                      placeholder="https://www.dropbox.com/scl/fi/.../video.mp4 hoặc link file .mp4 từ Cloudflare R2"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/10 text-xs sm:text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono"
+                    />
+                    <p className="text-[11px] text-black/50 leading-relaxed">
+                      Dán link video từ <strong>Dropbox</strong> hoặc file <strong>.mp4 / .webm</strong> trực tiếp. Hệ thống tự động kích hoạt trình phát điện ảnh <strong>Plyr</strong> và tự nhận diện thời lượng video.
+                    </p>
+                  </div>
 
-                  <p className="text-[11px] text-[#777777] leading-relaxed">
-                    Dán đường link video từ <strong>Dropbox</strong> hoặc link file <strong>.mp4 / .webm</strong> trực tiếp (Cloudflare R2). Hệ thống tự động kích hoạt trình phát điện ảnh <strong>Plyr</strong> với đầy đủ bộ điều khiển tua mượt mà.
-                  </p>
-
-
-                  {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
+                  {/* Inline Video Preview with Plyr & Frame Capture */}
                   {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type !== 'none' && (() => {
                     const parsed = parseVideoUrl(editingProject.videoUrl);
                     const isDirectOrDropbox = parsed.type === 'direct';
                     const directVideoSrc = parsed.directUrl || editingProject.videoUrl;
-                    // In admin preview, route through /api/admin/video-proxy?url=... so crossOrigin canvas captures work without CORS tainting
                     const previewVideoSrc = isDirectOrDropbox && directVideoSrc
                       ? (directVideoSrc.startsWith('/') || directVideoSrc.startsWith('data:')
                           ? directVideoSrc
@@ -1652,19 +1696,23 @@ export function ProjectsTab({
                     const isFrameCapturable = Boolean(isDirectOrDropbox && videoReadyState >= 2 && !isCapturingFrame);
 
                     return (
-                      <div className="pt-2">
-                        <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                          <p className="text-[11px] font-bold text-[#333333] flex items-center gap-1.5 flex-wrap">
-                            <span>Xem trước video:</span>
-                            <span className="font-semibold text-black/75">
+                      <div className="pt-2 space-y-3">
+                        {/* Stream status bar above preview */}
+                        <div className="flex items-center justify-between p-2.5 px-3.5 rounded-xl bg-white border border-black/[0.06] flex-wrap gap-2.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-[#111111] flex items-center gap-1.5">
+                              <Play className="w-3.5 h-3.5 text-[#2563EB]" />
+                              <span>Xem trước:</span>
+                            </span>
+                            <span className="text-[11px] font-semibold text-black/75 bg-black/5 px-2 py-0.5 rounded-md">
                               {parsed.isDropbox
                                 ? 'Dropbox MP4 (Plyr)'
                                 : parsed.type === 'direct'
-                                ? 'File MP4 / Trực tiếp (Plyr)'
+                                ? 'File MP4 / R2 (Plyr)'
                                 : 'Video'}
                             </span>
                             <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                                 editingProject.aspectRatio === '9:16'
                                   ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                   : 'bg-black/5 text-black/60 border border-black/10'
@@ -1672,15 +1720,16 @@ export function ProjectsTab({
                             >
                               {editingProject.aspectRatio === '9:16' ? 'Dọc 9:16' : 'Ngang 16:9'}
                             </span>
-                          </p>
-                          <div className="flex items-center gap-2">
+                          </div>
+
+                          <div className="flex items-center gap-2.5">
                             {/* Button: Chụp frame này làm ảnh bìa */}
                             {isDirectOrDropbox && (
                               <button
                                 type="button"
                                 disabled={!isFrameCapturable}
                                 onClick={handleCaptureFrameAsCover}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                                   isFrameCapturable
                                     ? 'bg-[#111111] hover:bg-black/85 text-white shadow-xs cursor-pointer active:scale-98'
                                     : 'bg-black/5 text-black/35 cursor-not-allowed'
@@ -1692,23 +1741,24 @@ export function ProjectsTab({
                                 }
                               >
                                 <Camera className="w-3.5 h-3.5" />
-                                <span>{isCapturingFrame ? 'Đang chụp...' : 'Chụp frame này làm ảnh bìa'}</span>
+                                <span>{isCapturingFrame ? 'Đang chụp...' : 'Chụp frame làm ảnh bìa'}</span>
                               </button>
                             )}
 
-                            <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                            <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)] animate-pulse" />
                               <span>Sẵn sàng phát</span>
                             </span>
                           </div>
                         </div>
-                        {/* Video Player: Adaptively 9:16 vertical or 16:9 horizontal */}
+
+                        {/* Player Frame */}
                         <div
                           className={`w-full ${
                             editingProject.aspectRatio === '9:16'
                               ? 'max-w-[240px] aspect-[9/16]'
                               : 'max-w-md aspect-video'
-                          } mx-auto rounded-xl overflow-hidden bg-black border border-black/10 shadow-md transition-all`}
+                          } mx-auto rounded-xl overflow-hidden bg-black border border-black/10 shadow-lg transition-all`}
                         >
                           {parsed.type === 'youtube' || parsed.type === 'vimeo' || parsed.type === 'gdrive' || parsed.type === 'vk' ? (
                             <div className="relative w-full h-full">
@@ -1718,12 +1768,6 @@ export function ProjectsTab({
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                                 allowFullScreen
                               />
-                              {parsed.type === 'gdrive' && (
-                                <div
-                                  aria-hidden="true"
-                                  className="absolute top-0 right-0 w-16 h-16 z-20 pointer-events-auto bg-transparent cursor-default"
-                                />
-                              )}
                             </div>
                           ) : (
                             <video

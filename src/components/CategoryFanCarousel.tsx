@@ -46,9 +46,18 @@ export function CategoryFanCarousel({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isFirstMountRef = useRef(true);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1200
   );
+
+  useEffect(() => {
+    // Disable initial mount flag on next frame so subsequent user navigation animates smoothly
+    const raf = requestAnimationFrame(() => {
+      isFirstMountRef.current = false;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -233,7 +242,15 @@ export function CategoryFanCarousel({
             return (
               <motion.div
                 key={slot.slotKey}
-                initial={false}
+                initial={{
+                  x: transform.x,
+                  y: transform.y,
+                  z: transform.z,
+                  rotateZ: transform.rotateZ,
+                  rotateY: transform.rotateY,
+                  scale: transform.scale,
+                  opacity: transform.opacity,
+                }}
                 animate={{
                   x: transform.x,
                   y: transform.y,
@@ -243,12 +260,16 @@ export function CategoryFanCarousel({
                   scale: transform.scale,
                   opacity: transform.opacity,
                 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 260,
-                  damping: 26,
-                  mass: 0.85,
-                }}
+                transition={
+                  isFirstMountRef.current
+                    ? { duration: 0 }
+                    : {
+                        type: 'spring',
+                        stiffness: 260,
+                        damping: 26,
+                        mass: 0.85,
+                      }
+                }
                 style={{
                   zIndex: transform.zIndex,
                   transformStyle: 'preserve-3d',

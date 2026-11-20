@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Minus, Plus } from 'lucide-react';
 import { MaskedRevealTitle } from './MaskedRevealTitle';
@@ -65,6 +65,11 @@ export function ProjectsAccordionSection({
 
   const allProjects = customProjects ?? PORTFOLIO_PROJECTS;
   const openCategories = controlledOpenCategories ?? internalOpenCategories;
+
+  const isFirstRenderRef = useRef(true);
+  useEffect(() => {
+    isFirstRenderRef.current = false;
+  }, []);
 
   const toggleCategory = (categoryId: string) => {
     if (controlledToggleCategory) {
@@ -180,7 +185,7 @@ export function ProjectsAccordionSection({
                     {isOpen && (
                       <motion.div
                         id={`category-panel-${group.id}`}
-                        initial={{ height: 0, opacity: 0 }}
+                        initial={isFirstRenderRef.current ? false : { height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
