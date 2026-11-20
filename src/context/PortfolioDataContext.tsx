@@ -78,7 +78,7 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
             profile: {
               ...DEFAULT_CONTENT_PAYLOAD.profile,
               ...parsed.profile,
-              heroBgType: 'video',
+              heroBgType: parsed.profile?.heroBgType || DEFAULT_CONTENT_PAYLOAD.profile.heroBgType || 'video',
               heroBgUrl: parsed.profile?.heroBgUrl || parsed.profile?.showreelUrl || DEFAULT_CONTENT_PAYLOAD.profile.heroBgUrl,
             },
             branding: { ...DEFAULT_BRANDING, ...(parsed.branding || {}) },
@@ -151,7 +151,7 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
               profile: {
                 ...prev.profile,
                 ...remoteData.profile,
-                heroBgType: 'video',
+                heroBgType: remoteData.profile?.heroBgType || prev.profile?.heroBgType || 'video',
                 heroBgUrl: remoteData.profile?.heroBgUrl || remoteData.profile?.showreelUrl || prev.profile.heroBgUrl,
               },
               branding: { ...(prev.branding || DEFAULT_BRANDING), ...(remoteData.branding || {}) },

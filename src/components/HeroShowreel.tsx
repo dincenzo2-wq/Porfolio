@@ -44,6 +44,7 @@ export function HeroShowreel({
   intro,
   showreelUrl,
   heroBgUrl,
+  heroBgType = 'video',
   heroPosterUrl,
   heroVideoStart = 0,
   heroVideoEnd = 15,
@@ -80,6 +81,10 @@ export function HeroShowreel({
 
   // Bulletproof HTML5 Video Autoplay & In-Out Loop Enforcer
   useEffect(() => {
+    if (heroBgType === 'image') {
+      setIsVideoPlaying(false);
+      return;
+    }
     const video = videoRef.current;
     if (!video) return;
 
@@ -259,34 +264,36 @@ export function HeroShowreel({
           />
         )}
 
-        {/* 1. Cinematic Hero Background: 100% Video Loop Showreel */}
-        {(parsedVideo.type === 'youtube' ||
-          parsedVideo.type === 'vimeo' ||
-          parsedVideo.type === 'gdrive' ||
-          parsedVideo.type === 'vk') &&
-        parsedVideo.embedUrl ? (
-          <iframe
-            key={parsedVideo.embedUrl}
-            src={parsedVideo.embedUrl}
-            title="Hero Background Video"
-            className="hero-reveal-bg absolute inset-0 w-full h-full object-cover pointer-events-none"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        ) : (
-          <video
-            ref={videoRef}
-            key={parsedVideo.directUrl || activeVideoUrl}
-            src={parsedVideo.directUrl || activeVideoUrl}
-            poster={effectivePoster}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className={`hero-reveal-bg absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-700 ${
-              isVideoPlaying ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
+        {/* 1. Cinematic Hero Background: 100% Video Loop Showreel (Chỉ phát khi không chọn chế độ ảnh tĩnh) */}
+        {heroBgType !== 'image' && (
+          (parsedVideo.type === 'youtube' ||
+            parsedVideo.type === 'vimeo' ||
+            parsedVideo.type === 'gdrive' ||
+            parsedVideo.type === 'vk') &&
+          parsedVideo.embedUrl ? (
+            <iframe
+              key={parsedVideo.embedUrl}
+              src={parsedVideo.embedUrl}
+              title="Hero Background Video"
+              className="hero-reveal-bg absolute inset-0 w-full h-full object-cover pointer-events-none"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              key={parsedVideo.directUrl || activeVideoUrl}
+              src={parsedVideo.directUrl || activeVideoUrl}
+              poster={effectivePoster}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className={`hero-reveal-bg absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-700 ${
+                isVideoPlaying ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          )
         )}
 
         {/* Lớp phủ Gradient đen đa điểm (Multi-stop Eased Bottom Gradient) làm nổi bật hoàn hảo chữ và nút trên nền váy cưới */}

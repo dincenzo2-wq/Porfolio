@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import type { SiteProfileData } from '../../types/portfolio';
 import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
@@ -680,13 +681,13 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
           </div>
 
-          {/* Cụm điều khiển: Ảnh bìa Hero (Poster 0ms) & Video Loop Showreel */}
+          {/* Cụm điều khiển: Chọn chế độ nền Hero (Ảnh bìa tĩnh HOẶC Video loop) */}
           <div className="pt-6 border-t border-black/8 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
-                <Image className="w-4 h-4 text-[#2563EB]" />
+                <Sparkles className="w-4 h-4 text-[#2563EB]" />
                 <h3 className="font-bricolage text-sm font-bold text-[#111111] uppercase tracking-wide">
-                  Ảnh bìa Hero &amp; Video Loop Showreel
+                  Chế độ nền Hero trang chủ
                 </h3>
               </div>
               <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
@@ -694,28 +695,83 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   Kéo thả upload Cloudflare R2
                 </span>
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB]">
-                  {profile.heroPosterUrl ? 'Poster 0ms + Video Loop đang bật' : 'Chưa có ảnh bìa Poster 0ms'}
+                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                  profile.heroBgType === 'image'
+                    ? 'bg-amber-500/10 text-amber-800 border border-amber-500/20 font-bold'
+                    : 'bg-[#2563EB]/10 text-[#2563EB] font-bold'
+                }`}>
+                  {profile.heroBgType === 'image'
+                    ? '★ Đang chọn: Chỉ dùng Ảnh bìa Hero (Ảnh tĩnh)'
+                    : '★ Đang chọn: Video Loop Showreel'}
                 </span>
               </div>
             </div>
 
-            <p className="text-xs text-black/60 leading-relaxed">
-              Ảnh bìa (Poster 0ms) xuất hiện ngay tức thì khi khách mở trang để không bao giờ bị chớp đen, song song với Video Loop Showreel chạy nền qua Cloudflare R2. Bạn có thể <strong>kéo thả trực tiếp file ảnh (.webp, .jpg, .png) vào khung Ảnh bìa</strong> hoặc <strong>chụp từ video đang phát</strong>.
-            </p>
+            {/* Bộ chọn 1 trong 2: Ảnh bìa tĩnh HOẶC Video Loop */}
+            <div className="p-1.5 bg-[#EAEAF0] rounded-2xl flex flex-col sm:flex-row gap-1.5 border border-black/8 shadow-inner">
+              <button
+                type="button"
+                onClick={() => onChange({ heroBgType: 'image' })}
+                className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
+                  profile.heroBgType === 'image'
+                    ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
+                    : 'text-black/60 hover:text-black hover:bg-white/50'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  profile.heroBgType === 'image' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
+                }`}>
+                  <Image className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="font-bold text-xs truncate">1. Chỉ dùng Ảnh bìa Hero (Ảnh tĩnh 0ms)</p>
+                  <p className="text-[10px] text-black/50 truncate">Hiển thị 100% ảnh bìa nghệ thuật, không bị video loop đè lên</p>
+                </div>
+                {profile.heroBgType === 'image' && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange({ heroBgType: 'video' })}
+                className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
+                  (profile.heroBgType ?? 'video') === 'video'
+                    ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
+                    : 'text-black/60 hover:text-black hover:bg-white/50'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  (profile.heroBgType ?? 'video') === 'video' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
+                }`}>
+                  <Video className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="font-bold text-xs truncate">2. Video Loop Showreel (Video chuyển động)</p>
+                  <p className="text-[10px] text-black/50 truncate">Phát lặp video nền showreel kèm ảnh Poster 0ms lúc khởi động</p>
+                </div>
+                {(profile.heroBgType ?? 'video') === 'video' && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                )}
+              </button>
+            </div>
 
             {/* Hai cột song song: Cột 1 là Ảnh bìa Hero, Cột 2 là Video Loop Showreel */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-              {/* KHUNG 1: ẢNH BÌA HERO (POSTER 0MS) */}
+              {/* KHUNG 1: ẢNH BÌA HERO (POSTER 0MS / NỀN CHÍNH TĨNH) */}
               <div
                 onDragEnter={handlePosterDragEnter}
                 onDragOver={handlePosterDragOver}
                 onDragLeave={handlePosterDragLeave}
                 onDrop={handlePosterDrop}
                 className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
-                  isDraggingPosterZone
-                    ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                  profile.heroBgType === 'image'
+                    ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
                     : 'border-black/10 bg-[#F4F4F7]'
+                } ${
+                  isDraggingPosterZone
+                    ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
+                    : ''
                 }`}
               >
                 {/* Drag Overlay for Poster Box */}
@@ -738,13 +794,18 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                   <div className="flex items-center gap-1.5">
                     <Image className="w-4 h-4 text-[#2563EB]" />
                     <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
-                      Khung Ảnh bìa Hero (Poster 0ms)
+                      {profile.heroBgType === 'image' ? '★ Nền Hero chính (Ảnh tĩnh)' : 'Ảnh bìa Poster (Đệm 0ms)'}
                     </span>
                   </div>
-                  {profile.heroPosterUrl ? (
+                  {profile.heroBgType === 'image' ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600 text-white flex items-center gap-1 shadow-2xs">
+                      <CheckCircle2 className="w-3 h-3 text-white" />
+                      Đang chiếu trang chủ
+                    </span>
+                  ) : profile.heroPosterUrl ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      Đã lưu R2
+                      Poster đệm 0ms (R2)
                     </span>
                   ) : (
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/50">
@@ -845,9 +906,13 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                 onDragLeave={handleHeroDragLeave}
                 onDrop={handleHeroDrop}
                 className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
+                  (profile.heroBgType ?? 'video') === 'video'
+                    ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
+                    : 'border-black/10 bg-[#F4F4F7] opacity-80'
+                } ${
                   isDraggingHeroMedia
-                    ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
-                    : 'border-black/10 bg-[#F4F4F7]'
+                    ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
+                    : ''
                 }`}
               >
                 {/* Drag Overlay for Video Box */}
@@ -875,9 +940,16 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                       Video Loop Showreel (16:9)
                     </span>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/60">
-                    Phát lặp tự động
-                  </span>
+                  {(profile.heroBgType ?? 'video') === 'video' ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#2563EB] text-white flex items-center gap-1 shadow-2xs">
+                      <CheckCircle2 className="w-3 h-3 text-white" />
+                      Đang chiếu trang chủ
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/10 text-black/60">
+                      Tạm ngưng (Đang ưu tiên ảnh tĩnh)
+                    </span>
+                  )}
                 </div>
 
                 {/* 16:9 Video Player Preview */}
