@@ -1568,12 +1568,20 @@ export function ProjectsTab({
                           } mx-auto rounded-xl overflow-hidden bg-black border border-black/10 shadow-md transition-all`}
                         >
                           {parsed.type === 'youtube' || parsed.type === 'vimeo' || parsed.type === 'gdrive' ? (
-                            <iframe
-                              src={parsed.embedUrl}
-                              className="w-full h-full border-0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
+                            <div className="relative w-full h-full">
+                              <iframe
+                                src={parsed.embedUrl}
+                                className="w-full h-full border-0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                              {parsed.type === 'gdrive' && (
+                                <div
+                                  aria-hidden="true"
+                                  className="absolute top-0 right-0 w-16 h-16 z-20 pointer-events-auto bg-transparent cursor-default"
+                                />
+                              )}
+                            </div>
                           ) : (
                             <video
                               ref={videoPreviewRef}

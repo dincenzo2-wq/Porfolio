@@ -105,13 +105,23 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
 
     if (parsedVideo.type === 'youtube' || parsedVideo.type === 'vimeo' || parsedVideo.type === 'gdrive') {
       return (
-        <iframe
-          src={parsedVideo.embedUrl}
-          title={project.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="w-full h-full border-0 bg-black"
-        />
+        <div className="relative w-full h-full">
+          <iframe
+            src={parsedVideo.embedUrl}
+            title={project.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="w-full h-full border-0 bg-black"
+          />
+          {/* Transparent click-interceptor over Google Drive top-right pop-out button */}
+          {parsedVideo.type === 'gdrive' && (
+            <div
+              aria-hidden="true"
+              className="absolute top-0 right-0 w-16 h-16 z-20 pointer-events-auto bg-transparent cursor-default"
+              title=""
+            />
+          )}
+        </div>
       );
     }
 
