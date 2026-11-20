@@ -113,8 +113,8 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
     const videoId = ytMatch[1];
     const startParam = options?.startSec ? `&start=${Math.floor(options.startSec)}` : '';
     const endParam = options?.endSec ? `&end=${Math.ceil(options.endSec)}` : '';
-    const loopParam = options?.loop !== false ? `&loop=1&playlist=${videoId}` : '';
-    const muteParam = options?.muted !== false ? '&mute=1' : '';
+    const loopParam = options?.loop ? `&loop=1&playlist=${videoId}` : '';
+    const muteParam = options?.muted ? '&mute=1' : '';
     return {
       type: 'youtube',
       videoId,
@@ -122,7 +122,7 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
       isShorts: cleanUrl.includes('/shorts/'),
       startSec: options?.startSec,
       endSec: options?.endSec,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1${startParam}${endParam}${loopParam}`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1&vq=hd1080${startParam}${endParam}${loopParam}`,
     };
   }
 
@@ -134,15 +134,15 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
   if (vimeoMatch && vimeoMatch[1]) {
     const videoId = vimeoMatch[1];
     const timeHash = options?.startSec ? `#t=${Math.floor(options.startSec)}s` : '';
-    const loopParam = options?.loop !== false ? '&loop=1' : '';
-    const muteParam = options?.muted !== false ? '&muted=1' : '';
+    const loopParam = options?.loop ? '&loop=1' : '';
+    const muteParam = options?.muted ? '&muted=1' : '';
     return {
       type: 'vimeo',
       videoId,
       platformName: 'Vimeo',
       startSec: options?.startSec,
       endSec: options?.endSec,
-      embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1${muteParam}&autopause=0&title=0&byline=0&portrait=0&color=2563eb${loopParam}${timeHash}`,
+      embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1${muteParam}&autopause=0&title=0&byline=0&portrait=0&color=2563eb&quality=1080p${loopParam}${timeHash}`,
     };
   }
 

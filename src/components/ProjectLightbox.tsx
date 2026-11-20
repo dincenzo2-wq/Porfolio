@@ -88,7 +88,7 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
       : isVerticalByMetadata(project)
     : false;
 
-  const parsedVideo = project ? parseVideoUrl(project.videoUrl) : null;
+  const parsedVideo = project ? parseVideoUrl(project.videoUrl, { muted: false }) : null;
   const directSrc = project ? parsedVideo?.directUrl || project.videoUrl : undefined;
   const formattedRoles = project ? formatDeliverableRoles(project.deliverableRole) : '';
 
