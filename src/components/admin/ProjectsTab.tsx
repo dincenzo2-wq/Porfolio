@@ -680,11 +680,12 @@ export function ProjectsTab({
     });
   };
 
-  // Auto-detect aspect ratio when pasting video URLs (Shorts, TikTok, Reels, Vimeo, YouTube)
+  // Auto-detect aspect ratio & auto-fetch YouTube cover thumbnail (0MB storage)
   // Tuyệt đối KHÔNG tự động chuyển tab/danh mục: giữ nguyên lựa chọn danh mục của người dùng
   const handleVideoUrlChange = (rawVal: string) => {
     const normalized = normalizeDropboxUrl(rawVal);
     const detectedRatio = detectAspectRatioFromVideoUrl(normalized);
+    const parsed = parseVideoUrl(normalized);
 
     setEditingProject((prev) => {
       if (!prev) return null;
@@ -693,7 +694,14 @@ export function ProjectsTab({
       if (detectedRatio && prev.aspectRatio !== detectedRatio) {
         updates.aspectRatio = detectedRatio;
       }
-      // Giữ nguyên tab danh mục hiện tại, không tự động chọn tab sang Social hay bất kỳ tab nào khác
+
+      // Tự động gán ảnh bìa YouTube gốc nếu chưa có ảnh bìa hoặc đang dùng ảnh từ YouTube
+      if (parsed.type === 'youtube' && parsed.videoId) {
+        if (!prev.coverImage || prev.coverImage.includes('img.youtube.com')) {
+          updates.coverImage = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
+        }
+      }
+
       return { ...prev, ...updates };
     });
   };
@@ -1553,6 +1561,24 @@ export function ProjectsTab({
                               </button>
                             )}
 
+                            {/* Button: Lấy Thumbnail YouTube làm ảnh bìa */}
+                            {parsed.type === 'youtube' && parsed.videoId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const ytCover = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
+                                  setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
+                                  setFailedCoverUrl(null);
+                                  setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng)!');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-red-600 hover:bg-red-700 text-white shadow-xs cursor-pointer active:scale-98 transition-all"
+                                title="Lấy ảnh bìa gốc chất lượng cao từ YouTube (tiết kiệm 100% dung lượng)"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>Lấy bìa YouTube (0MB)</span>
+                              </button>
+                            )}
+
                             <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
                               <span>Sẵn sàng phát</span>
@@ -1629,6 +1655,12 @@ export function ProjectsTab({
                           src={editingProject.coverImage}
                           alt="Xem trước ảnh bìa"
                           onError={() => {
+                            if (editingProject.coverImage?.includes('maxresdefault.jpg')) {
+                              // Tự động fallback sang hqdefault nếu video không có bản maxres
+                              const fallbackUrl = editingProject.coverImage.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                              setEditingProject((prev) => (prev ? { ...prev, coverImage: fallbackUrl } : null));
+                              return;
+                            }
                             setFailedCoverUrl(editingProject.coverImage);
                             setUploadError(
                               'Ảnh bìa không tồn tại trên R2 (404) hoặc đường dẫn không hợp lệ. Vui lòng bấm "Chụp frame này làm ảnh bìa" hoặc tải ảnh mới.'
@@ -1659,9 +1691,9 @@ export function ProjectsTab({
                       )}
                     </div>
 
-                    {/* Bên phải: Nút tải ảnh từ máy + Ô nhập link URL bên dưới */}
+                    {/* Bên phải: Nút tải ảnh từ máy + Nút lấy từ YouTube (nếu có) + Ô nhập link URL bên dưới */}
                     <div className="flex-1 w-full space-y-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#111111] hover:bg-black/85 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0 active:scale-98">
                           <Upload className="w-3.5 h-3.5 text-white" />
                           <span>{uploadingImage ? 'Đang nén WebP...' : 'Tải ảnh từ máy (Tự nén WebP)'}</span>
@@ -1673,6 +1705,33 @@ export function ProjectsTab({
                             className="hidden"
                           />
                         </label>
+
+                        {/* Nút lấy lại ảnh bìa YouTube */}
+                        {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'youtube' && (() => {
+                          const ytParsed = parseVideoUrl(editingProject.videoUrl);
+                          if (!ytParsed.videoId) return null;
+                          const ytCover = `https://img.youtube.com/vi/${ytParsed.videoId}/maxresdefault.jpg`;
+                          const isAlreadyUsing = Boolean(editingProject.coverImage?.includes(ytParsed.videoId));
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
+                                setFailedCoverUrl(null);
+                                setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng)!');
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer active:scale-98 ${
+                                isAlreadyUsing
+                                  ? 'bg-red-50 text-red-700 border-red-200 shadow-xs'
+                                  : 'bg-white text-red-600 hover:bg-red-50 border-red-200'
+                              }`}
+                              title="Tự động lấy ảnh bìa gốc của video YouTube này (tiết kiệm 100% dung lượng)"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
+                              <span>{isAlreadyUsing ? 'Đang dùng bìa YouTube (0MB)' : 'Lấy bìa YouTube (0MB)'}</span>
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       <input
