@@ -262,7 +262,8 @@ export function HeroShowreel({
         {/* 1. Cinematic Hero Background: 100% Video Loop Showreel */}
         {(parsedVideo.type === 'youtube' ||
           parsedVideo.type === 'vimeo' ||
-          parsedVideo.type === 'gdrive') &&
+          parsedVideo.type === 'gdrive' ||
+          parsedVideo.type === 'vk') &&
         parsedVideo.embedUrl ? (
           <iframe
             key={parsedVideo.embedUrl}

@@ -4,13 +4,14 @@
  */
 
 export interface ParsedVideo {
-  type: 'youtube' | 'vimeo' | 'gdrive' | 'direct' | 'none';
+  type: 'youtube' | 'vimeo' | 'gdrive' | 'vk' | 'direct' | 'none';
   embedUrl?: string;
   directUrl?: string;
   videoId?: string;
   platformName?: string;
   isDropbox?: boolean;
   isShorts?: boolean;
+  isVkClip?: boolean;
   startSec?: number;
   endSec?: number;
 }
@@ -33,14 +34,21 @@ export function detectAspectRatioFromVideoUrl(url?: string): '9:16' | '16:9' | n
     clean.includes('/shorts/') ||
     clean.includes('tiktok.com') ||
     clean.includes('/reel/') ||
-    clean.includes('/reels/')
+    clean.includes('/reels/') ||
+    clean.includes('vk.com/clip') ||
+    clean.includes('vkvideo.ru/clip') ||
+    clean.includes('/clip-') ||
+    clean.includes('/clip/')
   ) {
     return '9:16';
   }
   if (
     clean.includes('youtube.com/watch') ||
     clean.includes('youtu.be/') ||
-    clean.includes('vimeo.com')
+    clean.includes('vimeo.com') ||
+    clean.includes('vk.com/video') ||
+    clean.includes('vkvideo.ru/video') ||
+    clean.includes('video_ext.php')
   ) {
     return '16:9';
   }
@@ -102,7 +110,13 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
     return { type: 'none' };
   }
 
-  const cleanUrl = url.trim();
+  let cleanUrl = url.trim();
+
+  // If user pasted an iframe embed code (e.g. <iframe src="https://vk.com/video_ext.php..."></iframe>)
+  const iframeSrcMatch = cleanUrl.match(/<iframe[^>]*\bsrc=["']([^"']+)["']/i);
+  if (iframeSrcMatch && iframeSrcMatch[1]) {
+    cleanUrl = iframeSrcMatch[1].trim();
+  }
 
   // 1. YouTube Match
   // Matches: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, youtube.com/shorts/ID
@@ -144,6 +158,72 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
       endSec: options?.endSec,
       embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1${muteParam}&autopause=0&title=0&byline=0&portrait=0&color=2563eb&quality=1080p${loopParam}${timeHash}`,
     };
+  }
+
+  // 3. VKontakte / VK Video Match
+  // Matches:
+  // - vk.com/video-12345_67890, vkvideo.ru/video-12345_67890
+  // - vk.com/clip-12345_67890, vkvideo.ru/clip-12345_67890
+  // - vk.com/video_ext.php?oid=...&id=...&hash=...
+  // - vkvideo.ru/video_ext.php?oid=...&id=...&hash=...
+  if (/(?:vk\.com|vkvideo\.ru)/i.test(cleanUrl)) {
+    // 3a. Direct video_ext.php embed link
+    if (cleanUrl.includes('video_ext.php')) {
+      try {
+        const parsed = new URL(cleanUrl);
+        const oid = parsed.searchParams.get('oid') || '';
+        const id = parsed.searchParams.get('id') || '';
+        const hash = parsed.searchParams.get('hash') || '';
+        const hd = parsed.searchParams.get('hd') || '2';
+        const isClip = cleanUrl.includes('clip') || parsed.searchParams.get('clip') === '1';
+
+        const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
+        const loopParam = options?.loop ? '&loop=1' : '';
+        const embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=${hd}&autoplay=1${loopParam}`;
+
+        return {
+          type: 'vk',
+          videoId: `${oid}_${id}`,
+          platformName: isClip ? 'VK Clip' : 'VK Video',
+          isShorts: isClip,
+          isVkClip: isClip,
+          startSec: options?.startSec,
+          endSec: options?.endSec,
+          embedUrl,
+        };
+      } catch {
+        // Fall through to regex
+      }
+    }
+
+    // 3b. Standard watch or clip link: video{oid}_{id} or clip{oid}_{id}
+    const vkStandardMatch = cleanUrl.match(/(?:vk\.com|vkvideo\.ru)\/(?:video|clip)(-?\d+)_(\d+)/i);
+    if (vkStandardMatch) {
+      const oid = vkStandardMatch[1];
+      const id = vkStandardMatch[2];
+      const isClip = cleanUrl.includes('/clip');
+
+      let hash = '';
+      try {
+        const parsed = new URL(cleanUrl);
+        hash = parsed.searchParams.get('hash') || '';
+      } catch {}
+
+      const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
+      const loopParam = options?.loop ? '&loop=1' : '';
+      const embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=2&autoplay=1${loopParam}`;
+
+      return {
+        type: 'vk',
+        videoId: `${oid}_${id}`,
+        platformName: isClip ? 'VK Clip' : 'VK Video',
+        isShorts: isClip,
+        isVkClip: isClip,
+        startSec: options?.startSec,
+        endSec: options?.endSec,
+        embedUrl,
+      };
+    }
   }
 
   // 3. Google Drive Match

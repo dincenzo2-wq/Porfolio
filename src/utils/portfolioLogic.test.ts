@@ -426,6 +426,33 @@ test('parseVideoUrl supports YouTube, Vimeo, and MP4 showreel formats', () => {
   const mp4 = parseVideoUrl('/videos/dem-khong-ngu.mp4');
   assert.equal(mp4.type, 'direct');
   assert.equal(mp4.directUrl, '/videos/dem-khong-ngu.mp4');
+
+  // VK Video standard link
+  const vkStandard = parseVideoUrl('https://vk.com/video-220754053_456239589');
+  assert.equal(vkStandard.type, 'vk');
+  assert.equal(vkStandard.videoId, '-220754053_456239589');
+  assert.ok(vkStandard.embedUrl?.includes('vk.com/video_ext.php?oid=-220754053&id=456239589'));
+
+  // VK Video standalone domain (vkvideo.ru)
+  const vkRu = parseVideoUrl('https://vkvideo.ru/video-220754053_456239589');
+  assert.equal(vkRu.type, 'vk');
+  assert.equal(vkRu.videoId, '-220754053_456239589');
+
+  // VK Clip (short-form 9:16)
+  const vkClip = parseVideoUrl('https://vk.com/clip-220754053_456239589');
+  assert.equal(vkClip.type, 'vk');
+  assert.equal(vkClip.isShorts, true);
+  assert.equal(vkClip.platformName, 'VK Clip');
+
+  // VK Embed with hash
+  const vkEmbed = parseVideoUrl('https://vk.com/video_ext.php?oid=-220754053&id=456239589&hash=abc123xyz');
+  assert.equal(vkEmbed.type, 'vk');
+  assert.ok(vkEmbed.embedUrl?.includes('hash=abc123xyz'));
+
+  // VK iframe embed snippet
+  const vkIframe = parseVideoUrl('<iframe src="https://vk.com/video_ext.php?oid=-220754053&id=456239589&hash=xyz789" width="800"></iframe>');
+  assert.equal(vkIframe.type, 'vk');
+  assert.ok(vkIframe.embedUrl?.includes('hash=xyz789'));
 });
 
 test('parseVideoUrl supports trimming options (startSec, endSec, loop) for 15s loop', () => {
@@ -493,10 +520,16 @@ test('detectAspectRatioFromVideoUrl detects 9:16 for Shorts, TikTok, and Reels, 
   assert.equal(detectAspectRatioFromVideoUrl('https://www.instagram.com/reel/C8xyz123/'), '9:16');
   assert.equal(detectAspectRatioFromVideoUrl('https://instagram.com/reels/C8xyz123'), '9:16');
 
-  // Standard 16:9 YouTube & Vimeo
+  // Standard 16:9 YouTube & Vimeo & VK Video
   assert.equal(detectAspectRatioFromVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), '16:9');
   assert.equal(detectAspectRatioFromVideoUrl('https://youtu.be/dQw4w9WgXcQ'), '16:9');
   assert.equal(detectAspectRatioFromVideoUrl('https://vimeo.com/12345678'), '16:9');
+  assert.equal(detectAspectRatioFromVideoUrl('https://vk.com/video-220754053_456239589'), '16:9');
+  assert.equal(detectAspectRatioFromVideoUrl('https://vkvideo.ru/video-220754053_456239589'), '16:9');
+
+  // VK Clip (9:16)
+  assert.equal(detectAspectRatioFromVideoUrl('https://vk.com/clip-220754053_456239589'), '9:16');
+  assert.equal(detectAspectRatioFromVideoUrl('https://vkvideo.ru/clip-220754053_456239589'), '9:16');
 
   // Direct MP4 without metadata returns null (to let loadedmetadata inspect real pixel dimensions)
   assert.equal(detectAspectRatioFromVideoUrl('https://pub-r2.dev/video.mp4'), null);

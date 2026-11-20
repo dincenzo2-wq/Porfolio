@@ -103,13 +103,18 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
   const renderMedia = () => {
     if (!project || !parsedVideo) return null;
 
-    if (parsedVideo.type === 'youtube' || parsedVideo.type === 'vimeo' || parsedVideo.type === 'gdrive') {
+    if (
+      parsedVideo.type === 'youtube' ||
+      parsedVideo.type === 'vimeo' ||
+      parsedVideo.type === 'gdrive' ||
+      parsedVideo.type === 'vk'
+    ) {
       return (
         <div className="relative w-full h-full">
           <iframe
             src={parsedVideo.embedUrl}
             title={project.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
             className="w-full h-full border-0 bg-black"
           />
