@@ -14,6 +14,15 @@ import {
   ArrowRight,
   Loader2,
   Sparkles,
+  User,
+  Briefcase,
+  Mail,
+  Phone,
+  Send,
+  MapPin,
+  Clapperboard,
+  Layers,
+  ArrowUpRight,
 } from 'lucide-react';
 import type { SiteProfileData } from '../../types/portfolio';
 import { parseVideoUrl, formatVideoDuration } from '../../utils/videoEmbed';
@@ -24,6 +33,14 @@ interface GeneralInfoTabProps {
   profile: SiteProfileData;
   onChange: (partial: Partial<SiteProfileData>) => void;
 }
+
+const NAV_SECTIONS = [
+  { id: 'section-identity', num: '01', label: 'Định danh & Bio' },
+  { id: 'section-hero-media', num: '02', label: 'Nền Hero & Media' },
+  { id: 'section-contact', num: '03', label: 'Kênh liên hệ' },
+  { id: 'section-copy-footer', num: '04', label: 'Dòng dẫn & Footer' },
+  { id: 'section-marquee', num: '05', label: 'Logo Đối tác' },
+];
 
 export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const currentVideoUrl = profile.showreelUrl || profile.heroBgUrl || '/videos/dem-khong-ngu.mp4';
@@ -255,7 +272,6 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
 
   // Core handler: Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
   const handleUploadHeroVideoFile = async (file: File) => {
-    // 1. Kiểm tra định dạng video (.mp4 hoặc .webm)
     const lowerName = file.name.toLowerCase();
     const isVideo =
       lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || file.type.startsWith('video/');
@@ -266,7 +282,6 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
       return;
     }
 
-    // 2. Kiểm tra giới hạn dung lượng < 15MB (để không vượt giới hạn API Worker và không làm đầy R2)
     const MAX_VIDEO_BYTES = 15 * 1024 * 1024; // 15MB
     if (file.size > MAX_VIDEO_BYTES) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
@@ -610,655 +625,928 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     if (!video) return;
     setCurrentTime(video.currentTime);
   };
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const offset = 140;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = el.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   const inputClass =
-    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
+    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-2.5 text-sm text-[#111111] focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
   const textareaClass =
-    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] leading-relaxed min-h-[116px] resize-y focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
-  const labelClass = 'block text-xs font-bold uppercase tracking-wider text-[#111111] mb-1.5';
+    'w-full bg-[#F9F9FB] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#111111] leading-relaxed min-h-[110px] resize-y focus:bg-white focus:border-[#111111] focus:ring-2 focus:ring-black/5 focus:outline-none transition-all placeholder:text-black/35';
+  const labelClass = 'text-xs font-bold uppercase tracking-wider text-[#111111]';
   const helperClass = 'text-[11px] text-black/55 mt-1.5';
 
   return (
-    <div className="w-full py-4 space-y-6">
-      {/* 1. HERO & ĐỊNH VỊ THƯƠNG HIỆU */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Cột trái: Tiêu đề & Vị trí */}
-        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
-          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
-            1. HERO &amp; ĐỊNH VỊ THƯƠNG HIỆU
-          </h2>
-          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
-            Nội dung định danh thương hiệu, hồ sơ năng lực và video loop nền Hero.
-          </p>
+    <div className="w-full py-4 space-y-7">
+      {/* Quick Jump Anchor Pill Bar */}
+      <div className="sticky top-[68px] z-20 -mx-2 px-2 py-2.5 bg-white/90 backdrop-blur-md border-b border-black/[0.06] flex items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+          <span className="text-[11px] font-bold text-black/40 uppercase tracking-wider mr-1 hidden sm:inline">
+            Chuyển nhanh:
+          </span>
+          {NAV_SECTIONS.map((sec) => (
+            <button
+              key={sec.id}
+              type="button"
+              onClick={() => scrollToSection(sec.id)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-black/70 bg-[#F4F4F6] hover:bg-black/10 hover:text-black shrink-0 transition-all cursor-pointer flex items-center gap-1.5 active:scale-98"
+            >
+              <span className="font-mono text-[10px] text-black/45">{sec.num}</span>
+              <span>{sec.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <span className="text-[11px] font-medium text-black/50 bg-black/[0.04] px-2.5 py-1 rounded-full">
+            Tab 1 · Cấu hình thương hiệu
+          </span>
+        </div>
+      </div>
+
+      {/* 01. ĐỊNH DANH & HỒ SƠ NĂNG LỰC */}
+      <section
+        id="section-identity"
+        className="scroll-mt-36 bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6"
+      >
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5 border-b border-black/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#111111] text-white font-mono text-xs font-bold shrink-0">
+                01
+              </span>
+              <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
+                Định danh &amp; Hồ sơ Năng lực
+              </h2>
+            </div>
+            <p className="text-xs text-black/60 leading-relaxed pl-9.5">
+              Tên nghệ danh chính, định danh chuyên môn và lời tựa năng lực xuất hiện tại thanh điều hướng &amp; mở đầu Hero.
+            </p>
+          </div>
+          <div className="pl-9.5 sm:pl-0 shrink-0">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-black/[0.04] text-black/70 border border-black/[0.06] flex items-center gap-1">
+              <User className="w-3 h-3 text-[#2563EB]" />
+              Hiển thị: Header &amp; Hero
+            </span>
+          </div>
         </div>
 
-        {/* Cột phải: Các ô nhập liệu */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Inputs: 2-column balanced grid */}
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>Tên nghệ danh chính (Headline)</label>
-              <input
-                type="text"
-                value={profile.fullName}
-                onChange={(e) => onChange({ fullName: e.target.value })}
-                className={`${inputClass} font-bold`}
-                placeholder="QUỐC VINH®"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Tên nghệ danh chính (Headline)</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Header &amp; Title
+                </span>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={profile.fullName}
+                  onChange={(e) => onChange({ fullName: e.target.value })}
+                  className={`${inputClass} pl-10 font-bold`}
+                  placeholder="QUỐC VINH®"
+                />
+              </div>
+              <p className={helperClass}>Chữ hoa nhận diện nổi bật tại đỉnh trang chủ và thanh menu.</p>
             </div>
 
             <div>
-              <label className={labelClass}>Định danh chuyên môn (Role Title)</label>
-              <input
-                type="text"
-                value={profile.roleTitle}
-                onChange={(e) => onChange({ roleTitle: e.target.value })}
-                className={inputClass}
-                placeholder="VIDEOGRAPHER · FILM EDITOR · MOTION DESIGNER"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Định danh chuyên môn (Role Title)</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Hero Subtitle
+                </span>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={profile.roleTitle}
+                  onChange={(e) => onChange({ roleTitle: e.target.value })}
+                  className={`${inputClass} pl-10 font-semibold`}
+                  placeholder="VIDEOGRAPHER · FILM EDITOR · MOTION DESIGNER"
+                />
+              </div>
+              <p className={helperClass}>Dãy vai trò chuyên môn ngăn cách bởi dấu chấm giữa (·).</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
             <div>
-              <label className={labelClass}>Định vị năng lực (Positioning)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Định vị năng lực (Positioning)</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Hero Intro
+                </span>
+              </div>
               <textarea
-                rows={6}
+                rows={4}
                 value={profile.positioning}
                 onChange={(e) => onChange({ positioning: e.target.value })}
-                className={`${textareaClass} min-h-[160px]`}
+                className={textareaClass}
                 placeholder="Chuyên quay phim thương mại, dựng hậu kỳ tốc độ cao và motion graphics cho Agency, Brand & Production House."
               />
+              <p className={helperClass}>Câu tuyên ngôn ngắn gọn về thế mạnh và đối tượng phục vụ chính.</p>
             </div>
 
             <div>
-              <label className={labelClass}>Cam kết tiến độ (Bio Detail)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Cam kết tiến độ (Bio Detail)</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Hero Detail
+                </span>
+              </div>
               <textarea
-                rows={6}
+                rows={4}
                 value={profile.bioDetail}
                 onChange={(e) => onChange({ bioDetail: e.target.value })}
-                className={`${textareaClass} min-h-[160px]`}
+                className={textareaClass}
                 placeholder="Quy trình làm việc thực chiến, đáp ứng brief chuẩn xác. Nhận brief và xuất bản nháp nhanh trong 24–48h."
               />
+              <p className={helperClass}>Cam kết về quy trình làm việc, tốc độ trả bản nháp và nghiệm thu.</p>
             </div>
-          </div>
-
-          {/* Cụm điều khiển: Chọn chế độ nền Hero (Ảnh bìa tĩnh HOẶC Video loop) */}
-          <div className="pt-6 border-t border-black/8 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#2563EB]" />
-                <h3 className="font-bricolage text-sm font-bold text-[#111111] uppercase tracking-wide">
-                  Chế độ nền Hero trang chủ
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  Kéo thả upload Cloudflare R2
-                </span>
-                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-                  profile.heroBgType === 'image'
-                    ? 'bg-amber-500/10 text-amber-800 border border-amber-500/20 font-bold'
-                    : 'bg-[#2563EB]/10 text-[#2563EB] font-bold'
-                }`}>
-                  {profile.heroBgType === 'image'
-                    ? '★ Đang chọn: Chỉ dùng Ảnh bìa Hero (Ảnh tĩnh)'
-                    : '★ Đang chọn: Video Loop Showreel'}
-                </span>
-              </div>
-            </div>
-
-            {/* Bộ chọn 1 trong 2: Ảnh bìa tĩnh HOẶC Video Loop */}
-            <div className="p-1.5 bg-[#EAEAF0] rounded-2xl flex flex-col sm:flex-row gap-1.5 border border-black/8 shadow-inner">
-              <button
-                type="button"
-                onClick={() => onChange({ heroBgType: 'image' })}
-                className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
-                  profile.heroBgType === 'image'
-                    ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
-                    : 'text-black/60 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  profile.heroBgType === 'image' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
-                }`}>
-                  <Image className="w-4 h-4" />
-                </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-bold text-xs truncate">1. Chỉ dùng Ảnh bìa Hero (Ảnh tĩnh 0ms)</p>
-                  <p className="text-[10px] text-black/50 truncate">Hiển thị 100% ảnh bìa nghệ thuật, không bị video loop đè lên</p>
-                </div>
-                {profile.heroBgType === 'image' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChange({ heroBgType: 'video' })}
-                className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
-                  (profile.heroBgType ?? 'video') === 'video'
-                    ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
-                    : 'text-black/60 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  (profile.heroBgType ?? 'video') === 'video' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
-                }`}>
-                  <Video className="w-4 h-4" />
-                </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-bold text-xs truncate">2. Video Loop Showreel (Video chuyển động)</p>
-                  <p className="text-[10px] text-black/50 truncate">Phát lặp video nền showreel kèm ảnh Poster 0ms lúc khởi động</p>
-                </div>
-                {(profile.heroBgType ?? 'video') === 'video' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                )}
-              </button>
-            </div>
-
-            {/* Hai cột song song: Cột 1 là Ảnh bìa Hero, Cột 2 là Video Loop Showreel */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-              {/* KHUNG 1: ẢNH BÌA HERO (POSTER 0MS / NỀN CHÍNH TĨNH) */}
-              <div
-                onDragEnter={handlePosterDragEnter}
-                onDragOver={handlePosterDragOver}
-                onDragLeave={handlePosterDragLeave}
-                onDrop={handlePosterDrop}
-                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
-                  profile.heroBgType === 'image'
-                    ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
-                    : 'border-black/10 bg-[#F4F4F7]'
-                } ${
-                  isDraggingPosterZone
-                    ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
-                    : ''
-                }`}
-              >
-                {/* Drag Overlay for Poster Box */}
-                {isDraggingPosterZone && (
-                  <div
-                    onDragOver={handlePosterDragOver}
-                    onDrop={handlePosterDrop}
-                    className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
-                      <Image className="w-6 h-6 animate-bounce" />
-                    </div>
-                    <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
-                      Thả ảnh vào đây để nén WebP &amp; đặt làm Ảnh bìa Hero (R2)
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Image className="w-4 h-4 text-[#2563EB]" />
-                    <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
-                      {profile.heroBgType === 'image' ? '★ Nền Hero chính (Ảnh tĩnh)' : 'Ảnh bìa Poster (Đệm 0ms)'}
-                    </span>
-                  </div>
-                  {profile.heroBgType === 'image' ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600 text-white flex items-center gap-1 shadow-2xs">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                      Đang chiếu trang chủ
-                    </span>
-                  ) : profile.heroPosterUrl ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      Poster đệm 0ms (R2)
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/50">
-                      Chưa có ảnh riêng
-                    </span>
-                  )}
-                </div>
-
-                {/* 16:9 Image Preview / Drop Target */}
-                <div
-                  onClick={() => posterFileInputRef.current?.click()}
-                  className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 border border-black/15 shadow-inner cursor-pointer group flex items-center justify-center"
-                >
-                  {profile.heroPosterUrl ? (
-                    <>
-                      <img
-                        src={profile.heroPosterUrl}
-                        alt="Hero Poster Preview"
-                        className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center text-white">
-                        <Upload className="w-6 h-6 mb-1 text-white animate-bounce" />
-                        <span className="text-xs font-bold">Bấm hoặc kéo thả ảnh mới vào để thay thế</span>
-                        <span className="text-[10px] text-white/80 mt-0.5">Tự động nén WebP &lt; 400KB &amp; R2</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-6 text-center flex flex-col items-center justify-center space-y-2 text-black/60">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-black/10 shadow-xs flex items-center justify-center text-[#2563EB] group-hover:scale-110 transition-transform">
-                        <Image className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs font-bold text-[#111111]">
-                        Kéo thả ảnh bìa Hero vào đây
-                      </p>
-                      <p className="text-[11px] text-black/50 max-w-[260px] leading-relaxed">
-                        Hỗ trợ .jpg, .png, .webp. Tự động nén chuẩn cinema &lt; 400KB và tải lên Cloudflare R2
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions for Poster */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      ref={posterFileInputRef}
-                      accept="image/*"
-                      onChange={handlePosterFileUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => posterFileInputRef.current?.click()}
-                      disabled={uploadingPoster}
-                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
-                    >
-                      {uploadingPoster ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                          <span>Đang nén WebP &amp; R2...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-3.5 h-3.5 text-white" />
-                          <span>📁 Tải ảnh bìa từ máy</span>
-                        </>
-                      )}
-                    </button>
-
-                    {profile.heroPosterUrl && (
-                      <button
-                        type="button"
-                        onClick={() => onChange({ heroPosterUrl: '' })}
-                        className="px-3 py-2.5 rounded-xl bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0 transition-all shadow-2xs"
-                        title="Gỡ ảnh Poster hiện tại"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Gỡ</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <input
-                    type="text"
-                    value={profile.heroPosterUrl || ''}
-                    onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
-                    placeholder="Hoặc dán URL ảnh bìa trực tiếp (https://...)"
-                    className="w-full px-3 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] font-mono focus:outline-none focus:border-[#2563EB]"
-                  />
-                </div>
-              </div>
-
-              {/* KHUNG 2: VIDEO LOOP SHOWREEL NỀN HERO */}
-              <div
-                onDragEnter={handleHeroDragEnter}
-                onDragOver={handleHeroDragOver}
-                onDragLeave={handleHeroDragLeave}
-                onDrop={handleHeroDrop}
-                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
-                  (profile.heroBgType ?? 'video') === 'video'
-                    ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
-                    : 'border-black/10 bg-[#F4F4F7] opacity-80'
-                } ${
-                  isDraggingHeroMedia
-                    ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
-                    : ''
-                }`}
-              >
-                {/* Drag Overlay for Video Box */}
-                {isDraggingHeroMedia && (
-                  <div
-                    onDragOver={handleHeroDragOver}
-                    onDrop={handleHeroDrop}
-                    className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
-                      <Upload className="w-6 h-6 animate-bounce" />
-                    </div>
-                    <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
-                      {heroDragKind === 'video'
-                        ? 'Thả video vào đây để tải lên Cloudflare R2 (< 15MB)'
-                        : 'Thả ảnh vào đây để nén WebP & đặt làm Ảnh bìa Hero (R2)'}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Video className="w-4 h-4 text-[#2563EB]" />
-                    <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
-                      Video Loop Showreel (16:9)
-                    </span>
-                  </div>
-                  {(profile.heroBgType ?? 'video') === 'video' ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#2563EB] text-white flex items-center gap-1 shadow-2xs">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                      Đang chiếu trang chủ
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/10 text-black/60">
-                      Tạm ngưng (Đang ưu tiên ảnh tĩnh)
-                    </span>
-                  )}
-                </div>
-
-                {/* 16:9 Video Player Preview */}
-                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
-                  <div className={`w-full h-full ${isWindowDragging || isDraggingHeroMedia || isDraggingPosterZone ? 'pointer-events-none' : ''}`}>
-                    {(parsedShowreel.type === 'youtube' ||
-                      parsedShowreel.type === 'vimeo' ||
-                      parsedShowreel.type === 'gdrive' ||
-                      parsedShowreel.type === 'vk') &&
-                    parsedShowreel.embedUrl ? (
-                      <iframe
-                        src={parsedShowreel.embedUrl}
-                        title="Video Loop Showreel Preview"
-                        className={`w-full h-full border-0 ${isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''}`}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <video
-                        ref={previewVideoRef}
-                        key={currentVideoUrl}
-                        src={parsedShowreel.directUrl || currentVideoUrl}
-                        poster={profile.heroPosterUrl || ''}
-                        crossOrigin="anonymous"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        controls
-                        onTimeUpdate={handleTimeUpdate}
-                        className={`w-full h-full object-cover ${isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''}`}
-                      />
-                    )}
-                  </div>
-
-                  {profile.heroPosterUrl && (
-                    <div className="absolute top-2.5 left-2.5 pointer-events-none">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        Poster 0ms gắn kèm
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions for Video */}
-                <div className="space-y-2 pt-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {/* Nút Chụp Frame làm Poster */}
-                    <button
-                      type="button"
-                      onClick={handleCaptureCurrentFrameAsPoster}
-                      disabled={capturingPoster}
-                      className="px-3 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
-                      title="Chụp ngay khung hình đang chiếu làm ảnh Poster 0ms"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-white" />
-                      <span className="truncate">
-                        {capturingPoster
-                          ? 'Đang chụp WebP...'
-                          : `📸 Chụp Frame (${formatVideoDuration(currentTime)}) làm Poster`}
-                      </span>
-                    </button>
-
-                    {/* Nút Tải Video lên R2 */}
-                    <input
-                      ref={heroVideoFileInputRef}
-                      type="file"
-                      accept="video/mp4,video/webm"
-                      className="hidden"
-                      onChange={handleUploadHeroVideo}
-                    />
-                    <button
-                      type="button"
-                      disabled={uploadingHeroVideo}
-                      onClick={() => heroVideoFileInputRef.current?.click()}
-                      className="px-3 py-2.5 rounded-xl bg-white border border-black/15 hover:border-black/30 text-[#111111] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:bg-[#F9F9FB] active:scale-98"
-                      title="Tải video MP4/WebM < 15MB lên Cloudflare R2"
-                    >
-                      {uploadingHeroVideo ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2563EB]" />
-                          <span className="truncate">Tải lên R2 ({heroVideoUploadProgress})...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-3.5 h-3.5 text-black/60" />
-                          <span className="truncate">Tải Video R2 (&lt; 15MB)</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <p className="text-[11px] font-mono text-black/45 truncate" title={currentVideoUrl}>
-                      {currentVideoUrl}
-                    </p>
-
-                    {(profile.showreelUrl || profile.heroBgUrl) &&
-                      ((profile.showreelUrl && profile.showreelUrl !== '/videos/dem-khong-ngu.mp4') ||
-                        (profile.heroBgUrl && profile.heroBgUrl !== '/videos/dem-khong-ngu.mp4')) && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onChange({
-                              showreelUrl: '/videos/dem-khong-ngu.mp4',
-                              heroBgUrl: '/videos/dem-khong-ngu.mp4',
-                              heroBgType: 'video',
-                              heroVideoStart: 0,
-                              heroVideoEnd: 15,
-                            })
-                          }
-                          className="text-[11px] text-black/50 hover:text-[#2563EB] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Mặc định</span>
-                        </button>
-                      )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Status messages for video upload & poster capture */}
-            {heroVideoUploadSuccess && (
-              <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="font-medium">{heroVideoUploadSuccess}</span>
-              </div>
-            )}
-
-            {heroVideoUploadError && (
-              <div className="mt-3 flex items-center gap-2.5 p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span className="font-medium">{heroVideoUploadError}</span>
-              </div>
-            )}
-
-            {posterCaptureSuccess && (
-              <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="font-medium">{posterCaptureSuccess}</span>
-              </div>
-            )}
-
-            {posterCaptureError && (
-              <div className="mt-3 flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="font-medium">{posterCaptureError}</span>
-              </div>
-            )}
           </div>
         </div>
       </section>
 
-      {/* 2. THÔNG TIN LIÊN HỆ & KÊNH TRAO ĐỔI */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Cột trái */}
-        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
-          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
-            2. THÔNG TIN LIÊN HỆ &amp; KÊNH TRAO ĐỔI
-          </h2>
-          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
-            Xuất hiện tại thanh điều hướng Navbar, chân trang Footer và hộp thoại gửi brief nhanh khi đối tác bấm nút Liên hệ.
-          </p>
+      {/* 02. CHẾ ĐỘ NỀN HERO TRANG CHỦ & MEDIA */}
+      <section
+        id="section-hero-media"
+        className="scroll-mt-36 bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6"
+      >
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5 border-b border-black/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#111111] text-white font-mono text-xs font-bold shrink-0">
+                02
+              </span>
+              <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
+                Chế độ Nền Hero trang chủ
+              </h2>
+            </div>
+            <p className="text-xs text-black/60 leading-relaxed pl-9.5">
+              Lựa chọn 1 trong 2: Ảnh bìa tĩnh nghệ thuật HOẶC Video loop showreel (16:9). Tự động nén WebP &amp; tối ưu 0ms.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap pl-9.5 sm:pl-0 shrink-0">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              Upload Cloudflare R2
+            </span>
+            <span
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                profile.heroBgType === 'image'
+                  ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30'
+                  : 'bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/25'
+              }`}
+            >
+              {profile.heroBgType === 'image'
+                ? '★ Đang chọn: Chỉ dùng Ảnh bìa (Ảnh tĩnh)'
+                : '★ Đang chọn: Video Loop Showreel'}
+            </span>
+          </div>
         </div>
 
-        {/* Cột phải */}
-        <div className="lg:col-span-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
+        {/* Bộ chọn 1 trong 2: Ảnh bìa tĩnh HOẶC Video Loop */}
+        <div className="p-1.5 bg-[#EAEAF0] rounded-2xl flex flex-col sm:flex-row gap-1.5 border border-black/8 shadow-inner">
+          <button
+            type="button"
+            onClick={() => onChange({ heroBgType: 'image' })}
+            className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
+              profile.heroBgType === 'image'
+                ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
+                : 'text-black/60 hover:text-black hover:bg-white/50'
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                profile.heroBgType === 'image' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
+              }`}
+            >
+              <Image className="w-4 h-4" />
+            </div>
+            <div className="text-left flex-1 min-w-0">
+              <p className="font-bold text-xs truncate">1. Chỉ dùng Ảnh bìa Hero (Ảnh tĩnh 0ms)</p>
+              <p className="text-[10px] text-black/50 truncate">
+                Hiển thị 100% ảnh bìa nghệ thuật, không bị video loop đè lên
+              </p>
+            </div>
+            {profile.heroBgType === 'image' && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChange({ heroBgType: 'video' })}
+            className={`flex-1 flex items-center gap-3 py-3 px-4 rounded-xl text-xs transition-all cursor-pointer ${
+              (profile.heroBgType ?? 'video') === 'video'
+                ? 'bg-white text-[#111111] shadow-sm border border-black/10 scale-[1.01]'
+                : 'text-black/60 hover:text-black hover:bg-white/50'
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                (profile.heroBgType ?? 'video') === 'video' ? 'bg-[#2563EB] text-white' : 'bg-black/5 text-black/50'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+            </div>
+            <div className="text-left flex-1 min-w-0">
+              <p className="font-bold text-xs truncate">2. Video Loop Showreel (Video chuyển động)</p>
+              <p className="text-[10px] text-black/50 truncate">
+                Phát lặp video nền showreel kèm ảnh Poster 0ms lúc khởi động
+              </p>
+            </div>
+            {(profile.heroBgType ?? 'video') === 'video' && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+            )}
+          </button>
+        </div>
+
+        {/* Hai cột song song: Cột 1 là Ảnh bìa Hero, Cột 2 là Video Loop Showreel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* KHUNG 1: ẢNH BÌA HERO (POSTER 0MS / NỀN CHÍNH TĨNH) */}
+          <div
+            onDragEnter={handlePosterDragEnter}
+            onDragOver={handlePosterDragOver}
+            onDragLeave={handlePosterDragLeave}
+            onDrop={handlePosterDrop}
+            className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
+              profile.heroBgType === 'image'
+                ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
+                : 'border-black/10 bg-[#F4F4F7]'
+            } ${
+              isDraggingPosterZone
+                ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
+                : ''
+            }`}
+          >
+            {/* Drag Overlay for Poster Box */}
+            {isDraggingPosterZone && (
+              <div
+                onDragOver={handlePosterDragOver}
+                onDrop={handlePosterDrop}
+                className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
+                  <Image className="w-6 h-6 animate-bounce" />
+                </div>
+                <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
+                  Thả ảnh vào đây để nén WebP &amp; đặt làm Ảnh bìa Hero (R2)
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <Image className="w-4 h-4 text-[#2563EB]" />
+                <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
+                  {profile.heroBgType === 'image' ? '★ Nền Hero chính (Ảnh tĩnh)' : 'Ảnh bìa Poster (Đệm 0ms)'}
+                </span>
+              </div>
+              {profile.heroBgType === 'image' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600 text-white flex items-center gap-1 shadow-2xs">
+                  <CheckCircle2 className="w-3 h-3 text-white" />
+                  Đang chiếu trang chủ
+                </span>
+              ) : profile.heroPosterUrl ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Poster đệm 0ms (R2)
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/50">
+                  Chưa có ảnh riêng
+                </span>
+              )}
+            </div>
+
+            {/* 16:9 Image Preview / Drop Target */}
+            <div
+              onClick={() => posterFileInputRef.current?.click()}
+              className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 border border-black/15 shadow-inner cursor-pointer group flex items-center justify-center"
+            >
+              {profile.heroPosterUrl ? (
+                <>
+                  <img
+                    src={profile.heroPosterUrl}
+                    alt="Hero Poster Preview"
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center text-white">
+                    <Upload className="w-6 h-6 mb-1 text-white animate-bounce" />
+                    <span className="text-xs font-bold">Bấm hoặc kéo thả ảnh mới vào để thay thế</span>
+                    <span className="text-[10px] text-white/80 mt-0.5">Tự động nén WebP &lt; 400KB &amp; R2</span>
+                  </div>
+                </>
+              ) : (
+                <div className="p-6 text-center flex flex-col items-center justify-center space-y-2 text-black/60">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-black/10 shadow-xs flex items-center justify-center text-[#2563EB] group-hover:scale-110 transition-transform">
+                    <Image className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-bold text-[#111111]">Kéo thả ảnh bìa Hero vào đây</p>
+                  <p className="text-[11px] text-black/50 max-w-[260px] leading-relaxed">
+                    Hỗ trợ .jpg, .png, .webp. Tự động nén chuẩn cinema &lt; 400KB và tải lên Cloudflare R2
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions for Poster */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={posterFileInputRef}
+                  accept="image/*"
+                  onChange={handlePosterFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => posterFileInputRef.current?.click()}
+                  disabled={uploadingPoster}
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                >
+                  {uploadingPoster ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                      <span>Đang nén WebP &amp; R2...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5 text-white" />
+                      <span>📁 Tải ảnh bìa từ máy</span>
+                    </>
+                  )}
+                </button>
+
+                {profile.heroPosterUrl && (
+                  <button
+                    type="button"
+                    onClick={() => onChange({ heroPosterUrl: '' })}
+                    className="px-3 py-2.5 rounded-xl bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0 transition-all shadow-2xs"
+                    title="Gỡ ảnh Poster hiện tại"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Gỡ</span>
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="text"
+                value={profile.heroPosterUrl || ''}
+                onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
+                placeholder="Hoặc dán URL ảnh bìa trực tiếp (https://...)"
+                className="w-full px-3 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] font-mono focus:outline-none focus:border-[#2563EB]"
+              />
+            </div>
+          </div>
+
+          {/* KHUNG 2: VIDEO LOOP SHOWREEL NỀN HERO */}
+          <div
+            onDragEnter={handleHeroDragEnter}
+            onDragOver={handleHeroDragOver}
+            onDragLeave={handleHeroDragLeave}
+            onDrop={handleHeroDrop}
+            className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
+              (profile.heroBgType ?? 'video') === 'video'
+                ? 'border-[#2563EB] bg-blue-50/30 shadow-sm ring-2 ring-[#2563EB]/15'
+                : 'border-black/10 bg-[#F4F4F7] opacity-80'
+            } ${
+              isDraggingHeroMedia
+                ? '!border-dashed !border-[#2563EB] !bg-blue-50/90 shadow-[0_0_0_4px_rgba(37,99,235,0.15)]'
+                : ''
+            }`}
+          >
+            {/* Drag Overlay for Video Box */}
+            {isDraggingHeroMedia && (
+              <div
+                onDragOver={handleHeroDragOver}
+                onDrop={handleHeroDrop}
+                className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
+                  <Upload className="w-6 h-6 animate-bounce" />
+                </div>
+                <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
+                  {heroDragKind === 'video'
+                    ? 'Thả video vào đây để tải lên Cloudflare R2 (< 15MB)'
+                    : 'Thả ảnh vào đây để nén WebP & đặt làm Ảnh bìa Hero (R2)'}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-[#2563EB]" />
+                <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
+                  Video Loop Showreel (16:9)
+                </span>
+              </div>
+              {(profile.heroBgType ?? 'video') === 'video' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#2563EB] text-white flex items-center gap-1 shadow-2xs">
+                  <CheckCircle2 className="w-3 h-3 text-white" />
+                  Đang chiếu trang chủ
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/10 text-black/60">
+                  Tạm ngưng (Đang ưu tiên ảnh tĩnh)
+                </span>
+              )}
+            </div>
+
+            {/* 16:9 Video Player Preview */}
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
+              <div
+                className={`w-full h-full ${
+                  isWindowDragging || isDraggingHeroMedia || isDraggingPosterZone ? 'pointer-events-none' : ''
+                }`}
+              >
+                {(parsedShowreel.type === 'youtube' ||
+                  parsedShowreel.type === 'vimeo' ||
+                  parsedShowreel.type === 'gdrive' ||
+                  parsedShowreel.type === 'vk') &&
+                parsedShowreel.embedUrl ? (
+                  <iframe
+                    src={parsedShowreel.embedUrl}
+                    title="Video Loop Showreel Preview"
+                    className={`w-full h-full border-0 ${
+                      isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''
+                    }`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    ref={previewVideoRef}
+                    key={currentVideoUrl}
+                    src={parsedShowreel.directUrl || currentVideoUrl}
+                    poster={profile.heroPosterUrl || ''}
+                    crossOrigin="anonymous"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    onTimeUpdate={handleTimeUpdate}
+                    className={`w-full h-full object-cover ${
+                      isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''
+                    }`}
+                  />
+                )}
+              </div>
+
+              {profile.heroPosterUrl && (
+                <div className="absolute top-2.5 left-2.5 pointer-events-none">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    Poster 0ms gắn kèm
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions for Video */}
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Nút Chụp Frame làm Poster */}
+                <button
+                  type="button"
+                  onClick={handleCaptureCurrentFrameAsPoster}
+                  disabled={capturingPoster}
+                  className="px-3 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
+                  title="Chụp ngay khung hình đang chiếu làm ảnh Poster 0ms"
+                >
+                  <Camera className="w-3.5 h-3.5 text-white" />
+                  <span className="truncate">
+                    {capturingPoster
+                      ? 'Đang chụp WebP...'
+                      : `📸 Chụp Frame (${formatVideoDuration(currentTime)}) làm Poster`}
+                  </span>
+                </button>
+
+                {/* Nút Tải Video lên R2 */}
+                <input
+                  ref={heroVideoFileInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  className="hidden"
+                  onChange={handleUploadHeroVideo}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingHeroVideo}
+                  onClick={() => heroVideoFileInputRef.current?.click()}
+                  className="px-3 py-2.5 rounded-xl bg-white border border-black/15 hover:border-black/30 text-[#111111] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:bg-[#F9F9FB] active:scale-98"
+                  title="Tải video MP4/WebM < 15MB lên Cloudflare R2"
+                >
+                  {uploadingHeroVideo ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2563EB]" />
+                      <span className="truncate">Tải lên R2 ({heroVideoUploadProgress})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5 text-black/60" />
+                      <span className="truncate">Tải Video R2 (&lt; 15MB)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <p className="text-[11px] font-mono text-black/45 truncate" title={currentVideoUrl}>
+                  {currentVideoUrl}
+                </p>
+
+                {(profile.showreelUrl || profile.heroBgUrl) &&
+                  ((profile.showreelUrl && profile.showreelUrl !== '/videos/dem-khong-ngu.mp4') ||
+                    (profile.heroBgUrl && profile.heroBgUrl !== '/videos/dem-khong-ngu.mp4')) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange({
+                          showreelUrl: '/videos/dem-khong-ngu.mp4',
+                          heroBgUrl: '/videos/dem-khong-ngu.mp4',
+                          heroBgType: 'video',
+                          heroVideoStart: 0,
+                          heroVideoEnd: 15,
+                        })
+                      }
+                      className="text-[11px] text-black/50 hover:text-[#2563EB] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Mặc định</span>
+                    </button>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status messages for video upload & poster capture */}
+        {heroVideoUploadSuccess && (
+          <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">{heroVideoUploadSuccess}</span>
+          </div>
+        )}
+
+        {heroVideoUploadError && (
+          <div className="flex items-center gap-2.5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="font-medium">{heroVideoUploadError}</span>
+          </div>
+        )}
+
+        {posterCaptureSuccess && (
+          <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">{posterCaptureSuccess}</span>
+          </div>
+        )}
+
+        {posterCaptureError && (
+          <div className="flex items-center gap-2.5 p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="font-medium">{posterCaptureError}</span>
+          </div>
+        )}
+      </section>
+
+      {/* 03. THÔNG TIN LIÊN HỆ & ĐỊA BÀN HOẠT ĐỘNG */}
+      <section
+        id="section-contact"
+        className="scroll-mt-36 bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6"
+      >
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5 border-b border-black/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#111111] text-white font-mono text-xs font-bold shrink-0">
+                03
+              </span>
+              <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
+                Kênh liên hệ &amp; Địa bàn hoạt động
+              </h2>
+            </div>
+            <p className="text-xs text-black/60 leading-relaxed pl-9.5">
+              Xuất hiện tại thanh điều hướng Navbar, khối chân trang Footer và hộp thoại gửi brief nhanh khi đối tác bấm nút liên hệ.
+            </p>
+          </div>
+          <div className="pl-9.5 sm:pl-0 shrink-0">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-black/[0.04] text-black/70 border border-black/[0.06] flex items-center gap-1">
+              <Mail className="w-3 h-3 text-[#2563EB]" />
+              Navbar · Footer · Modal
+            </span>
+          </div>
+        </div>
+
+        {/* Inputs: Balanced 4-card grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
               <label className={labelClass}>Email công việc</label>
+              <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-1.5 py-0.5 rounded">
+                Chính
+              </span>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                <Mail className="w-4 h-4" />
+              </div>
               <input
                 type="email"
                 value={profile.email}
                 onChange={(e) => onChange({ email: e.target.value })}
-                className={inputClass}
+                className={`${inputClass} pl-10`}
                 placeholder="vinh.film@gmail.com"
               />
             </div>
+            <p className={helperClass}>Kênh nhận brief văn bản chính thức.</p>
+          </div>
 
-            <div>
-              <label className={labelClass}>Số Zalo / Hotline liên hệ</label>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelClass}>Số Zalo / Hotline</label>
+              <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-1.5 py-0.5 rounded">
+                Hotline
+              </span>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                <Phone className="w-4 h-4" />
+              </div>
               <input
                 type="text"
                 value={profile.zalo}
                 onChange={(e) => onChange({ zalo: e.target.value, phone: e.target.value })}
-                className={inputClass}
+                className={`${inputClass} pl-10`}
                 placeholder="0908 123 456"
               />
             </div>
+            <p className={helperClass}>Tự động đồng bộ sang trường điện thoại.</p>
+          </div>
 
-            <div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
               <label className={labelClass}>Telegram Username</label>
+              <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-1.5 py-0.5 rounded">
+                Chat
+              </span>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                <Send className="w-4 h-4" />
+              </div>
               <input
                 type="text"
                 value={profile.telegram}
                 onChange={(e) => onChange({ telegram: e.target.value })}
-                className={inputClass}
+                className={`${inputClass} pl-10 font-mono text-xs`}
                 placeholder="@quocvinhfilm"
               />
             </div>
+            <p className={helperClass}>Hỗ trợ trao đổi nhanh với Agency quốc tế.</p>
+          </div>
 
-            <div>
-              <label className={labelClass}>Địa bàn hoạt động chính</label>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelClass}>Địa bàn hoạt động</label>
+              <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-1.5 py-0.5 rounded">
+                Khu vực
+              </span>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                <MapPin className="w-4 h-4" />
+              </div>
               <input
                 type="text"
                 value={profile.location}
                 onChange={(e) => onChange({ location: e.target.value })}
-                className={inputClass}
+                className={`${inputClass} pl-10`}
                 placeholder="TP. Hồ Chí Minh"
               />
             </div>
+            <p className={helperClass}>Thành phố nhận đi quay trực tiếp (On-set).</p>
           </div>
         </div>
       </section>
 
-      {/* 3. DÒNG DẪN & CHÂN TRANG */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Cột trái */}
-        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-[128px]">
-          <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
-            3. DÒNG DẪN &amp; CHÂN TRANG
-          </h2>
-          <p className="text-xs sm:text-sm text-black/60 leading-relaxed">
-            Tinh chỉnh lời tựa cho danh mục Dự án, Dịch vụ Agency và lời kêu gọi kèm cam kết báo giá ở khối chân trang (Footer CTA).
-          </p>
-        </div>
-
-        {/* Cột phải */}
-        <div className="lg:col-span-8 space-y-6">
-          <div>
-            <label className={labelClass}>Dòng mô tả dưới tiêu đề &quot;DỰ ÁN ĐÃ THỰC HIỆN&quot;</label>
-            <input
-              type="text"
-              value={profile.projectsSubtitle}
-              onChange={(e) => onChange({ projectsSubtitle: e.target.value })}
-              className={inputClass}
-              placeholder="Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao."
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Dòng mô tả dưới tiêu đề &quot;3 ĐẦU VIỆC THỰC CHIẾN CHO AGENCY&quot;</label>
-            <input
-              type="text"
-              value={profile.agencySubtitle}
-              onChange={(e) => onChange({ agencySubtitle: e.target.value })}
-              className={inputClass}
-              placeholder="Quy trình sản xuất tinh gọn, bảo đảm chất lượng hình ảnh cao nhất trong thời gian ngắn nhất."
-            />
-          </div>
-
-          {/* Tách Tiêu đề khối chốt dự án thành hàng ngang phía trên */}
-          <div>
-            <label className={labelClass}>Tiêu đề khối chốt dự án (Footer CTA)</label>
-            <input
-              type="text"
-              value={profile.footerTitle}
-              onChange={(e) => onChange({ footerTitle: e.target.value })}
-              className={`${inputClass} font-bold uppercase`}
-              placeholder="GỬI BRIEF DỰ ÁN CỦA BẠN"
-            />
-          </div>
-
-          {/* Đặt Mô tả cam kết báo giá trải rộng toàn chiều ngang bên dưới */}
-          <div>
-            <label className={labelClass}>Mô tả cam kết báo giá (Footer CTA)</label>
-            <textarea
-              rows={3}
-              value={profile.footerDescription}
-              onChange={(e) => onChange({ footerDescription: e.target.value })}
-              className={textareaClass}
-              placeholder="Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM."
-            />
-            <p className={helperClass}>
-              Hiển thị với độ tương phản cao, rõ nét toàn câu ở khu vực chân trang.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. DẢI BĂNG THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (BRAND MARQUEE) — TÁCH BIỆT HOÀN TOÀN VỚI DỰ ÁN */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.07]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+      {/* 04. DÒNG DẪN & KHỐI CHỐT FOOTER */}
+      <section
+        id="section-copy-footer"
+        className="scroll-mt-36 bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6"
+      >
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5 border-b border-black/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#111111] text-white font-mono text-xs font-bold shrink-0">
+                04
+              </span>
               <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
-                Dải băng Thương hiệu &amp; Agency đã hợp tác (Brand Marquee)
+                Dòng dẫn &amp; Khối chốt Footer
               </h2>
             </div>
-            <p className="text-xs text-black/60 mt-1 max-w-2xl leading-relaxed">
+            <p className="text-xs text-black/60 leading-relaxed pl-9.5">
+              Tinh chỉnh lời tựa cho danh mục Dự án, Dịch vụ Agency và lời kêu gọi kèm cam kết báo giá ở khối chân trang.
+            </p>
+          </div>
+          <div className="pl-9.5 sm:pl-0 shrink-0">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-black/[0.04] text-black/70 border border-black/[0.06] flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#2563EB]" />
+              Kèm Live Dark Preview
+            </span>
+          </div>
+        </div>
+
+        {/* Inputs & Live Preview layout */}
+        <div className="space-y-6">
+          {/* Dòng dẫn phân mục: 2 cột */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Lời tựa mục &quot;DỰ ÁN ĐÃ THỰC HIỆN&quot;</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Mục Dự án
+                </span>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                  <Clapperboard className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={profile.projectsSubtitle}
+                  onChange={(e) => onChange({ projectsSubtitle: e.target.value })}
+                  className={`${inputClass} pl-10`}
+                  placeholder="Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao."
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Lời tựa mục &quot;3 ĐẦU VIỆC THỰC CHIẾN&quot;</label>
+                <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                  Mục Agency
+                </span>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/40">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={profile.agencySubtitle}
+                  onChange={(e) => onChange({ agencySubtitle: e.target.value })}
+                  className={`${inputClass} pl-10`}
+                  placeholder="Quy trình sản xuất tinh gọn, bảo đảm chất lượng hình ảnh cao nhất trong thời gian ngắn nhất."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Khối chốt Footer CTA */}
+          <div className="pt-2 border-t border-black/[0.07] space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              {/* Cột trái: Form nhập Footer CTA */}
+              <div className="md:col-span-6 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelClass}>Tiêu đề khối chốt dự án (Footer CTA)</label>
+                    <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                      Chân trang
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={profile.footerTitle}
+                    onChange={(e) => onChange({ footerTitle: e.target.value })}
+                    className={`${inputClass} font-bold uppercase`}
+                    placeholder="GỬI BRIEF DỰ ÁN CỦA BẠN"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelClass}>Mô tả cam kết báo giá (Footer CTA)</label>
+                    <span className="text-[10px] font-medium text-black/45 bg-black/[0.04] px-2 py-0.5 rounded">
+                      Cam kết 2h
+                    </span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={profile.footerDescription}
+                    onChange={(e) => onChange({ footerDescription: e.target.value })}
+                    className={textareaClass}
+                    placeholder="Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM."
+                  />
+                  <p className={helperClass}>
+                    Thông điệp giúp đối tác ra quyết định gửi brief ngay lập tức.
+                  </p>
+                </div>
+              </div>
+
+              {/* Cột phải: Live Dark Preview mô phỏng chân trang thực tế */}
+              <div className="md:col-span-6">
+                <div className="p-5 rounded-2xl bg-[#0C0C0F] border border-white/10 text-white space-y-3.5 shadow-md">
+                  <div className="flex items-center justify-between text-[11px] text-white/50 border-b border-white/10 pb-2.5">
+                    <span className="font-mono uppercase tracking-wider text-[10px] text-white/40">
+                      Mô phỏng hiển thị Chân trang (Live Preview)
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Thời gian thực
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 py-1">
+                    <h4 className="font-bricolage text-base sm:text-lg font-bold tracking-tight text-white uppercase leading-snug">
+                      {profile.footerTitle || 'GỬI BRIEF DỰ ÁN CỦA BẠN'}
+                    </h4>
+                    <p className="text-xs text-white/70 leading-relaxed">
+                      {profile.footerDescription ||
+                        'Báo giá rõ theo từng hạng mục trong 2 giờ. Hỗ trợ nhận file dựng từ xa (Remote) hoặc đi quay trực tiếp tại TP.HCM.'}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-white/10">
+                    <div className="px-3.5 py-1.5 rounded-lg bg-white text-[#111111] font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+                      <span>GỬI BRIEF CHO VINH</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-[10px] text-white/40 font-mono">
+                      {profile.location || 'TP. Hồ Chí Minh'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 05. DẢI BĂNG THƯƠNG HIỆU & AGENCY ĐÃ HỢP TÁC (BRAND MARQUEE) */}
+      <section
+        id="section-marquee"
+        className="scroll-mt-36 bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-black/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#111111] text-white font-mono text-xs font-bold shrink-0">
+                05
+              </span>
+              <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
+                Dải băng Thương hiệu &amp; Agency đã hợp tác
+              </h2>
+            </div>
+            <p className="text-xs text-black/60 leading-relaxed pl-9.5">
               Dải băng chạy ngang vô tận giới thiệu các đối tác, thương hiệu uy tín bạn từng cộng tác. Tải lên trực tiếp nhiều file ảnh Logo (.png) để tự động chuyển sang màu trắng tinh, khoét âm bản và ngăn cách bằng dấu hoa thị xanh (*).
             </p>
           </div>
 
           {/* Toggle Bật / Tắt Marquee */}
-          <label className="inline-flex items-center gap-2.5 cursor-pointer shrink-0 self-start sm:self-auto bg-[#F9F9FB] px-3.5 py-2 rounded-xl border border-black/10 hover:border-black/25 transition-all">
-            <input
-              type="checkbox"
-              checked={profile.showBrandMarquee !== false}
-              onChange={(e) => onChange({ showBrandMarquee: e.target.checked })}
-              className="w-4 h-4 rounded text-[#111111] focus:ring-[#111111] border-black/20 cursor-pointer"
-            />
-            <span className="text-xs font-semibold text-[#111111]">
-              Hiển thị dải băng trên trang chủ
-            </span>
-          </label>
+          <div className="pl-9.5 sm:pl-0 shrink-0">
+            <label className="inline-flex items-center gap-2.5 cursor-pointer bg-[#F9F9FB] px-3.5 py-2 rounded-xl border border-black/10 hover:border-black/25 transition-all">
+              <input
+                type="checkbox"
+                checked={profile.showBrandMarquee !== false}
+                onChange={(e) => onChange({ showBrandMarquee: e.target.checked })}
+                className="w-4 h-4 rounded text-[#111111] focus:ring-[#111111] border-black/20 cursor-pointer"
+              />
+              <span className="text-xs font-semibold text-[#111111]">
+                Hiển thị dải băng trên trang chủ
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* Content of Marquee Section */}
@@ -1274,7 +1562,7 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
               onChange={handleUploadBrandLogos}
             />
 
-            {/* PHẦN 1: KÉO THẢ HOẶC TẢI TRỰC TIẾP NHIỀU FILE LOGO .PNG & XỬ LÝ CANVAS TRẮNG */}
+            {/* KÉO THẢ HOẶC TẢI TRỰC TIẾP NHIỀU FILE LOGO .PNG & XỬ LÝ CANVAS TRẮNG */}
             <div
               onDragEnter={handleLogoDragEnter}
               onDragOver={handleLogoDragOver}
