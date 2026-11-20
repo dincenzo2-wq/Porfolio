@@ -206,6 +206,52 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
   const [heroDragKind, setHeroDragKind] = useState<'video' | 'image' | 'unknown'>('unknown');
   const heroDragDepthRef = useRef(0);
 
+  // Dedicated drag & drop state for Hero Poster box
+  const [isDraggingPosterZone, setIsDraggingPosterZone] = useState(false);
+  const posterDragDepthRef = useRef(0);
+
+  // Global window drag detection to disable pointer-events on iframes & prevent drop swallowing
+  const [isWindowDragging, setIsWindowDragging] = useState(false);
+  const windowDragDepthRef = useRef(0);
+
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      windowDragDepthRef.current += 1;
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+      setIsWindowDragging(true);
+    };
+    const handleWindowDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+    const handleWindowDragLeave = () => {
+      windowDragDepthRef.current = Math.max(0, windowDragDepthRef.current - 1);
+      if (windowDragDepthRef.current === 0) {
+        setIsWindowDragging(false);
+      }
+    };
+    const handleWindowDrop = () => {
+      windowDragDepthRef.current = 0;
+      setIsWindowDragging(false);
+    };
+
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, []);
+
   // Core handler: Tải trực tiếp file video nền ngắn (.mp4 / .webm) lên Cloudflare R2 (< 15MB)
   const handleUploadHeroVideoFile = async (file: File) => {
     // 1. Kiểm tra định dạng video (.mp4 hoặc .webm)
@@ -336,6 +382,59 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
     }
   };
 
+  // Dedicated Drag & Drop handlers for Hero Poster box
+  const handlePosterDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    posterDragDepthRef.current += 1;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    setIsDraggingPosterZone(true);
+  };
+
+  const handlePosterDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    if (!isDraggingPosterZone) setIsDraggingPosterZone(true);
+  };
+
+  const handlePosterDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    posterDragDepthRef.current = Math.max(0, posterDragDepthRef.current - 1);
+    if (posterDragDepthRef.current === 0) {
+      setIsDraggingPosterZone(false);
+    }
+  };
+
+  const handlePosterDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    posterDragDepthRef.current = 0;
+    setIsDraggingPosterZone(false);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const lowerName = file.name.toLowerCase();
+    const isImage =
+      file.type.startsWith('image/') ||
+      /\.(jpe?g|png|webp|avif|jfif|bmp|gif|heic)$/i.test(lowerName);
+
+    if (isImage) {
+      await handleUploadPosterFile(file);
+    } else {
+      setPosterCaptureError(
+        'Vui lòng kéo thả file ảnh (.jpg, .png, .webp, .avif) vào khung Ảnh bìa Hero.'
+      );
+    }
+  };
+
   // Drag & drop handlers for Hero preview box
   const handleHeroDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -388,15 +487,20 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
 
     const file = files[0];
     const lowerName = file.name.toLowerCase();
-    const isVideo = lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || file.type.startsWith('video/');
-    const isImage = file.type.startsWith('image/') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp');
+    const isVideo =
+      lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || file.type.startsWith('video/');
+    const isImage =
+      file.type.startsWith('image/') ||
+      /\.(jpe?g|png|webp|avif|jfif|bmp|gif|heic)$/i.test(lowerName);
 
     if (isVideo) {
       await handleUploadHeroVideoFile(file);
     } else if (isImage) {
       await handleUploadPosterFile(file);
     } else {
-      setHeroVideoUploadError('Vui lòng kéo thả file Video (.mp4, .webm) hoặc file Ảnh Poster (.jpg, .png, .webp).');
+      setHeroVideoUploadError(
+        'Vui lòng kéo thả file Video (.mp4, .webm) hoặc file Ảnh Poster (.jpg, .png, .webp).'
+      );
     }
   };
 
@@ -576,68 +680,218 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
             </div>
           </div>
 
-          {/* Cụm điều khiển: Video Loop Showreel Nền Hero (1 Khung duy nhất) */}
-          <div className="pt-6 border-t border-black/8 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Cụm điều khiển: Ảnh bìa Hero (Poster 0ms) & Video Loop Showreel */}
+          <div className="pt-6 border-t border-black/8 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
-                <Video className="w-4 h-4 text-[#2563EB]" />
+                <Image className="w-4 h-4 text-[#2563EB]" />
                 <h3 className="font-bricolage text-sm font-bold text-[#111111] uppercase tracking-wide">
-                  Video Loop Showreel nền Hero
+                  Ảnh bìa Hero &amp; Video Loop Showreel
                 </h3>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB] self-start sm:self-auto">
-                Không dùng ảnh bìa · 100% Video Loop
-              </span>
+              <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Kéo thả upload Cloudflare R2
+                </span>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB]">
+                  {profile.heroPosterUrl ? 'Poster 0ms + Video Loop đang bật' : 'Chưa có ảnh bìa Poster 0ms'}
+                </span>
+              </div>
             </div>
 
             <p className="text-xs text-black/60 leading-relaxed">
-              Video nền Hero chất lượng cao lưu trữ tại Cloudflare R2 với bộ đệm CDN toàn cầu. Kéo thả trực tiếp file video (.mp4/.webm &lt; 15MB) hoặc ảnh Poster (.jpg/.png/.webp), hoặc dùng các nút thao tác nhanh bên dưới.
+              Ảnh bìa (Poster 0ms) xuất hiện ngay tức thì khi khách mở trang để không bao giờ bị chớp đen, song song với Video Loop Showreel chạy nền qua Cloudflare R2. Bạn có thể <strong>kéo thả trực tiếp file ảnh (.webp, .jpg, .png) vào khung Ảnh bìa</strong> hoặc <strong>chụp từ video đang phát</strong>.
             </p>
 
-            {/* Khung duy nhất: Video 16:9 xem trước đặt cạnh các nút thao tác chính, hỗ trợ kéo thả trực tiếp */}
-            <div
-              onDragEnter={handleHeroDragEnter}
-              onDragOver={handleHeroDragOver}
-              onDragLeave={handleHeroDragLeave}
-              onDrop={handleHeroDrop}
-              className={`relative p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 ${
-                isDraggingHeroMedia
-                  ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
-                  : 'border-black/10 bg-[#F4F4F7]'
-              }`}
-            >
-              {/* Drag & Drop Visual Overlay */}
-              {isDraggingHeroMedia && (
-                <div
-                  onDragOver={handleHeroDragOver}
-                  onDrop={handleHeroDrop}
-                  className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy pointer-events-auto"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-3">
-                    <Upload className="w-6 h-6 animate-bounce" />
+            {/* Hai cột song song: Cột 1 là Ảnh bìa Hero, Cột 2 là Video Loop Showreel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              {/* KHUNG 1: ẢNH BÌA HERO (POSTER 0MS) */}
+              <div
+                onDragEnter={handlePosterDragEnter}
+                onDragOver={handlePosterDragOver}
+                onDragLeave={handlePosterDragLeave}
+                onDrop={handlePosterDrop}
+                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
+                  isDraggingPosterZone
+                    ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                    : 'border-black/10 bg-[#F4F4F7]'
+                }`}
+              >
+                {/* Drag Overlay for Poster Box */}
+                {isDraggingPosterZone && (
+                  <div
+                    onDragOver={handlePosterDragOver}
+                    onDrop={handlePosterDrop}
+                    className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
+                      <Image className="w-6 h-6 animate-bounce" />
+                    </div>
+                    <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
+                      Thả ảnh vào đây để nén WebP &amp; đặt làm Ảnh bìa Hero (R2)
+                    </p>
                   </div>
-                  <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-2 rounded-xl border border-[#2563EB]/30 shadow-sm">
-                    {heroDragKind === 'video'
-                      ? 'Thả video vào đây để tải lên Cloudflare R2 (< 15MB)'
-                      : heroDragKind === 'image'
-                      ? 'Thả ảnh vào đây để nén WebP & đặt làm Poster 0ms (R2)'
-                      : 'Thả file Video (.mp4, .webm) hoặc Ảnh Poster (.jpg, .png, .webp) vào đây để tải lên R2'}
-                  </p>
-                </div>
-              )}
+                )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-                {/* Khung phát xem trước video nền hiện tại (16:9 gọn gàng) */}
-                <div className="lg:col-span-7">
-                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Image className="w-4 h-4 text-[#2563EB]" />
+                    <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
+                      Khung Ảnh bìa Hero (Poster 0ms)
+                    </span>
+                  </div>
+                  {profile.heroPosterUrl ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Đã lưu R2
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/50">
+                      Chưa có ảnh riêng
+                    </span>
+                  )}
+                </div>
+
+                {/* 16:9 Image Preview / Drop Target */}
+                <div
+                  onClick={() => posterFileInputRef.current?.click()}
+                  className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 border border-black/15 shadow-inner cursor-pointer group flex items-center justify-center"
+                >
+                  {profile.heroPosterUrl ? (
+                    <>
+                      <img
+                        src={profile.heroPosterUrl}
+                        alt="Hero Poster Preview"
+                        className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center text-white">
+                        <Upload className="w-6 h-6 mb-1 text-white animate-bounce" />
+                        <span className="text-xs font-bold">Bấm hoặc kéo thả ảnh mới vào để thay thế</span>
+                        <span className="text-[10px] text-white/80 mt-0.5">Tự động nén WebP &lt; 400KB &amp; R2</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-6 text-center flex flex-col items-center justify-center space-y-2 text-black/60">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-black/10 shadow-xs flex items-center justify-center text-[#2563EB] group-hover:scale-110 transition-transform">
+                        <Image className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-bold text-[#111111]">
+                        Kéo thả ảnh bìa Hero vào đây
+                      </p>
+                      <p className="text-[11px] text-black/50 max-w-[260px] leading-relaxed">
+                        Hỗ trợ .jpg, .png, .webp. Tự động nén chuẩn cinema &lt; 400KB và tải lên Cloudflare R2
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions for Poster */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={posterFileInputRef}
+                      accept="image/*"
+                      onChange={handlePosterFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => posterFileInputRef.current?.click()}
+                      disabled={uploadingPoster}
+                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                    >
+                      {uploadingPoster ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                          <span>Đang nén WebP &amp; R2...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 text-white" />
+                          <span>📁 Tải ảnh bìa từ máy</span>
+                        </>
+                      )}
+                    </button>
+
+                    {profile.heroPosterUrl && (
+                      <button
+                        type="button"
+                        onClick={() => onChange({ heroPosterUrl: '' })}
+                        className="px-3 py-2.5 rounded-xl bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0 transition-all shadow-2xs"
+                        title="Gỡ ảnh Poster hiện tại"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Gỡ</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={profile.heroPosterUrl || ''}
+                    onChange={(e) => onChange({ heroPosterUrl: e.target.value })}
+                    placeholder="Hoặc dán URL ảnh bìa trực tiếp (https://...)"
+                    className="w-full px-3 py-2 rounded-lg bg-white border border-black/10 text-xs text-[#111111] font-mono focus:outline-none focus:border-[#2563EB]"
+                  />
+                </div>
+              </div>
+
+              {/* KHUNG 2: VIDEO LOOP SHOWREEL NỀN HERO */}
+              <div
+                onDragEnter={handleHeroDragEnter}
+                onDragOver={handleHeroDragOver}
+                onDragLeave={handleHeroDragLeave}
+                onDrop={handleHeroDrop}
+                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
+                  isDraggingHeroMedia
+                    ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                    : 'border-black/10 bg-[#F4F4F7]'
+                }`}
+              >
+                {/* Drag Overlay for Video Box */}
+                {isDraggingHeroMedia && (
+                  <div
+                    onDragOver={handleHeroDragOver}
+                    onDrop={handleHeroDrop}
+                    className="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/15 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center cursor-copy [&>*]:pointer-events-none"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg mb-2">
+                      <Upload className="w-6 h-6 animate-bounce" />
+                    </div>
+                    <p className="text-sm font-bold text-[#111111] bg-white/95 px-4 py-1.5 rounded-xl border border-[#2563EB]/30 shadow-sm">
+                      {heroDragKind === 'video'
+                        ? 'Thả video vào đây để tải lên Cloudflare R2 (< 15MB)'
+                        : 'Thả ảnh vào đây để nén WebP & đặt làm Ảnh bìa Hero (R2)'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-[#2563EB]" />
+                    <span className="text-xs font-bold text-[#111111] uppercase tracking-wide">
+                      Video Loop Showreel (16:9)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-black/5 text-black/60">
+                    Phát lặp tự động
+                  </span>
+                </div>
+
+                {/* 16:9 Video Player Preview */}
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-black/15 shadow-sm">
+                  <div className={`w-full h-full ${isWindowDragging || isDraggingHeroMedia || isDraggingPosterZone ? 'pointer-events-none' : ''}`}>
                     {(parsedShowreel.type === 'youtube' ||
                       parsedShowreel.type === 'vimeo' ||
-                      parsedShowreel.type === 'gdrive') &&
+                      parsedShowreel.type === 'gdrive' ||
+                      parsedShowreel.type === 'vk') &&
                     parsedShowreel.embedUrl ? (
                       <iframe
                         src={parsedShowreel.embedUrl}
                         title="Video Loop Showreel Preview"
-                        className="w-full h-full border-0"
+                        className={`w-full h-full border-0 ${isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''}`}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       />
@@ -654,103 +908,72 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                         playsInline
                         controls
                         onTimeUpdate={handleTimeUpdate}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${isWindowDragging || isDraggingHeroMedia ? 'pointer-events-none' : ''}`}
                       />
                     )}
-
-                    {profile.heroPosterUrl && (
-                      <div className="absolute top-2.5 left-2.5 pointer-events-none">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          Poster 0ms đang bật
-                        </span>
-                      </div>
-                    )}
                   </div>
+
+                  {profile.heroPosterUrl && (
+                    <div className="absolute top-2.5 left-2.5 pointer-events-none">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        Poster 0ms gắn kèm
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Cạnh 2 nút thao tác chính */}
-                <div className="lg:col-span-5 space-y-3">
-                  {/* Nút 1: [📁 Tải Video nền lên R2 (< 15MB)] */}
-                  <input
-                    ref={heroVideoFileInputRef}
-                    type="file"
-                    accept="video/mp4,video/webm"
-                    className="hidden"
-                    onChange={handleUploadHeroVideo}
-                  />
-                  <button
-                    type="button"
-                    disabled={uploadingHeroVideo}
-                    onClick={() => heroVideoFileInputRef.current?.click()}
-                    className="w-full px-4 py-3 rounded-xl bg-[#111111] hover:bg-black/85 disabled:bg-black/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
-                    title="Chọn file video MP4 hoặc WebM dưới 15MB tải trực tiếp lên Cloudflare R2"
-                  >
-                    {uploadingHeroVideo ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>Đang tải lên R2 ({heroVideoUploadProgress})...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 text-white" />
-                        <span>📁 Tải Video nền lên R2 (&lt; 15MB)</span>
-                      </>
-                    )}
-                  </button>
+                {/* Actions for Video */}
+                <div className="space-y-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Nút Chụp Frame làm Poster */}
+                    <button
+                      type="button"
+                      onClick={handleCaptureCurrentFrameAsPoster}
+                      disabled={capturingPoster}
+                      className="px-3 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
+                      title="Chụp ngay khung hình đang chiếu làm ảnh Poster 0ms"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-white" />
+                      <span className="truncate">
+                        {capturingPoster
+                          ? 'Đang chụp WebP...'
+                          : `📸 Chụp Frame (${formatVideoDuration(currentTime)}) làm Poster`}
+                      </span>
+                    </button>
 
-                  {/* Nút 2: [📸 Chụp Frame đang phát làm Poster 0ms] */}
-                  <button
-                    type="button"
-                    onClick={handleCaptureCurrentFrameAsPoster}
-                    disabled={capturingPoster}
-                    className="w-full px-4 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
-                    title="Chụp ngay khung hình đang chiếu ở trình phát bên cạnh làm ảnh Poster 0ms"
-                  >
-                    <Camera className="w-4 h-4 text-white" />
-                    <span>
-                      {capturingPoster
-                        ? 'Đang chụp WebP...'
-                        : `📸 Chụp Frame đang phát (${formatVideoDuration(currentTime)}) làm Poster 0ms`}
-                    </span>
-                  </button>
-
-                  {/* Kèm nút phụ tải ảnh Poster từ máy nếu cần */}
-                  <div className="flex items-center gap-2 pt-0.5">
+                    {/* Nút Tải Video lên R2 */}
                     <input
+                      ref={heroVideoFileInputRef}
                       type="file"
-                      ref={posterFileInputRef}
-                      accept="image/*"
-                      onChange={handlePosterFileUpload}
+                      accept="video/mp4,video/webm"
                       className="hidden"
+                      onChange={handleUploadHeroVideo}
                     />
                     <button
                       type="button"
-                      onClick={() => posterFileInputRef.current?.click()}
-                      disabled={uploadingPoster}
-                      className="flex-1 px-3 py-2 rounded-lg bg-white border border-black/15 hover:border-black/30 text-xs font-semibold text-black/75 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:bg-[#F9F9FB] transition-all"
+                      disabled={uploadingHeroVideo}
+                      onClick={() => heroVideoFileInputRef.current?.click()}
+                      className="px-3 py-2.5 rounded-xl bg-white border border-black/15 hover:border-black/30 text-[#111111] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:bg-[#F9F9FB] active:scale-98"
+                      title="Tải video MP4/WebM < 15MB lên Cloudflare R2"
                     >
-                      <Image className="w-3.5 h-3.5 text-black/50" />
-                      <span>{uploadingPoster ? 'Đang nén WebP...' : 'Tải Poster từ máy'}</span>
+                      {uploadingHeroVideo ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2563EB]" />
+                          <span className="truncate">Tải lên R2 ({heroVideoUploadProgress})...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 text-black/60" />
+                          <span className="truncate">Tải Video R2 (&lt; 15MB)</span>
+                        </>
+                      )}
                     </button>
-
-                    {profile.heroPosterUrl && (
-                      <button
-                        type="button"
-                        onClick={() => onChange({ heroPosterUrl: '' })}
-                        className="px-3 py-2 rounded-lg bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0 transition-all shadow-2xs"
-                        title="Gỡ ảnh Poster hiện tại"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Gỡ</span>
-                      </button>
-                    )}
                   </div>
 
-                  {/* Nguồn video ngầm & Khôi phục mặc định */}
-                  <div className="pt-2 border-t border-black/8 space-y-1">
+                  <div className="flex items-center justify-between gap-2 pt-1">
                     <p className="text-[11px] font-mono text-black/45 truncate" title={currentVideoUrl}>
-                      Nguồn video: {currentVideoUrl}
+                      {currentVideoUrl}
                     </p>
 
                     {(profile.showreelUrl || profile.heroBgUrl) &&
@@ -767,45 +990,45 @@ export function GeneralInfoTab({ profile, onChange }: GeneralInfoTabProps) {
                               heroVideoEnd: 15,
                             })
                           }
-                          className="text-[11px] text-black/50 hover:text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] text-black/50 hover:text-[#2563EB] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
-                          <span>Khôi phục video mặc định (/videos/dem-khong-ngu.mp4)</span>
+                          <span>Mặc định</span>
                         </button>
                       )}
                   </div>
                 </div>
               </div>
-
-              {/* Status messages for video upload & poster capture */}
-              {heroVideoUploadSuccess && (
-                <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium">{heroVideoUploadSuccess}</span>
-                </div>
-              )}
-
-              {heroVideoUploadError && (
-                <div className="mt-3 flex items-center gap-2.5 p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span className="font-medium">{heroVideoUploadError}</span>
-                </div>
-              )}
-
-              {posterCaptureSuccess && (
-                <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium">{posterCaptureSuccess}</span>
-                </div>
-              )}
-
-              {posterCaptureError && (
-                <div className="mt-3 flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="font-medium">{posterCaptureError}</span>
-                </div>
-              )}
             </div>
+
+            {/* Status messages for video upload & poster capture */}
+            {heroVideoUploadSuccess && (
+              <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-medium">{heroVideoUploadSuccess}</span>
+              </div>
+            )}
+
+            {heroVideoUploadError && (
+              <div className="mt-3 flex items-center gap-2.5 p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-medium">{heroVideoUploadError}</span>
+              </div>
+            )}
+
+            {posterCaptureSuccess && (
+              <div className="mt-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-medium">{posterCaptureSuccess}</span>
+              </div>
+            )}
+
+            {posterCaptureError && (
+              <div className="mt-3 flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="font-medium">{posterCaptureError}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
