@@ -36,6 +36,7 @@ export function detectAspectRatioFromVideoUrl(url?: string): '9:16' | '16:9' | n
     clean.includes('/reel/') ||
     clean.includes('/reels/') ||
     clean.includes('vk.com/clip') ||
+    clean.includes('vk.ru/clip') ||
     clean.includes('vkvideo.ru/clip') ||
     clean.includes('/clip-') ||
     clean.includes('/clip/')
@@ -47,6 +48,7 @@ export function detectAspectRatioFromVideoUrl(url?: string): '9:16' | '16:9' | n
     clean.includes('youtu.be/') ||
     clean.includes('vimeo.com') ||
     clean.includes('vk.com/video') ||
+    clean.includes('vk.ru/video') ||
     clean.includes('vkvideo.ru/video') ||
     clean.includes('video_ext.php')
   ) {
@@ -162,11 +164,17 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
 
   // 3. VKontakte / VK Video Match
   // Matches:
-  // - vk.com/video-12345_67890, vkvideo.ru/video-12345_67890
-  // - vk.com/clip-12345_67890, vkvideo.ru/clip-12345_67890
-  // - vk.com/video_ext.php?oid=...&id=...&hash=...
+  // - vk.com/video-12345_67890, vk.ru/video12345_67890, vkvideo.ru/video-12345_67890
+  // - vk.com/clip-12345_67890, vk.ru/clip12345_67890, vkvideo.ru/clip-12345_67890
+  // - vk.com/video_ext.php?oid=...&id=...&hash=..., vk.ru/video_ext.php?...
   // - vkvideo.ru/video_ext.php?oid=...&id=...&hash=...
-  if (/(?:vk\.com|vkvideo\.ru)/i.test(cleanUrl)) {
+  if (/(?:vk\.com|vk\.ru|vkvideo\.ru)/i.test(cleanUrl)) {
+    const domain = cleanUrl.includes('vk.ru')
+      ? 'vk.ru'
+      : cleanUrl.includes('vkvideo.ru')
+      ? 'vkvideo.ru'
+      : 'vk.com';
+
     // 3a. Direct video_ext.php embed link
     if (cleanUrl.includes('video_ext.php')) {
       try {
@@ -179,7 +187,7 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
 
         const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
         const loopParam = options?.loop ? '&loop=1' : '';
-        const embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=${hd}&autoplay=1${loopParam}`;
+        const embedUrl = `https://${domain}/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=${hd}&autoplay=1${loopParam}`;
 
         return {
           type: 'vk',
@@ -197,7 +205,7 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
     }
 
     // 3b. Standard watch or clip link: video{oid}_{id} or clip{oid}_{id}
-    const vkStandardMatch = cleanUrl.match(/(?:vk\.com|vkvideo\.ru)\/(?:video|clip)(-?\d+)_(\d+)/i);
+    const vkStandardMatch = cleanUrl.match(/(?:vk\.com|vk\.ru|vkvideo\.ru)\/(?:video|clip)(-?\d+)_(\d+)/i);
     if (vkStandardMatch) {
       const oid = vkStandardMatch[1];
       const id = vkStandardMatch[2];
@@ -211,7 +219,7 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
 
       const hashParam = hash ? `&hash=${encodeURIComponent(hash)}` : '';
       const loopParam = options?.loop ? '&loop=1' : '';
-      const embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=2&autoplay=1${loopParam}`;
+      const embedUrl = `https://${domain}/video_ext.php?oid=${oid}&id=${id}${hashParam}&hd=2&autoplay=1${loopParam}`;
 
       return {
         type: 'vk',

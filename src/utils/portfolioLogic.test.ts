@@ -453,6 +453,18 @@ test('parseVideoUrl supports YouTube, Vimeo, and MP4 showreel formats', () => {
   const vkIframe = parseVideoUrl('<iframe src="https://vk.com/video_ext.php?oid=-220754053&id=456239589&hash=xyz789" width="800"></iframe>');
   assert.equal(vkIframe.type, 'vk');
   assert.ok(vkIframe.embedUrl?.includes('hash=xyz789'));
+
+  // User's exact VK.ru iframe embed snippet
+  const userVkIframe = parseVideoUrl('<iframe src="https://vk.ru/video_ext.php?oid=873547086&id=456239119&hash=de9ca5d4bfda67b4&hd=4&autoplay=1" width="1920" height="1080" allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;" frameborder="0" allowfullscreen></iframe>');
+  assert.equal(userVkIframe.type, 'vk');
+  assert.equal(userVkIframe.videoId, '873547086_456239119');
+  assert.ok(userVkIframe.embedUrl?.includes('hash=de9ca5d4bfda67b4'));
+  assert.ok(userVkIframe.embedUrl?.includes('vk.ru'));
+
+  // User's exact VK.ru watch link
+  const userVkWatch = parseVideoUrl('https://vk.ru/video873547086_456239119');
+  assert.equal(userVkWatch.type, 'vk');
+  assert.equal(userVkWatch.videoId, '873547086_456239119');
 });
 
 test('parseVideoUrl supports trimming options (startSec, endSec, loop) for 15s loop', () => {
