@@ -16,6 +16,65 @@ interface CarouselSlot {
 const MIN_RING_SLOTS = 12;
 const AUTO_GLIDE_SPEED = 0.22; // cards per second (~4.5s per frame, serene cinematic drift)
 
+/**
+ * Pre-computes exact ArcWave 3D cylindrical position on initial HTML render
+ * Prevents FOUC where cards start stacked at (0,0) and fan out on page reload
+ */
+function getInitialCardStyle(i: number, count: number) {
+  if (count === 0) return { style: {}, darkness: '0' };
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1440;
+  const isMobile = vw < 640;
+  const isTablet = vw >= 640 && vw < 1024;
+
+  const R = isMobile ? 640 : isTablet ? 920 : 1180;
+  const deltaThetaDeg = isMobile ? 16.8 : isTablet ? 15.2 : 14.3;
+  const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
+
+  let d = ((i - 0) % count + count) % count;
+  if (d > count / 2) d -= count;
+
+  const thetaRad = d * deltaThetaRad;
+  const thetaDeg = d * deltaThetaDeg;
+  const absThetaDeg = Math.abs(thetaDeg);
+
+  if (absThetaDeg > 76) {
+    return {
+      style: {
+        visibility: 'hidden' as const,
+        opacity: '0',
+        pointerEvents: 'none' as const,
+        transform: 'translate3d(0px, 0px, -2000px) rotateY(0deg)',
+        willChange: 'transform, opacity, filter',
+        backfaceVisibility: 'hidden' as const,
+      },
+      darkness: '0',
+    };
+  }
+
+  const tx = R * Math.sin(thetaRad);
+  const tz = R * (Math.cos(thetaRad) - 1);
+  const rotY = thetaDeg;
+  const normalizedAngle = absThetaDeg / 55;
+  const blurPx = Math.min(4, Math.pow(Math.max(0, normalizedAngle - 0.25), 1.4) * 4.5);
+  const opacity = Math.max(0.3, 1 - Math.pow(normalizedAngle, 1.4) * 0.7);
+  const zIndex = Math.round(500 - absThetaDeg * 5);
+  const darkness = Math.min(0.55, normalizedAngle * 0.6);
+
+  return {
+    style: {
+      visibility: 'visible' as const,
+      pointerEvents: opacity > 0.4 ? ('auto' as const) : ('none' as const),
+      opacity: opacity.toFixed(3),
+      filter: blurPx > 0.3 ? `blur(${blurPx.toFixed(2)}px)` : 'none',
+      zIndex: String(zIndex),
+      transform: `translate3d(${tx.toFixed(2)}px, 0px, ${tz.toFixed(2)}px) rotateY(${rotY.toFixed(2)}deg) scale(1)`,
+      willChange: 'transform, opacity, filter',
+      backfaceVisibility: 'hidden' as const,
+    },
+    darkness: darkness.toFixed(3),
+  };
+}
+
 export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   // 1. Source frames from Admin (Tab 3 Stills) or default frames
   const sourceFrames = useMemo(() => {
@@ -383,57 +442,58 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           style={{ transformStyle: 'preserve-3d' }}
           className="relative w-full h-full flex items-center justify-center"
         >
-          {ringSlots.map((slot, i) => (
-            <button
-              key={slot.slotKey}
-              ref={(el) => {
-                cardRefs.current[i] = el;
-              }}
-              type="button"
-              onClick={() => handleCardClick(slot.sourceIndex, i)}
-              aria-label={`Khung hình ${slot.item.title || formatIndex(slot.sourceIndex)} — Bấm để đưa về tâm`}
-              style={{
-                willChange: 'transform, opacity, filter',
-                backfaceVisibility: 'hidden',
-              }}
-              className="group absolute w-[175px] h-[250px] sm:w-[205px] sm:h-[295px] md:w-[230px] md:h-[330px] lg:w-[280px] lg:h-[400px] rounded-[14px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color,transform] duration-300 hover:border-white/40"
-            >
-              <img
-                src={slot.item.src}
-                alt={slot.item.alt || slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
-                loading="eager"
-                draggable={false}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.opacity = '0';
+          {ringSlots.map((slot, i) => {
+            const initialSlot = getInitialCardStyle(i, ringSlots.length);
+            return (
+              <button
+                key={slot.slotKey}
+                ref={(el) => {
+                  cardRefs.current[i] = el;
                 }}
-                className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-              />
-
-              {/* ArcWave Atmospheric Depth Darkening Overlay */}
-              <div
-                aria-hidden="true"
-                className="arcwave-darkness pointer-events-none absolute inset-0 bg-black opacity-0 transition-opacity duration-300"
-              />
-
-              {/* ArcWave Hover Caption Veil (.thr3-veil) */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-3.5 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                type="button"
+                onClick={() => handleCardClick(slot.sourceIndex, i)}
+                aria-label={`Khung hình ${slot.item.title || formatIndex(slot.sourceIndex)} — Bấm để đưa về tâm`}
+                style={initialSlot.style}
+                className="group absolute w-[175px] h-[250px] sm:w-[205px] sm:h-[295px] md:w-[230px] md:h-[330px] lg:w-[280px] lg:h-[400px] rounded-[14px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color] duration-300 hover:border-white/40"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
-                    {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
-                  </h4>
-                  <span className="text-xs font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
-                    {slot.item.year || '2025'}
-                  </span>
+                <img
+                  src={slot.item.src}
+                  alt={slot.item.alt || slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
+                  loading="eager"
+                  draggable={false}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.opacity = '0';
+                  }}
+                  className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                />
+
+                {/* ArcWave Atmospheric Depth Darkening Overlay */}
+                <div
+                  aria-hidden="true"
+                  style={{ opacity: initialSlot.darkness }}
+                  className="arcwave-darkness pointer-events-none absolute inset-0 bg-black transition-opacity duration-300"
+                />
+
+                {/* ArcWave Hover Caption Veil (.thr3-veil) */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-3.5 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
+                      {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
+                    </h4>
+                    <span className="text-xs font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
+                      {slot.item.year || '2025'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
+                    {slot.item.alt || 'Khung hình điện ảnh chọn lọc'}
+                  </p>
                 </div>
-                <p className="text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
-                  {slot.item.alt || 'Khung hình điện ảnh chọn lọc'}
-                </p>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
         {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg with bottom feather */}
