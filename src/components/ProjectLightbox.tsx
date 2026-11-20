@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { PortfolioProject } from '../types/portfolio';
 import { parseVideoUrl } from '../utils/videoEmbed';
 import { formatDeliverableRoles } from '../utils/portfolioLogic';
+import { PlyrVideoPlayer } from './PlyrVideoPlayer';
 
 interface ProjectLightboxProps {
   project: PortfolioProject | null;
@@ -132,17 +133,11 @@ export function ProjectLightbox({ project, onClose, onNavigate }: ProjectLightbo
 
     if (parsedVideo.type === 'direct' && directSrc) {
       return (
-        <video
-          ref={videoRef}
+        <PlyrVideoPlayer
           key={directSrc}
           src={directSrc}
           poster={project.coverImage || undefined}
-          controls
-          autoPlay
-          playsInline
-          preload="metadata"
           onLoadedMetadata={handleVideoLoadedMetadata}
-          className="w-full h-full object-contain bg-black"
         />
       );
     }

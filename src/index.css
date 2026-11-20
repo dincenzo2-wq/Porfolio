@@ -254,51 +254,64 @@
    Plyr Minimalist Editorial Studio Styling Overrides
    ========================================================================== */
 :root {
-  --plyr-color-main: #111111;
-  --plyr-video-controls-background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75));
+  --plyr-color-main: #2563EB;
+  --plyr-video-controls-background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.85));
   --plyr-video-control-color: #ffffff;
   --plyr-video-control-color-hover: #ffffff;
   --plyr-video-control-background-hover: rgba(255, 255, 255, 0.15);
-  --plyr-range-fill-background: #111111;
+  --plyr-range-fill-background: #2563EB;
   --plyr-range-thumb-background: #ffffff;
   --plyr-range-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --plyr-control-radius: 6px;
+  --plyr-control-radius: 8px;
 }
 
 .plyr {
-  --plyr-color-main: #111111;
+  --plyr-color-main: #2563EB;
   font-family: inherit;
   width: 100% !important;
   height: 100% !important;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
 }
 
 .plyr--video {
   height: 100% !important;
   width: 100% !important;
-  background: #000000;
+  background: #000000 !important;
 }
 
 .plyr__video-wrapper {
   height: 100% !important;
   width: 100% !important;
+  background: #000000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .plyr video {
   height: 100% !important;
   width: 100% !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
+  background: #000000 !important;
 }
 
 /* Center Large Play Button */
 .plyr__control--overlaid {
-  background: rgba(17, 17, 17, 0.85) !important;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(17, 17, 17, 0.82) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  border-radius: 50% !important;
+  width: 68px !important;
+  height: 68px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .plyr__control--overlaid:hover {
-  background: #111111 !important;
-  transform: scale(1.06);
+  background: #2563EB !important;
+  border-color: #3B82F6 !important;
+  transform: scale(1.08) !important;
 }
