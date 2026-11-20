@@ -767,6 +767,9 @@ export function ProjectsTab({
     if (parsed.type === 'vimeo') {
       return { label: 'Vimeo', hasValid: true };
     }
+    if (parsed.type === 'gdrive') {
+      return { label: 'Google Drive', hasValid: true };
+    }
     if (parsed.type === 'direct') {
       if (parsed.isDropbox) {
         return { label: 'Dropbox MP4', hasValid: true };
@@ -1462,14 +1465,14 @@ export function ProjectsTab({
                   </div>
                 </div>
 
-                {/* Row 3: Video URL (YouTube, Vimeo, MP4 direct) */}
+                {/* Row 3: Video URL (YouTube, Vimeo, Google Drive, MP4 direct) */}
                 <div className="space-y-2.5 bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07]">
                   <div className="flex items-center justify-between gap-2">
                     <label className="block font-semibold text-[#111111]">
-                      Đường link Video (YouTube / Vimeo / MP4 trực tiếp)
+                      Đường link Video (YouTube / Vimeo / Google Drive / MP4)
                     </label>
                     <span className="bg-black/5 text-black/65 px-2.5 py-0.5 rounded-md text-[11px] font-medium shrink-0">
-                      Hỗ trợ MP4 / Dropbox / YouTube
+                      Hỗ trợ YouTube / Drive / Dropbox / MP4
                     </span>
                   </div>
 
@@ -1478,12 +1481,12 @@ export function ProjectsTab({
                     value={editingProject.videoUrl || ''}
                     onChange={(e) => handleVideoUrlChange(e.target.value)}
                     onBlur={(e) => handleVideoUrlChange(e.target.value)}
-                    placeholder="https://www.youtube.com/... hoặc link Vimeo, Dropbox, MP4"
+                    placeholder="https://drive.google.com/file/d/... hoặc link YouTube, Vimeo, Dropbox, MP4"
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-black/10 text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
                   />
 
                   <p className="text-[11px] text-[#777777] leading-relaxed">
-                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, Dropbox MP4 và link file MP4 từ Cloudflare R2 (tự động bắt kích thước khung hình và thời lượng).
+                    Hỗ trợ YouTube (bao gồm Shorts tự nhận diện 9:16), Vimeo, Google Drive (cần bật quyền &quot;Bất kỳ ai có liên kết đều có thể xem&quot;), Dropbox MP4 và link file MP4 từ Cloudflare R2.
                   </p>
 
                   {/* Inline Video Preview (YouTube, Vimeo, Direct MP4) */}
@@ -1511,6 +1514,8 @@ export function ProjectsTab({
                                   : 'YouTube'
                                 : parsed.type === 'vimeo'
                                 ? 'Vimeo'
+                                : parsed.type === 'gdrive'
+                                ? 'Google Drive'
                                 : parsed.isDropbox
                                 ? 'Dropbox MP4'
                                 : 'File MP4 / Trực tiếp'}
@@ -1562,7 +1567,7 @@ export function ProjectsTab({
                               : 'max-w-md aspect-video'
                           } mx-auto rounded-xl overflow-hidden bg-black border border-black/10 shadow-md transition-all`}
                         >
-                          {parsed.type === 'youtube' || parsed.type === 'vimeo' ? (
+                          {parsed.type === 'youtube' || parsed.type === 'vimeo' || parsed.type === 'gdrive' ? (
                             <iframe
                               src={parsed.embedUrl}
                               className="w-full h-full border-0"

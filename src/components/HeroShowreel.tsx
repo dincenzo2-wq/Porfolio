@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Navbar } from './Navbar';
 import { parseVideoUrl } from '../utils/videoEmbed';
 import { getCategoryMeta, normalizeCategoryKey } from '../utils/portfolioLogic';
-import type { HeroBgType } from '../types/portfolio';
+import type { HeroBgType, SiteBrandingData } from '../types/portfolio';
 import defaultCinemaPoster from '../assets/images/reel_saigon_neon_1794581940924.jpg';
 
 interface ServiceChipItem {
@@ -31,6 +32,8 @@ interface HeroShowreelProps {
   heroPosterUrl?: string;
   heroVideoStart?: number;
   heroVideoEnd?: number;
+  branding?: SiteBrandingData;
+  onOpenContact?: () => void;
 }
 
 export function HeroShowreel({
@@ -44,6 +47,8 @@ export function HeroShowreel({
   heroPosterUrl,
   heroVideoStart = 0,
   heroVideoEnd = 15,
+  branding,
+  onOpenContact,
 }: HeroShowreelProps) {
   const serviceChips: ServiceChipItem[] = useMemo(() => {
     const source = categories && categories.length > 0 ? categories : DEFAULT_HERO_CATEGORIES;
@@ -245,6 +250,15 @@ export function HeroShowreel({
         }}
         className="hero-curtain-layer relative h-full w-full flex flex-col justify-end will-change-[transform,opacity] bg-cover bg-center"
       >
+        {/* Top Header: Brand Logo & Contact CTA anchored directly to Hero */}
+        {onOpenContact && (
+          <Navbar
+            onOpenContact={onOpenContact}
+            branding={branding}
+            position="absolute"
+          />
+        )}
+
         {/* 1. Cinematic Hero Background: 100% Video Loop Showreel */}
         {(parsedVideo.type === 'youtube' ||
           parsedVideo.type === 'vimeo' ||

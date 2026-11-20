@@ -181,17 +181,11 @@ function PortfolioApp() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-[#09090B] text-[#111111] selection:bg-[#2563EB] selection:text-white font-sans">
-        {/* Adaptive Navbar */}
-        <Navbar
-          onOpenContact={() => setContactOpen(true)}
-          branding={content.branding}
-          email={content.profile.email}
-          location={content.profile.location}
-        />
-
         <main className="w-full [overflow-x:clip]">
-          {/* PHẦN 1: Hero Showreel tinh gọn toàn khung (sticky top-0 z-0, scale 1 -> 0.96 & opacity 1 -> 0.4) */}
+          {/* PHẦN 1: Hero Showreel tinh gọn toàn khung (chứa Logo & Nút Liên hệ cố định tại Hero) */}
           <HeroShowreel
+            branding={content.branding}
+            onOpenContact={() => setContactOpen(true)}
             onSelectCategory={handleSelectCategoryFromHero}
             categories={content.categories}
             headline={content.profile.fullName}

@@ -147,8 +147,10 @@ export function parseVideoUrl(url?: string, options?: VideoParseOptions): Parsed
   }
 
   // 3. Google Drive Match
-  // Matches: drive.google.com/file/d/FILE_ID/..., drive.google.com/open?id=FILE_ID
-  const gdriveMatch = cleanUrl.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+  // Matches: drive.google.com/file/d/FILE_ID/..., drive.google.com/open?id=FILE_ID, drive.google.com/uc?id=FILE_ID
+  const gdriveMatch = cleanUrl.match(
+    /(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/
+  );
   if (gdriveMatch && gdriveMatch[1]) {
     const fileId = gdriveMatch[1];
     return {
