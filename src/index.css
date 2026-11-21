@@ -119,9 +119,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Video nền Hero: hiển thị sáng rõ tự nhiên 100% không bị phủ tối, nhịp thở chậm điện ảnh */
+  /* Video nền Hero: nhịp thở chậm điện ảnh (độ trong suốt opacity do React quản lý trực tiếp) */
   .hero-reveal-bg {
-    opacity: 1;
     animation: slowBreath 20s ease-in-out infinite alternate;
     will-change: transform;
     transform-origin: center center;

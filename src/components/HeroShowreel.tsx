@@ -289,6 +289,7 @@ export function HeroShowreel({
               muted
               playsInline
               preload="auto"
+              style={{ opacity: isVideoPlaying ? 1 : 0 }}
               className={`hero-reveal-bg absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-700 ${
                 isVideoPlaying ? 'opacity-100' : 'opacity-0'
               }`}
