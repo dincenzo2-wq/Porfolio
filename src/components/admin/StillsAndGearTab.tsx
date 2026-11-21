@@ -835,7 +835,7 @@ export function StillsAndGearTab({
             {stills.map((still, idx) => (
               <div
                 key={still.id}
-                className="group relative aspect-[16/10] rounded-xl overflow-hidden bg-black border border-black/10 shadow-2xs"
+                className="group relative aspect-video rounded-xl overflow-hidden bg-black border border-black/10 shadow-2xs"
               >
                 <img
                   src={still.src}
@@ -883,7 +883,7 @@ export function StillsAndGearTab({
 
                   <div className="text-[10px] text-white">
                     <span className="block font-bold line-clamp-1">{still.alt}</span>
-                    <span className="text-white/60">Accordion Frame</span>
+                    <span className="text-white/60">16:9 Cinema Frame</span>
                   </div>
                 </div>
               </div>

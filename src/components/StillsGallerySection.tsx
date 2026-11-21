@@ -2,19 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { StillsItem } from '../types/portfolio';
 import { DEFAULT_STILLS } from '../data/defaultContent';
+import {
+  getCylinderParams,
+  getDragPxPerCard,
+  generateCarouselSlots,
+  AUTO_GLIDE_SPEED,
+} from '../utils/stillsCarouselLogic';
 
 interface StillsGallerySectionProps {
   stills?: StillsItem[];
 }
-
-interface CarouselSlot {
-  slotKey: string;
-  sourceIndex: number;
-  item: StillsItem;
-}
-
-const MIN_RING_SLOTS = 12;
-const AUTO_GLIDE_SPEED = 0.22; // cards per second (~4.5s per frame, serene cinematic drift)
 
 /**
  * Pre-computes exact ArcWave 3D cylindrical position on initial HTML render
@@ -23,12 +20,7 @@ const AUTO_GLIDE_SPEED = 0.22; // cards per second (~4.5s per frame, serene cine
 function getInitialCardStyle(i: number, count: number) {
   if (count === 0) return { style: {}, darkness: '0' };
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1440;
-  const isMobile = vw < 640;
-  const isTablet = vw >= 640 && vw < 1024;
-
-  const R = isMobile ? 640 : isTablet ? 920 : 1180;
-  const deltaThetaDeg = isMobile ? 16.8 : isTablet ? 15.2 : 14.3;
-  const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
+  const { R, deltaThetaDeg, deltaThetaRad } = getCylinderParams(vw);
 
   let d = ((i - 0) % count + count) % count;
   if (d > count / 2) d -= count;
@@ -96,22 +88,8 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   }, [stills]);
 
   // Repeat frames seamlessly so the cylindrical ArcWave concave arc never has gaps
-  const ringSlots: CarouselSlot[] = useMemo(() => {
-    if (sourceFrames.length === 0) return [];
-    const slots: CarouselSlot[] = [];
-    let repeat = 0;
-    while (slots.length < Math.max(MIN_RING_SLOTS, sourceFrames.length)) {
-      for (let i = 0; i < sourceFrames.length; i++) {
-        slots.push({
-          slotKey: `${sourceFrames[i].id || i}-r${repeat}-${slots.length}`,
-          sourceIndex: i,
-          item: sourceFrames[i],
-        });
-      }
-      repeat++;
-      if (repeat > 10) break;
-    }
-    return slots;
+  const ringSlots = useMemo(() => {
+    return generateCarouselSlots(sourceFrames);
   }, [sourceFrames]);
 
   const sectionRef = useRef<HTMLElement>(null);
@@ -169,15 +147,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     if (count === 0) return;
 
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1440;
-    const isMobile = vw < 640;
-    const isTablet = vw >= 640 && vw < 1024;
-
-    // ArcWave Cylindrical Radius (R) & Angular Step (deltaTheta)
-    // Calibrated for portrait cards (~280x400) with 5 cards visible across viewport in amphitheater arc
-    // Slit gap is ~13-14px between adjacent frames (matching Framer ArcWave reference)
-    const R = isMobile ? 640 : isTablet ? 920 : 1180;
-    const deltaThetaDeg = isMobile ? 16.8 : isTablet ? 15.2 : 14.3;
-    const deltaThetaRad = (deltaThetaDeg * Math.PI) / 180;
+    const { R, deltaThetaDeg, deltaThetaRad } = getCylinderParams(vw);
 
     const currentOffset = offsetRef.current;
 
@@ -193,11 +163,12 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       const thetaDeg = d * deltaThetaDeg;
       const absThetaDeg = Math.abs(thetaDeg);
 
-      // Hide cards beyond visible horizon arc (> 75 degrees) to save GPU rasterization
+      // Hide cards beyond visible horizon arc (> 76 degrees) to save GPU rasterization
       if (absThetaDeg > 76) {
         el.style.opacity = '0';
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
+        el.tabIndex = -1;
         continue;
       }
 
@@ -210,22 +181,20 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
       const rotY = thetaDeg;
 
       // Depth blur & atmospheric opacity degradation on flanks
-      // Center (0 deg) has full clarity; flank 1 (14 deg) stays bright; flank 2 (28 deg) dims subtly; outer horizon dims into vignette
+      // Center (0 deg) has full clarity; flank 1 stays bright; flank 2 dims subtly; outer horizon dims into vignette
       const normalizedAngle = absThetaDeg / 55;
       const blurPx = Math.min(4, Math.pow(Math.max(0, normalizedAngle - 0.25), 1.4) * 4.5);
       const opacity = Math.max(0.3, 1 - Math.pow(normalizedAngle, 1.4) * 0.7);
-
-      // Scale: keep scale at 1.0 to preserve generous, uniform breathing gaps between cards
-      const scale = 1;
 
       const zIndex = Math.round(500 - absThetaDeg * 5);
 
       el.style.visibility = 'visible';
       el.style.pointerEvents = opacity > 0.4 ? 'auto' : 'none';
+      el.tabIndex = absThetaDeg > 55 ? -1 : 0;
       el.style.opacity = opacity.toFixed(3);
       el.style.filter = blurPx > 0.3 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
       el.style.zIndex = String(zIndex);
-      el.style.transform = `translate3d(${tx.toFixed(2)}px, 0px, ${tz.toFixed(2)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+      el.style.transform = `translate3d(${tx.toFixed(2)}px, 0px, ${tz.toFixed(2)}px) rotateY(${rotY.toFixed(2)}deg) scale(1)`;
 
       // Update inner darkening overlay if present
       const overlay = el.querySelector<HTMLElement>('.arcwave-darkness');
@@ -252,11 +221,12 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
       if (isInViewRef.current && !lightboxOpenRef.current && !document.hidden) {
         if (!isDraggingRef.current) {
+          const count = ringSlots.length;
           // If animating to center via click on flanking card
           if (targetOffsetRef.current !== null) {
             const diff = targetOffsetRef.current - offsetRef.current;
             if (Math.abs(diff) < 0.003) {
-              offsetRef.current = targetOffsetRef.current;
+              offsetRef.current = ((targetOffsetRef.current % count) + count) % count;
               targetOffsetRef.current = null;
               velocityRef.current = 0;
             } else {
@@ -272,6 +242,9 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
             if (Math.abs(velocityRef.current) > 0.0004) {
               offsetRef.current += velocityRef.current * dt;
+              if (offsetRef.current > count * 10 || offsetRef.current < -count * 10) {
+                offsetRef.current = ((offsetRef.current % count) + count) % count;
+              }
               layoutCards();
             }
           }
@@ -296,6 +269,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
   // Pointer drag / touch swipe handlers with natural momentum (captures only after real drag > 5px so button clicks never get swallowed)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (isDraggingRef.current) return; // Prevent multi-touch coordinate jumping
     isDraggingRef.current = true;
     targetOffsetRef.current = null; // Cancel any active click-to-center animation
     activePointerIdRef.current = e.pointerId;
@@ -307,6 +281,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
     const now = performance.now();
     const dx = e.clientX - dragLastXRef.current;
     const dt = Math.max((now - dragLastTimeRef.current) / 1000, 0.008);
@@ -327,7 +302,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           } catch {}
         }
       }
-      const pxPerCard = window.innerWidth < 640 ? 180 : window.innerWidth < 1024 ? 240 : 290;
+      const pxPerCard = getDragPxPerCard(window.innerWidth);
       const deltaCards = -dx / pxPerCard;
       offsetRef.current += deltaCards;
       velocityRef.current = Math.max(-2.8, Math.min(2.8, deltaCards / dt));
@@ -337,6 +312,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
     isDraggingRef.current = false;
     activePointerIdRef.current = null;
     setIsDraggingUI(false);
@@ -347,7 +323,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     } catch {}
   };
 
-  // ArcWave signature: Click flanking card to bring to center; Click center card to open Lightbox
+  // ArcWave: Click any card to open full-screen 16:9 Lightbox and center it
   const handleCardClick = (sourceIndex: number, slotIndex: number) => {
     // Ignore click if the user just dragged/swiped the carousel
     if (dragTotalDistRef.current > 8) return;
@@ -356,13 +332,9 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     let d = ((slotIndex - offsetRef.current) % count + count) % count;
     if (d > count / 2) d -= count;
 
-    // If card is already at center (|d| <= 0.35), open Lightbox to view full-screen
-    if (Math.abs(d) <= 0.35) {
-      setLightboxIndex(sourceIndex);
-    } else {
-      // Otherwise smoothly bring this card to dead center
-      targetOffsetRef.current = offsetRef.current + d;
-    }
+    // Center this card in the background and open the 16:9 Lightbox modal
+    targetOffsetRef.current = offsetRef.current + d;
+    setLightboxIndex(sourceIndex);
   };
 
   // Lock page scroll & enable keyboard navigation inside full-screen Lightbox
@@ -404,7 +376,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     );
   };
 
-  const formatIndex = (idx: number) => String(idx + 1).padStart(2, '0');
+  const formatNumber = (n: number) => String(n).padStart(2, '0');
 
   const currentLightboxFrame =
     lightboxIndex !== null && sourceFrames[lightboxIndex]
@@ -429,11 +401,11 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{
-          perspective: '1200px',
+          perspective: '1400px',
           perspectiveOrigin: '50% 50%',
           touchAction: 'pan-y',
         }}
-        className={`relative w-full h-[330px] sm:h-[390px] md:h-[440px] lg:h-[490px] xl:h-[510px] flex items-center justify-center overflow-visible ${
+        className={`relative w-full h-[230px] sm:h-[280px] md:h-[320px] lg:h-[360px] xl:h-[390px] flex items-center justify-center overflow-visible ${
           isDraggingUI ? 'cursor-grabbing' : ''
         }`}
       >
@@ -452,9 +424,9 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 }}
                 type="button"
                 onClick={() => handleCardClick(slot.sourceIndex, i)}
-                aria-label={`Khung hình ${slot.item.title || formatIndex(slot.sourceIndex)} — Bấm để đưa về tâm`}
+                aria-label={`Khung hình 16:9 ${slot.item.title || formatNumber(slot.sourceIndex + 1)} — Xem chi tiết`}
                 style={initialSlot.style}
-                className="group absolute w-[175px] h-[250px] sm:w-[205px] sm:h-[295px] md:w-[230px] md:h-[330px] lg:w-[280px] lg:h-[400px] rounded-[14px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color] duration-300 hover:border-white/40"
+                className="group absolute w-[270px] sm:w-[340px] md:w-[390px] lg:w-[440px] xl:w-[480px] aspect-video rounded-[10px] sm:rounded-[12px] md:rounded-[14px] overflow-hidden bg-[#111113] border border-white/15 focus-visible:outline-2 focus-visible:outline-[#3B82F6] focus-visible:outline-offset-2 cursor-pointer transition-[border-color] duration-300 hover:border-white/40 shadow-xl [backface-visibility:hidden]"
               >
                 <img
                   src={slot.item.src}
@@ -464,7 +436,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.opacity = '0';
                   }}
-                  className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  className="w-full h-full object-cover object-center pointer-events-none select-none transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                 />
 
                 {/* ArcWave Atmospheric Depth Darkening Overlay */}
@@ -477,17 +449,17 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                 {/* ArcWave Hover Caption Veil (.thr3-veil) */}
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-3.5 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 sm:h-2/5 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col justify-end p-2.5 sm:p-3 md:p-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bricolage text-sm sm:text-base font-bold text-white tracking-wide truncate">
+                    <h4 className="font-bricolage text-xs sm:text-sm md:text-base font-bold text-white tracking-wide truncate">
                       {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
                     </h4>
-                    <span className="text-xs font-sans font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
+                    <span className="text-[10px] sm:text-xs font-sans font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
                       {slot.item.year || '2025'}
                     </span>
                   </div>
-                  <p className="text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
+                  <p className="text-[11px] sm:text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
                     {slot.item.alt || 'Khung hình điện ảnh chọn lọc'}
                   </p>
                 </div>
@@ -496,28 +468,24 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           })}
         </div>
 
-        {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg with bottom feather */}
+        {/* Dynamic Horizon Fade (Left) — Follows live --morph-bg */}
         <div
           aria-hidden="true"
           style={{
             background:
               'linear-gradient(to right, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[12%] sm:w-[15%] md:w-[18%] z-[900]"
         />
 
-        {/* Dynamic Horizon Fade (Right) — Follows live --morph-bg with bottom feather */}
+        {/* Dynamic Horizon Fade (Right) — Follows live --morph-bg */}
         <div
           aria-hidden="true"
           style={{
             background:
               'linear-gradient(to left, var(--morph-bg, #09090B) 0%, var(--morph-bg, #09090B) 25%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
           }}
-          className="pointer-events-none absolute inset-y-0 right-0 w-[14%] sm:w-[18%] md:w-[22%] z-[900]"
+          className="pointer-events-none absolute inset-y-0 right-0 w-[12%] sm:w-[15%] md:w-[18%] z-[900]"
         />
       </div>
 
@@ -537,7 +505,7 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
           >
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 rounded-md bg-white/10 border border-white/15 font-bricolage text-xs sm:text-sm font-bold text-white/90 tracking-wider tabular-nums">
-                {formatIndex(lightboxIndex)} / {formatIndex(sourceFrames.length - 1)}
+                {formatNumber(lightboxIndex + 1)} / {formatNumber(sourceFrames.length)}
               </span>
               {currentLightboxFrame.title && (
                 <h3 className="font-bricolage text-sm sm:text-base md:text-lg font-bold text-white uppercase tracking-wide truncate max-w-[200px] sm:max-w-sm md:max-w-lg">
