@@ -7,6 +7,7 @@ import {
   colorizeSvgContent,
   generateFaviconSvg,
   svgToDataUrl,
+  getLogoShadowClass,
 } from './brandingLogic';
 
 test('cleanSvgWhiteBackground removes white background path and rect', () => {
@@ -81,4 +82,16 @@ test('svgToDataUrl formats valid data url', () => {
   const url = svgToDataUrl(svg);
   assert.ok(url.startsWith('data:image/svg+xml;charset=utf-8,'));
   assert.ok(url.includes('%3Csvg'));
+});
+
+test('getLogoShadowClass returns empty string for none or undefined', () => {
+  assert.strictEqual(getLogoShadowClass('none'), '');
+  assert.strictEqual(getLogoShadowClass(undefined), '');
+});
+
+test('getLogoShadowClass returns correct refined shadow classes', () => {
+  assert.ok(getLogoShadowClass('subtle').includes('drop-shadow-'));
+  assert.ok(getLogoShadowClass('subtle').includes('0.35'));
+  assert.ok(getLogoShadowClass('soft').includes('drop-shadow-'));
+  assert.ok(getLogoShadowClass('soft').includes('0.25'));
 });

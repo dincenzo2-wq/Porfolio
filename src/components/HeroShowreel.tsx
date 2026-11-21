@@ -297,6 +297,16 @@ export function HeroShowreel({
           )
         )}
 
+        {/* Lớp phủ Gradient đen mờ đầu khung (Eased Top Vignette) bảo vệ độ tương phản cho Logo & Nút Liên hệ trên mọi thước phim sáng mà không cần đổ bóng lem chữ */}
+        <div
+          aria-hidden="true"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(9, 9, 11, 0.6) 0%, rgba(9, 9, 11, 0.25) 50%, transparent 100%)',
+          }}
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 sm:h-32 z-[1] will-change-[opacity]"
+        />
+
         {/* Lớp phủ Gradient đen đa điểm (Multi-stop Eased Bottom Gradient) làm nổi bật hoàn hảo chữ và nút trên nền váy cưới */}
         <div
           aria-hidden="true"

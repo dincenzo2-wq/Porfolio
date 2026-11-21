@@ -140,6 +140,8 @@ export interface SiteProfileData {
   heroVideoEnd?: number;   // Out-point in seconds (default: 15)
 }
 
+export type LogoShadowType = 'none' | 'subtle' | 'soft';
+
 export interface SiteBrandingData {
   logoSvg?: string;
   logoDataUrl?: string;
@@ -151,6 +153,7 @@ export interface SiteBrandingData {
   faviconDarkSquare: boolean;
   faviconPadding: number; // 8 - 30 (%)
   faviconTheme?: 'dark' | 'light'; // 'dark': nền #111111 + icon #F7F6F2; 'light': nền #F7F6F2 + icon #111111
+  logoShadow?: LogoShadowType; // 'none' (sắc nét không bóng - đề xuất), 'subtle' (bóng vi mô êm nhẹ), 'soft' (bóng mềm điện ảnh)
 }
 
 export interface PortfolioContentPayload {

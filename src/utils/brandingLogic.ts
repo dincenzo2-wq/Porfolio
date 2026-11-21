@@ -381,3 +381,21 @@ export function updateHeadFavicon(faviconDataUrlOrPath: string): void {
   }
   appleLink.href = urlWithCacheBuster;
 }
+
+/**
+ * Kiểu đổ bóng logo trên thanh Navbar.
+ * - 'none': Tuyệt đối không đổ bóng, vector phẳng, sắc nét chuẩn Studio tối giản (Khuyên dùng).
+ * - 'subtle': Đổ bóng vi mô siêu mịn nhẹ (0 1px 3px rgba(0,0,0,0.35)), tách lớp nhẹ nhàng trên nền sáng mà không bị lem đen.
+ * - 'soft': Đổ bóng mềm dịu điện ảnh (0 2px 8px rgba(0,0,0,0.25)).
+ */
+export function getLogoShadowClass(shadowType?: 'none' | 'subtle' | 'soft'): string {
+  switch (shadowType) {
+    case 'subtle':
+      return 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]';
+    case 'soft':
+      return 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]';
+    case 'none':
+    default:
+      return '';
+  }
+}

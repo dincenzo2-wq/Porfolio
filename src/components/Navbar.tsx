@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import type { SiteBrandingData } from '../types/portfolio';
-import { cleanSvgWhiteBackground, invertSvgColors, autoCropSvgViewBox } from '../utils/brandingLogic';
+import {
+  cleanSvgWhiteBackground,
+  invertSvgColors,
+  autoCropSvgViewBox,
+  getLogoShadowClass,
+} from '../utils/brandingLogic';
 
 interface NavbarProps {
   onOpenContact: () => void;
@@ -100,12 +105,14 @@ export function Navbar({ onOpenContact, branding, position = 'absolute' }: Navba
       >
         {renderedLogoSvg && (
           <span
-            className="shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+            className={`shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 ${getLogoShadowClass(branding?.logoShadow)}`}
             dangerouslySetInnerHTML={{ __html: renderedLogoSvg }}
           />
         )}
         {branding?.showBrandName !== false && (
-          <span className="font-bricolage text-sm sm:text-base tracking-[0.04em] font-extrabold uppercase text-white transition-opacity group-hover:opacity-85 inline-flex items-center leading-none drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
+          <span
+            className={`font-bricolage text-sm sm:text-base tracking-[0.04em] font-extrabold uppercase text-white transition-opacity group-hover:opacity-85 inline-flex items-center leading-none ${getLogoShadowClass(branding?.logoShadow)}`}
+          >
             {branding?.brandName || 'QUỐC VINH'}
           </span>
         )}

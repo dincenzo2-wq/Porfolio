@@ -19,6 +19,7 @@ import {
   invertSvgColors,
   svgToDataUrl,
   autoCropSvgViewBox,
+  getLogoShadowClass,
 } from '../../utils/brandingLogic';
 
 interface BrandingTabProps {
@@ -560,6 +561,68 @@ export function BrandingTab({ branding, onChange, onMarkUnsaved }: BrandingTabPr
                   </label>
                 </div>
               </div>
+
+              {/* Tùy chọn độ bóng Logo trên Navbar */}
+              <div className="pt-3 border-t border-black/8 space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-black/70">
+                  Hiệu ứng bóng Logo trên thanh Menu:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ logoShadow: 'none' });
+                      onMarkUnsaved?.();
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      (currentBranding.logoShadow || 'none') === 'none'
+                        ? 'border-[#111111] bg-black/5 ring-1 ring-black/10'
+                        : 'border-black/10 bg-white hover:border-black/25'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-[#111111] block">Không đổ bóng</span>
+                    <span className="text-[10px] text-black/50 block leading-tight mt-0.5">
+                      Sắc nét phẳng, loại bỏ hoàn toàn viền lem đen (Khuyên dùng)
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ logoShadow: 'subtle' });
+                      onMarkUnsaved?.();
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      currentBranding.logoShadow === 'subtle'
+                        ? 'border-[#111111] bg-black/5 ring-1 ring-black/10'
+                        : 'border-black/10 bg-white hover:border-black/25'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-[#111111] block">Bóng vi mô nhẹ</span>
+                    <span className="text-[10px] text-black/50 block leading-tight mt-0.5">
+                      Độ mờ 1px cực mịn, êm ái trên nền sáng
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ logoShadow: 'soft' });
+                      onMarkUnsaved?.();
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      currentBranding.logoShadow === 'soft'
+                        ? 'border-[#111111] bg-black/5 ring-1 ring-black/10'
+                        : 'border-black/10 bg-white hover:border-black/25'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-[#111111] block">Bóng mềm điện ảnh</span>
+                    <span className="text-[10px] text-black/50 block leading-tight mt-0.5">
+                      Khuếch tán tự nhiên êm mắt
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -672,7 +735,7 @@ export function BrandingTab({ branding, onChange, onMarkUnsaved }: BrandingTabPr
                 <div className="flex items-center gap-2.5">
                   {processedNavbarSvg ? (
                     <div
-                      className="shrink-0 flex items-center justify-center"
+                      className={`shrink-0 flex items-center justify-center ${getLogoShadowClass(currentBranding.logoShadow)}`}
                       dangerouslySetInnerHTML={{ __html: processedNavbarSvg }}
                     />
                   ) : (
@@ -685,7 +748,7 @@ export function BrandingTab({ branding, onChange, onMarkUnsaved }: BrandingTabPr
                     <span
                       className={`font-bricolage text-base sm:text-lg tracking-[-0.03em] font-extrabold uppercase ${
                         previewStageDark ? 'text-white' : 'text-[#111111]'
-                      }`}
+                      } ${getLogoShadowClass(currentBranding.logoShadow)}`}
                     >
                       {currentBranding.brandName || 'VINH TRẦN'}
                     </span>

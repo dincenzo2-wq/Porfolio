@@ -126,6 +126,7 @@ export const DEFAULT_BRANDING: SiteBrandingData = {
   faviconDarkSquare: true,
   faviconPadding: 12,
   faviconTheme: 'dark',
+  logoShadow: 'none',
 };
 
 export const DEFAULT_SOFTWARE_TOOLS: string[] = [
