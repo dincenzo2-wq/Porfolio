@@ -578,15 +578,18 @@ export function StillsAndGearTab({
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/55">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
-                        ☁️ Cloudflare R2
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-white/75">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
+                        Cloudflare R2
                       </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#38BDF8]">
-                        🎬 16:9 WebP &lt; 500KB
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-white/75">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]/70" />
+                        16:9 WebP &lt; 500KB
                       </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                        ⚡ Nhiều ảnh cùng lúc
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-white/75">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]/50" />
+                        Kéo thả nhiều ảnh
                       </span>
                     </div>
                   </div>
@@ -612,7 +615,7 @@ export function StillsAndGearTab({
                 />
               </div>
 
-              <p className="text-[10px] text-white/45 leading-normal">
+              <p className="text-[11px] text-white/65 leading-normal">
                 Để trống sẽ tự động lấy tên file ảnh gốc khi tải lên.
               </p>
             </div>
@@ -691,7 +694,7 @@ export function StillsAndGearTab({
                 return (
                   <div
                     key={still.id}
-                    className="group relative aspect-video rounded-xl overflow-hidden bg-[#161618] border border-black/10 shadow-xs hover:border-black/25 transition-all duration-200"
+                    className="group relative aspect-video rounded-xl overflow-hidden bg-[#161618] border border-black/10 shadow-xs hover:border-[#38BDF8]/40 hover:shadow-[0_4px_16px_rgba(56,189,248,0.12)] transition-all duration-200"
                   >
                     <img
                       src={src}
