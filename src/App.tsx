@@ -13,7 +13,7 @@ import { ContactModal } from './components/ContactModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PortfolioDataProvider, usePortfolioData } from './context/PortfolioDataContext';
 import type { PortfolioProject } from './types/portfolio';
-import { getAdjacentProject, normalizeCategoryKey } from './utils/portfolioLogic';
+import { getAdjacentProject, normalizeCategoryKey, isCategoryMatch } from './utils/portfolioLogic';
 
 function PortfolioApp() {
   const { content } = usePortfolioData();
@@ -75,6 +75,10 @@ function PortfolioApp() {
         '--morph-border',
         inkSmooth > 0.5 ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.14)'
       );
+      stage.style.setProperty(
+        '--morph-badge-bg',
+        inkSmooth > 0.5 ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)'
+      );
     };
 
     const onScroll = () => {
@@ -96,29 +100,40 @@ function PortfolioApp() {
       content.categories && content.categories.length > 0
         ? content.categories
         : ['TVC', 'Social 9:16'];
+    const projs = content.projects || [];
+    const withProjects = initialCats.filter((cat) =>
+      projs.some((p) => isCategoryMatch(p.category, cat) && !p.hidden)
+    );
+    const targetCats = withProjects.length > 0 ? withProjects : initialCats;
     const map: Record<string, boolean> = {};
-    initialCats.slice(0, 2).forEach((cat, idx) => {
+    targetCats.slice(0, 2).forEach((cat, idx) => {
       const key = normalizeCategoryKey(cat) || `cat-${idx + 1}`;
       map[key] = true;
     });
     return map;
   });
 
-  // Ensure the first two categories stay initialized cleanly if D1 loads different category names
+  // Ensure categories with active projects stay initialized cleanly when content is loaded
   useEffect(() => {
     const cats = content.categories;
+    const projs = content.projects || [];
     if (!cats || cats.length === 0) return;
     setOpenCategories((prev) => {
       const validKeys = cats.map((cat, idx) => normalizeCategoryKey(cat) || `cat-${idx + 1}`);
       const anyOpen = validKeys.some((k) => prev[k]);
       if (anyOpen) return prev;
       const next = { ...prev };
-      validKeys.slice(0, 2).forEach((k) => {
-        next[k] = true;
+      const withProjects = cats.filter((cat) =>
+        projs.some((p) => isCategoryMatch(p.category, cat) && !p.hidden)
+      );
+      const targetCats = withProjects.length > 0 ? withProjects : cats;
+      targetCats.slice(0, 2).forEach((cat, idx) => {
+        const key = normalizeCategoryKey(cat) || `cat-${idx + 1}`;
+        next[key] = true;
       });
       return next;
     });
-  }, [content.categories]);
+  }, [content.categories, content.projects]);
 
   // Client-side simple routing for Cloudflare Pages
   useEffect(() => {

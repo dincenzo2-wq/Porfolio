@@ -68,7 +68,7 @@ export const DEFAULT_PROFILE: SiteProfileData = {
   telegram: ARTIST_PROFILE.telegram,
   heroIntro:
     'Trần Quốc Vinh — Videographer, Film Editor & Motion Designer. Chuyên quay dựng phim quảng cáo, video ngắn 9:16 và Motion Graphics tốc độ cao cho Agency & Thương hiệu.',
-  projectsSubtitle: 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.',
+  projectsSubtitle: 'Tuyển tập tác phẩm thương mại, mạng xã hội và phim độc lập — phân loại theo định dạng sản xuất.',
   agencySubtitle: 'Nhận từng hạng mục lẻ hoặc trọn gói từ ghi hình đến dựng hoàn thiện.',
   showBrandMarquee: true,
   collaboratorsText: '',

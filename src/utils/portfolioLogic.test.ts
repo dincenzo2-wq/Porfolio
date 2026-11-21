@@ -15,6 +15,7 @@ import {
   normalizeCategoryKey,
   getCategoryMeta,
   capitalizeWords,
+  isCategoryMatch,
 } from './portfolioLogic';
 import {
   formatVideoDuration,
@@ -732,4 +733,31 @@ test('capitalizeWords capitalizes the first letter of each word in Vietnamese an
   // Edge cases
   assert.equal(capitalizeWords(''), '');
   assert.equal(capitalizeWords('   '), '   ');
+});
+
+test('isCategoryMatch matches category aliases flexibly', () => {
+  // TVC aliases
+  assert.equal(isCategoryMatch('TVC', 'TVC & Commercial'), true);
+  assert.equal(isCategoryMatch('TVC & Commercial', 'TVC'), true);
+  assert.equal(isCategoryMatch('tvc', 'TVC & Commercial'), true);
+  assert.equal(isCategoryMatch('TVC', 'TVC'), true);
+
+  // Social aliases
+  assert.equal(isCategoryMatch('Social 9:16', 'Social 9:16'), true);
+  assert.equal(isCategoryMatch('social', 'Social 9:16'), true);
+  assert.equal(isCategoryMatch('social916', 'Social 9:16'), true);
+
+  // Personal aliases
+  assert.equal(isCategoryMatch('Cá Nhân', 'Personal Works'), true);
+  assert.equal(isCategoryMatch('canhan', 'Cá Nhân'), true);
+  assert.equal(isCategoryMatch('personal', 'Cá Nhân'), true);
+
+  // Event recap & Wedding
+  assert.equal(isCategoryMatch('Event Recap', 'Event Recap'), true);
+  assert.equal(isCategoryMatch('Wedding', 'Wedding'), true);
+
+  // Mismatches
+  assert.equal(isCategoryMatch('TVC', 'Social 9:16'), false);
+  assert.equal(isCategoryMatch('Wedding', 'Event Recap'), false);
+  assert.equal(isCategoryMatch('', 'TVC'), false);
 });

@@ -394,6 +394,15 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
     >
       <div id="frames" className="absolute -top-24" aria-hidden="true" />
 
+      {/* Top Atmospheric Horizon Soft Veil */}
+      <div
+        aria-hidden="true"
+        style={{
+          background: 'linear-gradient(to bottom, var(--morph-bg, #09090B) 0%, transparent 100%)',
+        }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 sm:h-24 z-10"
+      />
+
       {/* ArcWave 3D Cylindrical Concave Arc Stage: Continuous drift, drag/swipe & click-to-center */}
       <div
         onPointerDown={handlePointerDown}

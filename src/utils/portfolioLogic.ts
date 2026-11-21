@@ -483,6 +483,52 @@ export function getCategoryMeta(
 }
 
 /**
+ * So khớp hạng mục linh hoạt giữa danh mục hiển thị (vd: 'TVC & Commercial')
+ * và danh mục gán trên dự án (vd: 'TVC'), không phân biệt hoa thường và ký tự đặc biệt.
+ */
+export function isCategoryMatch(projCategory: string, groupCategory: string): boolean {
+  if (!projCategory || !groupCategory) return false;
+  if (projCategory === groupCategory) return true;
+  const k1 = normalizeCategoryKey(projCategory);
+  const k2 = normalizeCategoryKey(groupCategory);
+  if (k1 === k2) return true;
+
+  // TVC / Commercial aliases
+  const isTvc1 = k1 === 'tvc' || k1 === 'tvccommercial';
+  const isTvc2 = k2 === 'tvc' || k2 === 'tvccommercial';
+  if (isTvc1 && isTvc2) return true;
+
+  // Social aliases
+  const isSocial1 = k1 === 'social' || k1 === 'social916';
+  const isSocial2 = k2 === 'social' || k2 === 'social916';
+  if (isSocial1 && isSocial2) return true;
+
+  // Personal aliases
+  const isPersonal1 = k1 === 'canhan' || k1 === 'personal' || k1 === 'personalworks';
+  const isPersonal2 = k2 === 'canhan' || k2 === 'personal' || k2 === 'personalworks';
+  if (isPersonal1 && isPersonal2) return true;
+
+  // Event recap aliases
+  const isEvent1 = k1 === 'eventrecap' || k1 === 'event';
+  const isEvent2 = k2 === 'eventrecap' || k2 === 'event';
+  if (isEvent1 && isEvent2) return true;
+
+  // Wedding aliases
+  const isWedding1 = k1 === 'wedding';
+  const isWedding2 = k2 === 'wedding';
+  if (isWedding1 && isWedding2) return true;
+
+  // Compare canonical titles
+  const m1 = KNOWN_CATEGORY_METADATA_MAP[k1];
+  const m2 = KNOWN_CATEGORY_METADATA_MAP[k2];
+  if (m1 && m2 && m1.title.toLowerCase() === m2.title.toLowerCase()) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Tự động viết hoa chữ cái đầu của từng từ (Title Case / Capitalize Each Word),
  * hỗ trợ toàn diện tiếng Việt có dấu và giữ nguyên các từ viết tắt chuyên ngành (TVC, MV, 4K, VFX, DOP...).
  *

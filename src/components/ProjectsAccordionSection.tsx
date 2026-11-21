@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Minus, Plus } from 'lucide-react';
+import { Film, Minus, Plus } from 'lucide-react';
 import { MaskedRevealTitle } from './MaskedRevealTitle';
 import { RevealGroup, RevealItem } from './ScrollReveal';
 import { CategoryFanCarousel } from './CategoryFanCarousel';
 import { PORTFOLIO_PROJECTS } from '../data/portfolioData';
 import type { PortfolioProject } from '../types/portfolio';
-import { getCategoryMeta, normalizeCategoryKey } from '../utils/portfolioLogic';
+import { getCategoryMeta, normalizeCategoryKey, isCategoryMatch } from '../utils/portfolioLogic';
 
 interface ProjectsAccordionSectionProps {
   onSelectProject: (project: PortfolioProject) => void;
@@ -55,16 +55,30 @@ export function ProjectsAccordionSection({
     };
   });
 
-  // Default open first two categories cleanly using unified normalized keys
-  const firstCatId = categoryGroups[0]?.id || 'tvc';
-  const secondCatId = categoryGroups[1]?.id || 'social916';
-  const [internalOpenCategories, setInternalOpenCategories] = useState<Record<string, boolean>>({
-    [firstCatId]: true,
-    [secondCatId]: true,
+  const allProjects = customProjects ?? PORTFOLIO_PROJECTS;
+
+  // Default open categories that actually have active projects to showcase live work immediately
+  const [internalOpenCategories, setInternalOpenCategories] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    const withProjects = categoryGroups.filter((g) => {
+      return allProjects.some((p) => isCategoryMatch(p.category, g.categoryFilter) && !p.hidden);
+    });
+    if (withProjects.length > 0) {
+      initial[withProjects[0].id] = true;
+      if (withProjects[1]) initial[withProjects[1].id] = true;
+    } else {
+      if (categoryGroups[0]) initial[categoryGroups[0].id] = true;
+    }
+    return initial;
   });
 
-  const allProjects = customProjects ?? PORTFOLIO_PROJECTS;
   const openCategories = controlledOpenCategories ?? internalOpenCategories;
+
+  const displaySubtitle =
+    subtitle &&
+    subtitle.trim() !== 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.'
+      ? subtitle.trim()
+      : 'Tuyển tập tác phẩm thương mại, mạng xã hội và phim độc lập — phân loại theo định dạng sản xuất.';
 
   const isFirstRenderRef = useRef(true);
   useEffect(() => {
@@ -90,14 +104,14 @@ export function ProjectsAccordionSection({
         color: 'var(--morph-ink, #111111)',
         borderColor: 'var(--morph-border, rgba(0,0,0,0.08))',
       }}
-      className="w-full bg-transparent pt-16 sm:pt-20 md:pt-24 pb-20 sm:pb-24 md:pb-28 border-b"
+      className="w-full bg-transparent pt-20 sm:pt-24 md:pt-28 pb-20 sm:pb-24 md:pb-28 border-b"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 space-y-10 sm:space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 space-y-12 sm:space-y-14">
         {/* Section Header: Minimal Studio Heading (adapts smoothly to Scroll-Linked Background Morph) */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <MaskedRevealTitle
             as="h2"
-            className="font-bricolage text-2xl md:text-3xl font-extrabold tracking-tight uppercase leading-[1.25] text-[var(--morph-ink,#111111)]"
+            className="font-bricolage text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-[-0.03em] uppercase leading-[1.15] text-[var(--morph-ink,#111111)]"
           >
             Dự án đã thực hiện
           </MaskedRevealTitle>
@@ -105,7 +119,7 @@ export function ProjectsAccordionSection({
             style={{ color: 'var(--morph-ink-muted, #555555)' }}
             className="text-sm sm:text-base font-normal leading-relaxed max-w-2xl"
           >
-            {subtitle || 'Chọn từng nhóm hạng mục bên dưới để xem sản phẩm thực tế đã bàn giao.'}
+            {displaySubtitle}
           </p>
         </div>
 
@@ -116,7 +130,7 @@ export function ProjectsAccordionSection({
         >
           {categoryGroups.map((group, groupIdx) => {
             const projectsInGroup = allProjects.filter(
-              (p) => p.category === group.categoryFilter && !p.hidden
+              (p) => isCategoryMatch(p.category, group.categoryFilter) && !p.hidden
             );
             const isOpen = !!openCategories[group.id];
             const isGroupVertical = group.isVertical || projectsInGroup.some((p) => p.aspectRatio === '9:16');
@@ -159,17 +173,31 @@ export function ProjectsAccordionSection({
                     </div>
 
                     {/* Right: Count Badge & +/- Round Button */}
-                    <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                      <span className="px-3 py-1.5 rounded-full border border-black/15 bg-white text-xs font-bold text-[#111111] tabular-nums shadow-2xs">
+                    <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+                      <span
+                        style={{
+                          backgroundColor: 'var(--morph-badge-bg, rgba(255, 255, 255, 0.08))',
+                          borderColor: 'var(--morph-border, rgba(0, 0, 0, 0.12))',
+                          color: 'var(--morph-ink, #111111)',
+                        }}
+                        className="px-3 py-1.5 rounded-full border text-xs font-bold tabular-nums shadow-2xs backdrop-blur-xs transition-colors"
+                      >
                         {String(projectsInGroup.length).padStart(2, '0')} DỰ ÁN
                       </span>
 
                       <div
-                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center transition-all ${
-                          isOpen
-                            ? 'bg-[#111111] border-[#111111] text-white shadow-xs'
-                            : 'bg-white border-black/15 text-[#111111] group-hover:border-[#111111] group-hover:bg-[#111111] group-hover:text-white'
-                        }`}
+                        style={{
+                          backgroundColor: isOpen
+                            ? 'var(--morph-ink, #111111)'
+                            : 'var(--morph-badge-bg, rgba(255, 255, 255, 0.08))',
+                          borderColor: isOpen
+                            ? 'var(--morph-ink, #111111)'
+                            : 'var(--morph-border, rgba(0, 0, 0, 0.15))',
+                          color: isOpen
+                            ? 'var(--morph-bg, #FFFFFF)'
+                            : 'var(--morph-ink, #111111)',
+                        }}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center transition-all shadow-2xs backdrop-blur-xs group-hover:scale-105"
                       >
                         {isOpen ? (
                           <Minus className="w-4 h-4 stroke-[2.5]" />
@@ -192,12 +220,24 @@ export function ProjectsAccordionSection({
                         className="overflow-hidden"
                       >
                         <div className="pt-2 pb-6 sm:pb-8">
-                          <CategoryFanCarousel
-                            projects={projectsInGroup}
-                            isVertical={isGroupVertical}
-                            onSelectProject={onSelectProject}
-                            categoryTitle={group.title}
-                          />
+                          {projectsInGroup.length === 0 ? (
+                            <div className="py-12 flex flex-col items-center justify-center text-center space-y-2 opacity-65">
+                              <Film className="w-8 h-8 text-[var(--morph-ink-muted,#777777)]" />
+                              <p className="text-xs font-bold uppercase tracking-wider text-[var(--morph-ink,#111111)]">
+                                Đang cập nhật tác phẩm
+                              </p>
+                              <p className="text-xs text-[var(--morph-ink-muted,#777777)] max-w-xs">
+                                Các dự án thuộc hạng mục {group.title} sẽ sớm được cập nhật vào portfolio.
+                              </p>
+                            </div>
+                          ) : (
+                            <CategoryFanCarousel
+                              projects={projectsInGroup}
+                              isVertical={isGroupVertical}
+                              onSelectProject={onSelectProject}
+                              categoryTitle={group.title}
+                            />
+                          )}
                         </div>
                       </motion.div>
                     )}
