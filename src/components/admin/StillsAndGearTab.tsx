@@ -9,18 +9,16 @@ import {
   Code2,
   Film,
   GraduationCap,
+  Image as ImageIcon,
   Laptop,
-  Pause,
   Pencil,
-  Play,
   Plus,
+  RefreshCw,
   RotateCcw,
-  SkipBack,
-  SkipForward,
   Sparkles,
   Trash2,
   Upload,
-  Video,
+  X,
 } from 'lucide-react';
 import type {
   EducationItem,
@@ -36,6 +34,12 @@ import {
   resolveSafeUploadedImageUrl,
   type CompressionResult,
 } from '../../utils/imageCompression';
+import {
+  filterValidImageFiles,
+  generateFrameTitle,
+  createStillsItem,
+  mergeNewStillsWithExisting,
+} from '../../utils/stillsBatchLogic';
 import { DEFAULT_SOFTWARE_TOOLS } from '../../data/defaultContent';
 import {
   renderSoftwareIcon,
@@ -43,11 +47,6 @@ import {
   isValidSvg,
   parseToolEntry,
 } from '../../utils/softwareIcons';
-import {
-  formatVideoDuration,
-  normalizeDropboxUrl,
-  getVideoProxyUrl,
-} from '../../utils/videoEmbed';
 
 interface StillsAndGearTabProps {
   stills: StillsItem[];
@@ -82,9 +81,18 @@ export function StillsAndGearTab({
   const [newStillAlt, setNewStillAlt] = useState('');
   const [uploadingStill, setUploadingStill] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState<string | null>(null);
-  const [uploadedBatchCount, setUploadedBatchCount] = useState<number | null>(null);
-  const [stillCompression, setStillCompression] = useState<CompressionResult | null>(null);
+  const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
+  const [uploadedBatchStats, setUploadedBatchStats] = useState<{
+    count: number;
+    originalBytes: number;
+    compressedBytes: number;
+    savingsPercent: number;
+  } | null>(null);
   const [stillUploadError, setStillUploadError] = useState<string | null>(null);
+
+  // Stills inline rename state
+  const [editingStillId, setEditingStillId] = useState<string | null>(null);
+  const [editingStillTitle, setEditingStillTitle] = useState('');
 
   // Gear item inputs
   const [newCameraItem, setNewCameraItem] = useState('');
@@ -99,275 +107,135 @@ export function StillsAndGearTab({
   const [editingToolName, setEditingToolName] = useState('');
   const [editingToolSvg, setEditingToolSvg] = useState('');
 
-  // Video Frame Extractor State
-  const [extractorVideoUrlInput, setExtractorVideoUrlInput] = useState('');
-  const [extractorActiveSrc, setExtractorActiveSrc] = useState<string | null>(null);
-  const [extractorIsLocalFile, setExtractorIsLocalFile] = useState(false);
-  const [extractorIsPlaying, setExtractorIsPlaying] = useState(false);
-  const [extractorCurrentTime, setExtractorCurrentTime] = useState(0);
-  const [extractorDuration, setExtractorDuration] = useState(0);
-  const [extractorCapturing, setExtractorCapturing] = useState(false);
-  const [extractorCaptureSuccess, setExtractorCaptureSuccess] = useState<string | null>(null);
-  const [extractorError, setExtractorError] = useState<string | null>(null);
-  const [extractorFrameTitle, setExtractorFrameTitle] = useState('');
-  const [extractorUsingProxy, setExtractorUsingProxy] = useState(false);
-  const extractorVideoRef = useRef<HTMLVideoElement>(null);
-
-  // Load video URL into extractor
-  const handleLoadExtractorUrl = (urlToLoad?: string) => {
-    const targetUrl = (urlToLoad || extractorVideoUrlInput).trim();
-    if (!targetUrl) return;
-
-    setExtractorError(null);
-    setExtractorCaptureSuccess(null);
-    setExtractorIsLocalFile(false);
-    setExtractorUsingProxy(false);
-
-    // Direct stream normalization
-    const streamUrl = normalizeDropboxUrl(targetUrl);
-    setExtractorActiveSrc(streamUrl);
-  };
-
-  // Load local video file into extractor
-  const handleSelectLocalVideoFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    const objectUrl = URL.createObjectURL(file);
-    setExtractorError(null);
-    setExtractorCaptureSuccess(null);
-    setExtractorIsLocalFile(true);
-    setExtractorUsingProxy(false);
-    setExtractorActiveSrc(objectUrl);
-    setExtractorFrameTitle(file.name.replace(/\.[^/.]+$/, ''));
-  };
-
-  // Precise frame-by-frame stepping (0.04s per 25fps editing standard)
-  const handleStepFrame = (offsetSeconds: number) => {
-    const video = extractorVideoRef.current;
-    if (!video) return;
-
-    video.pause();
-    setExtractorIsPlaying(false);
-    const newTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + offsetSeconds));
-    video.currentTime = newTime;
-    setExtractorCurrentTime(newTime);
-  };
-
-  // Toggle Play / Pause
-  const handleTogglePlayExtractor = () => {
-    const video = extractorVideoRef.current;
-    if (!video) return;
-
-    if (video.paused) {
-      video.play().catch(() => {});
-      setExtractorIsPlaying(true);
-    } else {
-      video.pause();
-      setExtractorIsPlaying(false);
-    }
-  };
-
-  // Capture current frame at native resolution, compress to WebP < 500KB and add to Stills
-  const handleCaptureFrameToStills = async () => {
-    const video = extractorVideoRef.current;
-    if (!video) return;
-
-    try {
-      setExtractorCapturing(true);
-      setExtractorError(null);
-      setExtractorCaptureSuccess(null);
-
-      // Create offscreen canvas at native video dimensions
-      const width = video.videoWidth || 1920;
-      const height = video.videoHeight || 1080;
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Không thể khởi tạo Canvas 2D context.');
-      }
-
-      ctx.drawImage(video, 0, 0, width, height);
-
-      // Convert canvas to WebP blob
-      const blob = await new Promise<Blob | null>((resolve, reject) => {
-        try {
-          canvas.toBlob((b) => resolve(b), 'image/webp', 0.95);
-        } catch (err) {
-          reject(err);
-        }
-      });
-
-      if (!blob) {
-        throw new Error('Chụp frame thất bại. Trình duyệt không thể trích xuất dữ liệu ảnh từ video.');
-      }
-
-      // Direct canvas WebP fallback (0.82)
-      const canvasFallbackDataUrl = (() => {
-        try {
-          const url = canvas.toDataURL('image/webp', 0.82);
-          return url && url.startsWith('data:image/') ? url : '';
-        } catch {
-          return '';
-        }
-      })();
-
-      // Compress to WebP < 500KB
-      const frameTimeStr = formatVideoDuration(video.currentTime);
-      const safeTimeName = frameTimeStr.replace(':', '-');
-      const tempFile = new File([blob], `frame-${safeTimeName}.webp`, { type: 'image/webp' });
-      const compResult = await compressImageToWebP(tempFile, 1920, 500 * 1024);
-
-      const safeInlineFallback = compResult.dataUrl || canvasFallbackDataUrl;
-
-      // Upload to R2 and verify via Image() before accepting the URL
-      let uploadedUrl: string | undefined;
-      const formData = new FormData();
-      formData.append('file', compResult.file);
-
-      try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        if (res.ok) {
-          const uploadRes = await res.json();
-          if (uploadRes && uploadRes.success && uploadRes.url) {
-            uploadedUrl = uploadRes.url;
-          }
-        }
-      } catch (uploadErr) {
-        console.warn('Upload notice, using local WebP preview:', uploadErr);
-      }
-
-      const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, safeInlineFallback);
-
-      // Title determination
-      const title = extractorFrameTitle.trim() || `Frame at ${frameTimeStr}`;
-
-      const newStill: StillsItem = {
-        id: `still-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        src: finalUrl,
-        alt: title,
-        row: 'top',
-        year: new Date().getFullYear().toString(),
-      };
-
-      onAddStill(newStill);
-      setExtractorCaptureSuccess(
-        `Đã chụp và lưu thành công "${title}" (${width}x${height}, ${formatBytes(compResult.compressedSize)} WebP) vào danh sách Stills!`
-      );
-    } catch (err: unknown) {
-      console.error('Frame capture error:', err);
-      const errMsg = err instanceof Error ? err.message : String(err);
-
-      // Check if it's CORS security error
-      if (
-        (errMsg.includes('SecurityError') || errMsg.includes('tainted') || errMsg.includes('cross-origin')) &&
-        extractorActiveSrc &&
-        !extractorUsingProxy &&
-        !extractorIsLocalFile
-      ) {
-        // Automatically switch to proxy route
-        setExtractorUsingProxy(true);
-        const proxyUrl = getVideoProxyUrl(extractorActiveSrc);
-        setExtractorActiveSrc(proxyUrl);
-        setExtractorError('Đang tự động kích hoạt Proxy luồng video để vượt qua giới hạn CORS của Canvas. Vui lòng bấm chụp lại sau 1-2 giây!');
-      } else {
-        setExtractorError(`Lỗi chụp frame: ${errMsg}`);
-      }
-    } finally {
-      setExtractorCapturing(false);
-    }
-  };
-
-  // Drag & drop state for Stills
+  // Stills Drag & Drop State & Refs
   const [isDraggingStills, setIsDraggingStills] = useState(false);
+  const stillDragDepthRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Core handler: process and upload still files to Cloudflare R2 with WebP compression
   const handleProcessAndUploadStillFiles = async (fileList: File[]) => {
     if (!fileList || fileList.length === 0) return;
 
+    // Filter valid image files using dedicated utility
+    const validFiles = filterValidImageFiles(fileList);
+
+    if (validFiles.length === 0) {
+      setStillUploadError(
+        'Không tìm thấy file ảnh hợp lệ. Vui lòng chọn hoặc kéo thả file ảnh (.jpg, .png, .webp, .avif, .heic).'
+      );
+      return;
+    }
+
     try {
       setUploadingStill(true);
       setStillUploadError(null);
-      setStillCompression(null);
-      setUploadedBatchCount(null);
+      setUploadedBatchStats(null);
+      setUploadProgressPercent(0);
 
-      let lastCompressionResult: CompressionResult | null = null;
       const baseAlt = newStillAlt.trim();
+      const newStillsBatch: StillsItem[] = [];
+      const failedFileNames: string[] = [];
+      let totalOriginalBytes = 0;
+      let totalCompressedBytes = 0;
 
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
+        const stepPercent = Math.round(((i) / validFiles.length) * 100);
+        setUploadProgressPercent(stepPercent);
         setUploadProgressText(
-          fileList.length > 1
-            ? `Đang nén & Upload (${i + 1}/${fileList.length}): ${file.name}...`
-            : `Đang nén & Upload: ${file.name}...`
+          validFiles.length > 1
+            ? `[${i + 1}/${validFiles.length}] Đang nén WebP & tải lên Cloudflare R2: ${file.name}...`
+            : `Đang nén WebP & tải lên Cloudflare R2: ${file.name}...`
         );
 
-        // 1. Compress image to WebP under 500KB on the client
-        const result = await compressImageToWebP(file, 1920, 500 * 1024);
-        lastCompressionResult = result;
-
-        // 2. Upload to Cloudflare R2 and verify URL loads cleanly as an image
-        const formData = new FormData();
-        formData.append('file', result.file);
-
-        let uploadedUrl: string | undefined;
-
         try {
-          const res = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
+          // 1. Compress image to WebP under 500KB on the client
+          const result = await compressImageToWebP(file, 1920, 500 * 1024);
+          totalOriginalBytes += result.originalSize;
+          totalCompressedBytes += result.compressedSize;
+
+          // 2. Upload to Cloudflare R2 endpoint /api/upload
+          const formData = new FormData();
+          formData.append('file', result.file);
+
+          let uploadedUrl: string | undefined;
+
+          try {
+            const res = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (res.ok) {
+              const uploadRes = await res.json();
+              if (uploadRes && uploadRes.success && uploadRes.url) {
+                uploadedUrl = uploadRes.url;
+              }
+            }
+          } catch (uploadErr) {
+            console.warn('R2 upload notice, using local WebP preview:', uploadErr);
+          }
+
+          const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, result.dataUrl);
+
+          // 3. Determine alt/title: if empty, automatically use filename without extension
+          const frameTitle = generateFrameTitle(file.name, baseAlt, i, validFiles.length);
+
+          // 4. Create complete StillsItem with both title and alt set
+          const newStill = createStillsItem({
+            id: `still-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+            src: finalUrl,
+            title: frameTitle,
           });
 
-          if (res.ok) {
-            const uploadRes = await res.json();
-            if (uploadRes && uploadRes.success && uploadRes.url) {
-              uploadedUrl = uploadRes.url;
-            }
-          }
-        } catch (uploadErr) {
-          console.warn('R2 upload notice, using local WebP preview:', uploadErr);
+          newStillsBatch.push(newStill);
+        } catch (fileErr) {
+          console.error(`Lỗi khi xử lý file ${file.name}:`, fileErr);
+          failedFileNames.push(file.name);
         }
-
-        const finalUrl = await resolveSafeUploadedImageUrl(uploadedUrl, result.dataUrl);
-
-        // 3. Determine alt/title: if empty, automatically use filename without extension
-        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-        let frameTitle = fileNameWithoutExt;
-        if (baseAlt) {
-          frameTitle = fileList.length > 1 ? `${baseAlt} (${i + 1})` : baseAlt;
-        }
-
-        // 4. Add to stills list
-        const newStill: StillsItem = {
-          id: `still-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
-          src: finalUrl,
-          alt: frameTitle,
-          row: 'top',
-          year: new Date().getFullYear().toString(),
-        };
-
-        onAddStill(newStill);
       }
 
-      setStillCompression(lastCompressionResult);
-      setUploadedBatchCount(fileList.length);
-      setNewStillAlt('');
-    } catch (err: any) {
-      setStillUploadError(err?.message || 'Không thể upload ảnh stills');
+      setUploadProgressPercent(100);
+
+      // 5. Merge new stills into the gallery in natural order (Frame 01, Frame 02...)
+      if (newStillsBatch.length > 0) {
+        const mergedStills = mergeNewStillsWithExisting(newStillsBatch, stills);
+        onUpdateStills(mergedStills);
+
+        const savingsPercent = totalOriginalBytes > 0
+          ? Math.max(0, Math.round(((totalOriginalBytes - totalCompressedBytes) / totalOriginalBytes) * 100))
+          : 0;
+
+        setUploadedBatchStats({
+          count: newStillsBatch.length,
+          originalBytes: totalOriginalBytes,
+          compressedBytes: totalCompressedBytes,
+          savingsPercent,
+        });
+
+        setNewStillAlt('');
+      }
+
+      if (failedFileNames.length > 0) {
+        setStillUploadError(
+          `Không thể xử lý ${failedFileNames.length} file: ${failedFileNames.join(', ')}. Các file còn lại đã được tải lên thành công.`
+        );
+      }
+    } catch (err: unknown) {
+      console.error('Lỗi khi tải ảnh stills lên Cloudflare R2:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setStillUploadError(errMsg || 'Không thể upload ảnh stills lên Cloudflare R2');
     } finally {
       setUploadingStill(false);
       setUploadProgressText(null);
+      setUploadProgressPercent(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
-  // Handle still upload with automatic client-side WebP compression (<500KB) and batch multiple files support
+  // Handle still upload from file input
   const handleUploadStill = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -378,30 +246,69 @@ export function StillsAndGearTab({
   const handleStillDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    stillDragDepthRef.current += 1;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     setIsDraggingStills(true);
   };
 
   const handleStillDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     if (!isDraggingStills) setIsDraggingStills(true);
   };
 
   const handleStillDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDraggingStills(false);
+    stillDragDepthRef.current = Math.max(0, stillDragDepthRef.current - 1);
+    if (stillDragDepthRef.current === 0) {
+      setIsDraggingStills(false);
+    }
   };
 
   const handleStillDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    stillDragDepthRef.current = 0;
     setIsDraggingStills(false);
+    if (uploadingStill) return;
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       await handleProcessAndUploadStillFiles(Array.from(files));
     }
+  };
+
+  // Delete still frame with optional R2 asset cleanup
+  const handleDeleteStillWithCleanup = (still: StillsItem) => {
+    if (still.src && (still.src.includes('/uploads/') || still.src.includes('/media/'))) {
+      fetch(`/api/upload?url=${encodeURIComponent(still.src)}`, { method: 'DELETE' }).catch(() => {});
+    }
+    onDeleteStill(still.id);
+  };
+
+  // Inline rename handlers for Stills
+  const handleStartEditStill = (still: StillsItem) => {
+    setEditingStillId(still.id);
+    setEditingStillTitle(still.title || still.alt || '');
+  };
+
+  const handleSaveEditStill = () => {
+    if (!editingStillId) return;
+    const trimmed = editingStillTitle.trim();
+    if (!trimmed) {
+      setEditingStillId(null);
+      return;
+    }
+    const updated = stills.map((s) =>
+      s.id === editingStillId ? { ...s, title: trimmed, alt: trimmed } : s
+    );
+    onUpdateStills(updated);
+    setEditingStillId(null);
   };
 
   // Reorder still frames
@@ -543,7 +450,7 @@ export function StillsAndGearTab({
 
   return (
     <div className="space-y-10 w-full">
-      {/* SECTION 1: SELECTED FRAMES (INTERACTIVE ACCORDION STILLS) */}
+      {/* SECTION 1: SELECTED FRAMES (16:9 CINEMA ARCWAVE CAROUSEL) */}
       <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 space-y-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
         <div className="border-b border-black/8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
@@ -551,7 +458,7 @@ export function StillsAndGearTab({
               1. Quản lý Ảnh Stills (Selected Frames)
             </h2>
             <p className="text-xs text-[#666666] mt-0.5">
-              Dải khung hình điện ảnh giãn nở (Interactive Accordion) hiển thị ngay bên dưới Hero.
+              Dải khung hình điện ảnh 16:9 ArcWave 3D Amphitheater Carousel hiển thị ngay bên dưới Hero.
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-black/5 text-[#555555] shrink-0 self-start sm:self-auto">
@@ -559,337 +466,334 @@ export function StillsAndGearTab({
           </span>
         </div>
 
-        {/* Upload New Frame with WebP Compression (Kéo thả hoặc chọn file) */}
-        <div
-          onDragEnter={handleStillDragEnter}
-          onDragOver={handleStillDragOver}
-          onDragLeave={handleStillDragLeave}
-          onDrop={handleStillDrop}
-          className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-200 space-y-4 ${
-            isDraggingStills
-              ? 'border-dashed border-[#2563EB] bg-blue-50/80 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
-              : 'border-black/[0.07] bg-[#F9F9FB]'
-          }`}
-        >
-          {/* Drag & Drop Visual Overlay */}
-          {isDraggingStills && (
-            <div className="pointer-events-none absolute inset-0 z-30 rounded-xl border-2 border-dashed border-[#2563EB] bg-[#2563EB]/10 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
-              <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-md mb-2">
-                <Upload className="w-5 h-5 animate-bounce" />
+        {/* Studio Stills Uploader (Tải trực tiếp khung hình điện ảnh lên Cloudflare R2 qua Drag & Drop) */}
+        <div className="bg-[#111111] text-white p-5 sm:p-7 rounded-2xl border border-white/10 space-y-5 shadow-xl relative overflow-hidden">
+          {/* Subtle Ambient Studio Glow */}
+          <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 bg-[#38BDF8]/10 rounded-full blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 bg-[#2563EB]/10 rounded-full blur-3xl" />
+
+          {/* Header with Title and Optional Prefix Input */}
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+                  Tải Khung hình Điện ảnh lên Cloudflare R2
+                </h3>
               </div>
-              <p className="text-xs font-bold text-[#111111] bg-white/95 px-3 py-1.5 rounded-lg border border-[#2563EB]/30 shadow-xs">
-                Thả một hoặc nhiều file ảnh vào đây để nén WebP &amp; tải lên Cloudflare R2
+              <p className="text-[11px] text-white/60">
+                Kéo &amp; thả trực tiếp các frame hình ảnh 16:9 vào đây · Nén WebP tự động &lt; 500KB
               </p>
             </div>
-          )}
 
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-              Thêm ảnh Still / Frame mới (Tự động nén WebP &lt; 500KB)
-            </h3>
-            <span className="text-[11px] text-black/50 font-medium">Hỗ trợ kéo thả nhiều file</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs items-end">
-            <div className="sm:col-span-8 space-y-1">
-              <label className="font-medium text-[#444444]">Mô tả / Tên frame</label>
-              <input
-                type="text"
-                value={newStillAlt}
-                onChange={(e) => setNewStillAlt(e.target.value)}
-                placeholder="VD: TVC neon stage, Sunset car headlights... (hoặc bỏ trống để lấy tên file)"
-                className="w-full px-3 py-2.5 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all"
-              />
-            </div>
-
-            <div className="sm:col-span-4 flex flex-col justify-end">
-              <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#111111] hover:bg-black/85 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-98 w-full">
-                <Upload className="w-3.5 h-3.5 text-white" />
-                <span>
-                  {uploadingStill
-                    ? uploadProgressText || 'Đang nén & Upload...'
-                    : 'Chọn file ảnh để nén & thêm'}
-                </span>
+            <div className="w-full sm:w-80">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-white/70 flex items-center justify-between">
+                  <span>Tiền tố / Tên frame</span>
+                  <span className="text-[10px] text-white/40 font-normal">(Để trống sẽ lấy tên file)</span>
+                </label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={uploadingStill}
-                  onChange={handleUploadStill}
-                  className="hidden"
+                  type="text"
+                  value={newStillAlt}
+                  onChange={(e) => setNewStillAlt(e.target.value)}
+                  placeholder="VD: TVC Neon Stage, Sunset Car..."
+                  className="w-full px-3 py-2 rounded-lg bg-[#1A1A1C] border border-white/15 text-xs text-white placeholder:text-white/35 focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all"
                 />
-              </label>
+              </div>
             </div>
           </div>
 
-          {uploadedBatchCount && uploadedBatchCount > 1 ? (
-            <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-lg border border-emerald-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Đã tự động nén WebP và thêm thành công <strong>{uploadedBatchCount} ảnh Stills</strong> vào dải Accordion (Dưới 500KB chuẩn Cloudflare R2).
-              </span>
-            </div>
-          ) : stillCompression ? (
-            <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-lg border border-emerald-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Đã nén WebP: {formatBytes(stillCompression.originalSize)} →{' '}
-                <strong>{formatBytes(stillCompression.compressedSize)}</strong> (Giảm{' '}
-                {stillCompression.savingsPercent}%, dưới 500KB sẵn sàng đưa vào gallery).
-              </span>
-            </div>
-          ) : null}
+          {/* Interactive Drag & Drop Dropzone Area */}
+          <div
+            tabIndex={0}
+            role="button"
+            aria-label="Kéo thả hoặc nhấp để tải khung hình lên Cloudflare R2"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onClick={() => {
+              if (!uploadingStill) {
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragEnter={handleStillDragEnter}
+            onDragOver={handleStillDragOver}
+            onDragLeave={handleStillDragLeave}
+            onDrop={handleStillDrop}
+            className={`group relative flex flex-col items-center justify-center p-8 sm:p-12 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer text-center select-none overflow-hidden ${
+              isDraggingStills
+                ? 'border-[#38BDF8] bg-[#38BDF8]/15 shadow-[0_0_35px_rgba(56,189,248,0.3)] ring-2 ring-[#38BDF8]/40 scale-[1.008]'
+                : 'border-white/20 bg-[#161618] hover:border-white/40 hover:bg-[#1A1A1E]'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={uploadingStill}
+              onChange={handleUploadStill}
+              className="hidden"
+            />
 
-          {stillUploadError && (
-            <div className="flex items-center gap-2 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{stillUploadError}</span>
-            </div>
-          )}
-        </div>
+            {/* Dragging Active Overlay (pointer-events-none prevents any event flicker) */}
+            {isDraggingStills && (
+              <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center space-y-3 bg-[#111111]/90 backdrop-blur-xs p-4">
+                <div className="w-16 h-16 rounded-2xl bg-[#38BDF8] text-[#111111] flex items-center justify-center shadow-lg shadow-cyan-500/30 animate-bounce">
+                  <Upload className="w-8 h-8" />
+                </div>
+                <p className="text-sm font-bold text-white">
+                  Thả các frame hình ảnh vào đây để nén WebP &amp; tải lên Cloudflare R2
+                </p>
+                <span className="text-xs text-[#38BDF8] font-semibold bg-white/10 px-3 py-1 rounded-full border border-cyan-400/30">
+                  Tự động đồng bộ dải ArcWave Gallery theo đúng thứ tự
+                </span>
+              </div>
+            )}
 
-        {/* Trích xuất & Chụp Frame trực tiếp từ Link Video Dropbox / MP4 */}
-        <div className="bg-[#F9F9FB] p-4 sm:p-5 rounded-xl border border-black/[0.07] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-[#2563EB]" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                Trích xuất &amp; Chụp Frame trực tiếp từ Link Video Dropbox
-              </h3>
-            </div>
-            {extractorActiveSrc && (
-              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0 self-start sm:self-auto">
-                {extractorIsLocalFile
-                  ? 'File Video từ máy'
-                  : extractorUsingProxy
-                  ? 'Video qua Proxy CORS'
-                  : 'Direct Stream MP4'}
-              </span>
+            {/* Uploading Progress State */}
+            {uploadingStill ? (
+              <div className="pointer-events-none flex flex-col items-center justify-center space-y-3.5 py-4 w-full max-w-md mx-auto">
+                <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center shadow-md border border-white/15">
+                  <RefreshCw className="w-7 h-7 text-[#38BDF8] animate-spin" />
+                </div>
+                <div className="space-y-1.5 w-full text-center">
+                  <p className="text-sm font-bold text-white line-clamp-1">
+                    {uploadProgressText || 'Đang nén WebP & tải lên Cloudflare R2...'}
+                  </p>
+                  <p className="text-xs text-white/60">
+                    Vui lòng đợi giây lát, các khung hình đang được tối ưu chuẩn WebP dưới 500KB
+                  </p>
+                  {/* Visual Progress Bar */}
+                  <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-2">
+                    <div
+                      className="bg-gradient-to-r from-[#2563EB] to-[#38BDF8] h-full transition-all duration-300 rounded-full"
+                      style={{ width: `${Math.max(10, uploadProgressPercent)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Idle Dropzone Content (pointer-events-none on children ensures rock-solid single target) */
+              <div className="pointer-events-none flex flex-col items-center justify-center space-y-3.5">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/15 text-white flex items-center justify-center shadow-md group-hover:scale-105 group-hover:bg-[#38BDF8] group-hover:text-[#111111] group-hover:border-[#38BDF8] transition-all duration-200">
+                  <Upload className="w-6 h-6 text-[#38BDF8] group-hover:text-[#111111] transition-colors" />
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm sm:text-base font-bold text-white">
+                    Kéo &amp; thả các khung hình (frames) vào đây
+                  </p>
+                  <p className="text-xs text-white/60">
+                    hoặc <span className="text-[#38BDF8] font-bold underline underline-offset-2">bấm vào đây để chọn file từ máy</span>
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px] text-white/70">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium">
+                    ☁️ Cloudflare R2 Storage
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium text-[#38BDF8]">
+                    🎬 Chuẩn 16:9 WebP &lt; 500KB
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium">
+                    📁 JPG, PNG, WEBP, AVIF
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-medium">
+                    ⚡ Kéo thả nhiều ảnh cùng lúc
+                  </span>
+                </div>
+              </div>
             )}
           </div>
 
-          <p className="text-xs text-[#666666]">
-            Dán link video Dropbox hoặc chọn file MP4 từ máy. Tua chính xác từng khung hình (1 frame = 0.04s) và bấm chụp để tự động nén WebP dưới 500KB lưu thẳng vào dải ảnh Stills.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs items-end">
-            <div className="sm:col-span-8 space-y-1">
-              <label className="font-medium text-[#444444]">Dán link video Dropbox (hoặc link MP4 trực tiếp)</label>
-              <input
-                type="text"
-                value={extractorVideoUrlInput}
-                onChange={(e) => setExtractorVideoUrlInput(e.target.value)}
-                placeholder="VD: https://www.dropbox.com/scl/fi/.../video.mp4?rlkey=... hoặc link MP4"
-                className="w-full px-3 py-2.5 rounded-lg bg-white border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono"
-              />
-            </div>
-
-            <div className="sm:col-span-4 flex items-center gap-2">
+          {/* Feedback Banners */}
+          {uploadedBatchStats && (
+            <div className="flex items-center justify-between gap-3 text-xs bg-emerald-950/60 text-emerald-200 p-3.5 rounded-xl border border-emerald-500/30 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  Đã tự động nén WebP và tải lên Cloudflare R2 thành công{' '}
+                  <strong>{uploadedBatchStats.count} khung hình</strong> vào dải Gallery! (
+                  {formatBytes(uploadedBatchStats.originalBytes)} →{' '}
+                  <strong>{formatBytes(uploadedBatchStats.compressedBytes)}</strong>, tiết kiệm{' '}
+                  {uploadedBatchStats.savingsPercent}% dung lượng).
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => handleLoadExtractorUrl()}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-98"
+                onClick={() => setUploadedBatchStats(null)}
+                className="text-emerald-300 hover:text-white font-bold px-2 py-0.5 rounded cursor-pointer transition-colors"
+                title="Đóng thông báo"
               >
-                <Video className="w-3.5 h-3.5" />
-                <span>Tải Video</span>
+                ×
               </button>
-
-              <label
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white border border-black/15 hover:bg-black/5 text-[#222222] text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-98 whitespace-nowrap"
-                title="Chọn file video từ máy để không tốn băng thông mạng"
-              >
-                <Film className="w-3.5 h-3.5 text-[#555555]" />
-                <span>Chọn File</span>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={handleSelectLocalVideoFile}
-                  className="hidden"
-                />
-              </label>
             </div>
+          )}
+
+          {stillUploadError && (
+            <div className="flex items-center justify-between gap-3 text-xs bg-amber-950/60 text-amber-200 p-3.5 rounded-xl border border-amber-500/30 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{stillUploadError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStillUploadError(null)}
+                className="text-amber-300 hover:text-white font-bold px-2 py-0.5 rounded cursor-pointer transition-colors"
+                title="Đóng thông báo"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Current Stills Grid (Numbered Frame 01, Frame 02, reorderable, editable) */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+              Danh sách khung hình Stills ({stills.length})
+            </h3>
+            <span className="text-[11px] text-[#777777]">
+              Hover vào ảnh để đổi thứ tự, chỉnh sửa tên hoặc xóa frame
+            </span>
           </div>
 
-          {/* Player, Scrubber & Frame Stepper */}
-          {extractorActiveSrc && (
-            <div className="space-y-3 pt-3 border-t border-black/8">
-              {/* 16:9 Video Player Viewport */}
-              <div className="relative aspect-video max-h-[380px] mx-auto bg-black rounded-xl overflow-hidden shadow-inner border border-black/15 flex items-center justify-center">
-                <video
-                  ref={extractorVideoRef}
-                  src={extractorActiveSrc}
-                  crossOrigin="anonymous"
-                  playsInline
-                  preload="metadata"
-                  onTimeUpdate={(e) => setExtractorCurrentTime(e.currentTarget.currentTime)}
-                  onDurationChange={(e) => setExtractorDuration(e.currentTarget.duration)}
-                  onPlay={() => setExtractorIsPlaying(true)}
-                  onPause={() => setExtractorIsPlaying(false)}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              {/* Scrubber Controls */}
-              <div className="space-y-2 bg-white p-3 rounded-lg border border-black/8">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleTogglePlayExtractor}
-                    className="p-2 rounded-lg bg-black/5 hover:bg-black/10 text-[#111111] transition-colors cursor-pointer"
-                    title={extractorIsPlaying ? 'Tạm dừng' : 'Phát'}
-                  >
-                    {extractorIsPlaying ? (
-                      <Pause className="w-4 h-4" />
-                    ) : (
-                      <Play className="w-4 h-4 ml-0.5" />
-                    )}
-                  </button>
-
-                  <input
-                    type="range"
-                    min={0}
-                    max={extractorDuration || 100}
-                    step={0.04}
-                    value={extractorCurrentTime}
-                    onChange={(e) => {
-                      const newTime = parseFloat(e.target.value);
-                      if (extractorVideoRef.current) {
-                        extractorVideoRef.current.currentTime = newTime;
-                      }
-                      setExtractorCurrentTime(newTime);
-                    }}
-                    className="flex-1 accent-[#2563EB] cursor-pointer"
+          {stills.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-10 bg-[#FAFAFC] rounded-xl border border-dashed border-black/10 text-center space-y-2">
+              <ImageIcon className="w-8 h-8 text-black/30" />
+              <p className="text-xs font-bold text-[#111111]">Chưa có khung hình Stills nào</p>
+              <p className="text-xs text-[#777777] max-w-sm">
+                Hãy kéo thả ảnh vào khu vực phía trên để nén WebP và tải trực tiếp lên Cloudflare R2.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+              {stills.map((still, idx) => (
+                <div
+                  key={still.id}
+                  className="group relative aspect-video rounded-xl overflow-hidden bg-black border border-black/10 shadow-2xs"
+                >
+                  <img
+                    src={still.src}
+                    alt={still.alt || still.title || `Frame ${idx + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
 
-                  <div className="text-[11px] font-mono font-semibold text-[#555555] whitespace-nowrap">
-                    {formatVideoDuration(extractorCurrentTime)} / {formatVideoDuration(extractorDuration)}
+                  {/* Always-visible top-left Frame index badge */}
+                  <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-[#111111]/90 backdrop-blur-md text-white text-[10px] font-bold tabular-nums shadow-sm border border-white/15">
+                    Frame {String(idx + 1).padStart(2, '0')}
+                  </div>
+
+                  {/* Hover overlay with action controls (Reorder Left, Reorder Right, Edit, Delete) */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between z-20">
+                    <div className="flex items-center justify-end gap-1">
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleMoveStill(idx, 'left')}
+                          className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
+                          title="Dời sang trái"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {idx < stills.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleMoveStill(idx, 'right')}
+                          className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
+                          title="Dời sang phải"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditStill(still)}
+                        className="p-1 rounded-md bg-white/20 text-white hover:bg-[#38BDF8] hover:text-[#111111] transition-colors shadow-xs cursor-pointer"
+                        title="Đổi tên frame này"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStillWithCleanup(still)}
+                        className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors shadow-xs cursor-pointer ml-1"
+                        title="Xóa frame này"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <div className="text-[10px] text-white">
+                      <span className="block font-bold line-clamp-1">{still.title || still.alt}</span>
+                      <span className="text-white/60">16:9 Cinema Frame</span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Frame stepping buttons & Capture CTA */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/5">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleStepFrame(-0.04)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-black/5 hover:bg-black/10 text-xs font-medium text-[#222222] transition-colors cursor-pointer"
-                      title="Lùi 1 Frame (0.04 giây)"
-                    >
-                      <SkipBack className="w-3.5 h-3.5 text-[#555555]" />
-                      <span>-1 Frame (0.04s)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStepFrame(0.04)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-black/5 hover:bg-black/10 text-xs font-medium text-[#222222] transition-colors cursor-pointer"
-                      title="Tiến 1 Frame (0.04 giây)"
-                    >
-                      <span>+1 Frame (0.04s)</span>
-                      <SkipForward className="w-3.5 h-3.5 text-[#555555]" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-1 sm:max-w-md justify-end">
-                    <input
-                      type="text"
-                      value={extractorFrameTitle}
-                      onChange={(e) => setExtractorFrameTitle(e.target.value)}
-                      placeholder={`Mô tả / Tên frame (VD: Frame at ${formatVideoDuration(extractorCurrentTime)})`}
-                      className="w-full px-2.5 py-1.5 rounded-md bg-[#F9F9FB] border border-black/10 text-xs text-[#111111] focus:outline-none focus:border-[#111111]"
-                    />
-
-                    <button
-                      type="button"
-                      disabled={extractorCapturing}
-                      onClick={handleCaptureFrameToStills}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#111111] hover:bg-black/85 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-98"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-white" />
-                      <span>{extractorCapturing ? 'Đang chụp...' : '📸 Chụp Frame này & Thêm vào Stills'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {extractorCaptureSuccess && (
-            <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-lg border border-emerald-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{extractorCaptureSuccess}</span>
-            </div>
-          )}
-
-          {extractorError && (
-            <div className="flex items-center gap-2 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{extractorError}</span>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Current Stills Grid (Numbered Frame 01, Frame 02, reorderable, no Top/Bot labels) */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-            {stills.map((still, idx) => (
-              <div
-                key={still.id}
-                className="group relative aspect-video rounded-xl overflow-hidden bg-black border border-black/10 shadow-2xs"
-              >
-                <img
-                  src={still.src}
-                  alt={still.alt}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        {/* Modal chỉnh sửa tên frame */}
+        {editingStillId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="w-full max-w-md bg-[#161618] text-white border border-white/15 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-[#38BDF8]" />
+                  <span>Đổi tên khung hình (Frame Title)</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingStillId(null)}
+                  className="text-white/60 hover:text-white p-1 rounded-md cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white/80">Tên hiển thị trên thẻ và Lightbox</label>
+                <input
+                  type="text"
+                  value={editingStillTitle}
+                  onChange={(e) => setEditingStillTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveEditStill();
+                    if (e.key === 'Escape') setEditingStillId(null);
+                  }}
+                  autoFocus
+                  placeholder="VD: TVC Neon Stage, Cinematic Sunset..."
+                  className="w-full px-3 py-2 rounded-lg bg-[#222226] border border-white/20 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all"
                 />
-
-                {/* Always-visible top-left Frame index badge */}
-                <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-[#111111]/90 backdrop-blur-md text-white text-[10px] font-bold tabular-nums shadow-sm border border-white/15">
-                  Frame {String(idx + 1).padStart(2, '0')}
-                </div>
-
-                {/* Hover overlay with action controls (Reorder Left, Reorder Right, Delete) */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between z-20">
-                  <div className="flex items-center justify-end gap-1">
-                    {idx > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleMoveStill(idx, 'left')}
-                        className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
-                        title="Dời sang trái"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {idx < stills.length - 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleMoveStill(idx, 'right')}
-                        className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
-                        title="Dời sang phải"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onDeleteStill(still.id)}
-                      className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors shadow-xs cursor-pointer ml-1"
-                      title="Xóa frame này"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <div className="text-[10px] text-white">
-                    <span className="block font-bold line-clamp-1">{still.alt}</span>
-                    <span className="text-white/60">16:9 Cinema Frame</span>
-                  </div>
-                </div>
               </div>
-            ))}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStillId(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditStill}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#38BDF8] text-[#111111] hover:bg-cyan-300 transition-colors shadow-sm cursor-pointer"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* SECTION 2: GEAR SPEC SHEET (THIẾT BỊ TÁC NGHIỆP CÁ NHÂN) - 100% PRESERVED */}
