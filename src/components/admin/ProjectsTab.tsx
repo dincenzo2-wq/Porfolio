@@ -542,7 +542,16 @@ export function ProjectsTab({
   };
 
   const handleOpenEdit = (project: PortfolioProject) => {
-    setEditingProject({ ...project });
+    const parsedYt = parseVideoUrl(project.videoUrl);
+    const autoCover =
+      parsedYt.type === 'youtube' && parsedYt.videoId && !project.coverImage
+        ? `https://img.youtube.com/vi/${parsedYt.videoId}/maxresdefault.jpg`
+        : project.coverImage;
+
+    setEditingProject({
+      ...project,
+      coverImage: autoCover,
+    });
     setIsCreatingNew(false);
     const client = (project.clientOrAgency || '').trim().toLowerCase();
     const isIndie =
@@ -699,7 +708,8 @@ export function ProjectsTab({
     });
   };
 
-  // Auto-detect aspect ratio for direct video & Dropbox links
+  // Auto-detect aspect ratio for direct video, YouTube & Dropbox links
+  // Tự động lấy ảnh bìa HD từ YouTube (0MB dung lượng lưu trữ)
   // Tuyệt đối KHÔNG tự động chuyển tab/danh mục: giữ nguyên lựa chọn danh mục của người dùng
   const handleVideoUrlChange = (rawVal: string) => {
     let cleanVal = rawVal.trim();
@@ -711,6 +721,7 @@ export function ProjectsTab({
 
     const normalized = normalizeDropboxUrl(cleanVal);
     const detectedRatio = detectAspectRatioFromVideoUrl(normalized);
+    const parsed = parseVideoUrl(normalized);
 
     setEditingProject((prev) => {
       if (!prev) return null;
@@ -718,6 +729,13 @@ export function ProjectsTab({
 
       if (detectedRatio && prev.aspectRatio !== detectedRatio) {
         updates.aspectRatio = detectedRatio;
+      }
+
+      // Tự động gán ảnh bìa YouTube gốc nếu chưa có ảnh bìa hoặc đang dùng ảnh từ YouTube
+      if (parsed.type === 'youtube' && parsed.videoId) {
+        if (!prev.coverImage || prev.coverImage.includes('img.youtube.com')) {
+          updates.coverImage = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
+        }
       }
 
       return { ...prev, ...updates };
@@ -787,6 +805,18 @@ export function ProjectsTab({
       return { label: 'Chưa có link video', hasValid: false };
     }
     const parsed = parseVideoUrl(videoUrl);
+    if (parsed.type === 'youtube') {
+      return { label: parsed.isShorts ? 'YouTube Shorts' : 'YouTube', hasValid: true };
+    }
+    if (parsed.type === 'vimeo') {
+      return { label: 'Vimeo', hasValid: true };
+    }
+    if (parsed.type === 'gdrive') {
+      return { label: 'Google Drive', hasValid: true };
+    }
+    if (parsed.type === 'vk') {
+      return { label: parsed.isShorts ? 'VK Clip 9:16' : 'VK Video', hasValid: true };
+    }
     if (parsed.isDropbox) {
       return { label: 'Dropbox MP4', hasValid: true };
     }
@@ -1649,7 +1679,7 @@ export function ProjectsTab({
                   </div>
                 </div>
 
-                {/* KHỐI 2: ĐƯỜNG LINK VIDEO & TRÌNH PHÁT PLYR */}
+                {/* KHỐI 2: ĐƯỜNG LINK VIDEO (YOUTUBE / DROPBOX / MP4) */}
                 <div className="rounded-2xl border border-black/[0.08] bg-[#F9F9FB] p-5 sm:p-6 space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
                     <div className="flex items-center gap-2">
@@ -1657,17 +1687,17 @@ export function ProjectsTab({
                         <Film className="w-3.5 h-3.5" />
                       </span>
                       <h3 className="font-semibold text-sm text-[#111111] tracking-tight">
-                        Đường link Video &amp; Trình phát Plyr
+                        Đường link Video &amp; Trình phát
                       </h3>
                     </div>
                     <span className="bg-black/5 text-black/65 px-2.5 py-0.5 rounded-md text-[11px] font-medium shrink-0">
-                      Hỗ trợ Dropbox &amp; Cloudflare R2
+                      Hỗ trợ YouTube / Drive / Dropbox / MP4
                     </span>
                   </div>
 
                   <div className="space-y-2">
                     <label className="block text-xs font-semibold text-[#111111]">
-                      Đường link Video trực tiếp (Dropbox MP4 / Cloudflare R2)
+                      Đường link Video (YouTube / Vimeo / Google Drive / Dropbox / MP4)
                     </label>
                     <input
                       type="text"
@@ -1675,11 +1705,11 @@ export function ProjectsTab({
                       value={editingProject.videoUrl || ''}
                       onChange={(e) => handleVideoUrlChange(e.target.value)}
                       onBlur={(e) => handleVideoUrlChange(e.target.value)}
-                      placeholder="https://www.dropbox.com/scl/fi/.../video.mp4 hoặc link file .mp4 từ Cloudflare R2"
+                      placeholder="https://youtu.be/... hoặc Dropbox MP4 / link file MP4 từ Cloudflare R2"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-black/10 text-xs sm:text-sm text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-2 focus:ring-black/5 transition-all font-mono"
                     />
                     <p className="text-[11px] text-black/50 leading-relaxed">
-                      Dán link video từ <strong>Dropbox</strong> hoặc file <strong>.mp4 / .webm</strong> trực tiếp. Hệ thống tự động kích hoạt trình phát điện ảnh <strong>Plyr</strong> và tự nhận diện thời lượng video.
+                      Hỗ trợ <strong>YouTube</strong> (tự nhận diện 9:16 Shorts &amp; tự lấy ảnh bìa HD 0MB dung lượng), <strong>Dropbox MP4</strong> (trình phát Plyr), <strong>Vimeo</strong>, <strong>Google Drive</strong> và file <strong>.mp4 / .webm</strong> trực tiếp.
                     </p>
                   </div>
 
@@ -1705,7 +1735,15 @@ export function ProjectsTab({
                               <span>Xem trước:</span>
                             </span>
                             <span className="text-[11px] font-semibold text-black/75 bg-black/5 px-2 py-0.5 rounded-md">
-                              {parsed.isDropbox
+                              {parsed.type === 'youtube'
+                                ? (parsed.isShorts ? 'YouTube Shorts' : 'YouTube')
+                                : parsed.type === 'vimeo'
+                                ? 'Vimeo'
+                                : parsed.type === 'gdrive'
+                                ? 'Google Drive'
+                                : parsed.type === 'vk'
+                                ? (parsed.isShorts ? 'VK Clip 9:16' : 'VK Video')
+                                : parsed.isDropbox
                                 ? 'Dropbox MP4 (Plyr)'
                                 : parsed.type === 'direct'
                                 ? 'File MP4 / R2 (Plyr)'
@@ -1723,6 +1761,24 @@ export function ProjectsTab({
                           </div>
 
                           <div className="flex items-center gap-2.5">
+                            {/* Button: Lấy Thumbnail YouTube làm ảnh bìa (0MB dung lượng) */}
+                            {parsed.type === 'youtube' && parsed.videoId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const ytCover = `https://img.youtube.com/vi/${parsed.videoId}/maxresdefault.jpg`;
+                                  setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
+                                  setFailedCoverUrl(null);
+                                  setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng lưu trữ)!');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-700 text-white shadow-xs cursor-pointer active:scale-98 transition-all"
+                                title="Lấy ảnh bìa gốc chất lượng cao từ YouTube (tiết kiệm 100% dung lượng)"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>Lấy bìa YouTube (0MB)</span>
+                              </button>
+                            )}
+
                             {/* Button: Chụp frame này làm ảnh bìa */}
                             {isDirectOrDropbox && (
                               <button
@@ -1892,6 +1948,33 @@ export function ProjectsTab({
                             className="hidden"
                           />
                         </label>
+
+                        {/* Nút lấy lại ảnh bìa YouTube */}
+                        {editingProject.videoUrl && parseVideoUrl(editingProject.videoUrl).type === 'youtube' && (() => {
+                          const ytParsed = parseVideoUrl(editingProject.videoUrl);
+                          if (!ytParsed.videoId) return null;
+                          const ytCover = `https://img.youtube.com/vi/${ytParsed.videoId}/maxresdefault.jpg`;
+                          const isAlreadyUsing = Boolean(editingProject.coverImage?.includes(ytParsed.videoId));
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingProject((prev) => (prev ? { ...prev, coverImage: ytCover } : null));
+                                setFailedCoverUrl(null);
+                                setCaptureSuccessMsg('Đã lấy ảnh bìa HD từ YouTube (0MB dung lượng lưu trữ)!');
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer active:scale-98 ${
+                                isAlreadyUsing
+                                  ? 'bg-red-50 text-red-700 border-red-200 shadow-xs'
+                                  : 'bg-white text-red-600 hover:bg-red-50 border-red-200'
+                              }`}
+                              title="Tự động lấy ảnh bìa gốc của video YouTube này (tiết kiệm 100% dung lượng)"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
+                              <span>{isAlreadyUsing ? 'Đang dùng bìa YouTube (0MB)' : 'Lấy bìa YouTube (0MB)'}</span>
+                            </button>
+                          );
+                        })()}
 
                       </div>
 

@@ -80,8 +80,8 @@ export const DEFAULT_PROFILE: SiteProfileData = {
   showreelUrl: '/videos/dem-khong-ngu.mp4',
   showreelLabel: 'XEM SHOWREEL 2026 · 01:15',
   heroBgUrl: '/videos/dem-khong-ngu.mp4',
-  heroBgType: 'video',
-  heroPosterUrl: '',
+  heroBgType: 'image',
+  heroPosterUrl: '/media/uploads/2026-11/1795197899439_v8zrah_1794981483388_864rxt_project_frame_22s.webp',
   heroVideoStart: 0,
   heroVideoEnd: 15,
 };

@@ -302,6 +302,10 @@ export function CategoryFanCarousel({
                   draggable={false}
                   onError={(e) => {
                     const target = e.currentTarget;
+                    if (target.src.includes('maxresdefault.jpg')) {
+                      target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                      return;
+                    }
                     if (target.dataset.hasFallenBack !== 'true') {
                       target.dataset.hasFallenBack = 'true';
                       target.src = '/assets/images/reel_saigon_neon_1794581940924.jpg';
