@@ -454,24 +454,6 @@ export function StillsGallerySection({ stills }: StillsGallerySectionProps) {
                   style={{ opacity: initialSlot.darkness }}
                   className="arcwave-darkness pointer-events-none absolute inset-0 bg-black transition-opacity duration-300"
                 />
-
-                {/* ArcWave Hover Caption Veil (.thr3-veil) */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 sm:h-2/5 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col justify-end p-2.5 sm:p-3 md:p-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bricolage text-xs sm:text-sm md:text-base font-bold text-white tracking-wide truncate">
-                      {slot.item.title || `Khung hình ${slot.sourceIndex + 1}`}
-                    </h4>
-                    <span className="text-[10px] sm:text-xs font-sans font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-white/20 text-white/90 tabular-nums shrink-0">
-                      {slot.item.year || '2025'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-white/70 line-clamp-1 mt-0.5 font-medium">
-                    {slot.item.alt || 'Khung hình điện ảnh chọn lọc'}
-                  </p>
-                </div>
               </button>
             );
           })}
