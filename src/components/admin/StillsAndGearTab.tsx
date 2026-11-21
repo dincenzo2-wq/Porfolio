@@ -40,7 +40,7 @@ import {
   createStillsItem,
   mergeNewStillsWithExisting,
 } from '../../utils/stillsBatchLogic';
-import { DEFAULT_SOFTWARE_TOOLS } from '../../data/defaultContent';
+import { DEFAULT_SOFTWARE_TOOLS, DEFAULT_STILLS } from '../../data/defaultContent';
 import {
   renderSoftwareIcon,
   detectSoftware,
@@ -62,6 +62,15 @@ interface StillsAndGearTabProps {
   onUpdateExperience?: (experience: ExperienceItem[]) => void;
   onUpdateEducation?: (education: EducationItem[]) => void;
 }
+
+const resolveStillSrc = (item: StillsItem, idx: number) => {
+  const defaultMatch = DEFAULT_STILLS.find((d) => d.id === item.id) || DEFAULT_STILLS[idx];
+  let src = item.src;
+  if ((!src || src.startsWith('/assets/')) && defaultMatch?.src) {
+    src = defaultMatch.src;
+  }
+  return src || defaultMatch?.src || '';
+};
 
 export function StillsAndGearTab({
   stills,
@@ -451,176 +460,175 @@ export function StillsAndGearTab({
   return (
     <div className="space-y-10 w-full">
       {/* SECTION 1: SELECTED FRAMES (16:9 CINEMA ARCWAVE CAROUSEL) */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6 sm:p-8 space-y-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
-        <div className="border-b border-black/8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <section className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 space-y-5 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/8 pb-3.5">
           <div>
-            <h2 className="font-bricolage text-lg sm:text-xl font-bold text-[#111111] uppercase tracking-tight">
-              1. Quản lý Ảnh Stills (Selected Frames)
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-bricolage text-base sm:text-lg font-bold text-[#111111] uppercase tracking-tight">
+                1. Quản lý Ảnh Stills (Selected Frames)
+              </h2>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-black/5 text-[#555555] tabular-nums">
+                {stills.length} frames
+              </span>
+            </div>
             <p className="text-xs text-[#666666] mt-0.5">
               Dải khung hình điện ảnh 16:9 ArcWave 3D Amphitheater Carousel hiển thị ngay bên dưới Hero.
             </p>
           </div>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-black/5 text-[#555555] shrink-0 self-start sm:self-auto">
-            Tổng: {stills.length} frames
-          </span>
         </div>
 
-        {/* Studio Stills Uploader (Tải trực tiếp khung hình điện ảnh lên Cloudflare R2 qua Drag & Drop) */}
-        <div className="bg-[#111111] text-white p-5 sm:p-7 rounded-2xl border border-white/10 space-y-5 shadow-xl relative overflow-hidden">
+        {/* Compact Studio Stills Uploader (Tải trực tiếp khung hình lên Cloudflare R2 qua Drag & Drop) */}
+        <div className="bg-[#121214] text-white p-4 sm:p-5 rounded-xl border border-white/10 shadow-lg relative overflow-hidden">
           {/* Subtle Ambient Studio Glow */}
-          <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 bg-[#38BDF8]/10 rounded-full blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 bg-[#2563EB]/10 rounded-full blur-3xl" />
+          <div className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 bg-[#38BDF8]/10 rounded-full blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 w-64 h-64 bg-[#2563EB]/10 rounded-full blur-3xl" />
 
-          {/* Header with Title and Optional Prefix Input */}
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
-                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
-                  Tải Khung hình Điện ảnh lên Cloudflare R2
-                </h3>
-              </div>
-              <p className="text-[11px] text-white/60">
-                Kéo &amp; thả trực tiếp các frame hình ảnh 16:9 vào đây · Nén WebP tự động &lt; 500KB
-              </p>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+            {/* Left 8 cols: Interactive Drag & Drop Dropzone */}
+            <div
+              tabIndex={0}
+              role="button"
+              aria-label="Kéo thả hoặc nhấp để tải khung hình lên Cloudflare R2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onClick={() => {
+                if (!uploadingStill) {
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragEnter={handleStillDragEnter}
+              onDragOver={handleStillDragOver}
+              onDragLeave={handleStillDragLeave}
+              onDrop={handleStillDrop}
+              className={`group relative lg:col-span-8 flex items-center justify-between p-4 sm:p-5 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer select-none overflow-hidden min-h-[105px] ${
+                isDraggingStills
+                  ? 'border-[#38BDF8] bg-[#38BDF8]/15 shadow-[0_0_30px_rgba(56,189,248,0.25)] ring-2 ring-[#38BDF8]/40 scale-[1.005]'
+                  : 'border-white/20 bg-[#161618] hover:border-white/35 hover:bg-[#1A1A1E]'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={uploadingStill}
+                onChange={handleUploadStill}
+                className="hidden"
+              />
+
+              {/* Dragging Active Overlay */}
+              {isDraggingStills && (
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-3 bg-[#111113]/95 backdrop-blur-xs p-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#38BDF8] text-[#111111] flex items-center justify-center shadow-lg shadow-cyan-500/30 animate-bounce shrink-0">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-bold text-white">
+                      Thả các frame hình ảnh vào đây để nén WebP &amp; tải lên Cloudflare R2
+                    </p>
+                    <span className="text-[11px] text-[#38BDF8] font-semibold">
+                      Tự động tối ưu 16:9 &lt; 500KB và đồng bộ vào thư viện
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Uploading Progress State */}
+              {uploadingStill ? (
+                <div className="pointer-events-none flex items-center gap-3.5 w-full py-1">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shadow-md border border-white/15 shrink-0">
+                    <RefreshCw className="w-5 h-5 text-[#38BDF8] animate-spin" />
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white truncate">
+                        {uploadProgressText || 'Đang nén WebP & tải lên Cloudflare R2...'}
+                      </span>
+                      <span className="text-[#38BDF8] font-mono tabular-nums font-bold shrink-0 ml-2">
+                        {uploadProgressPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-[#2563EB] to-[#38BDF8] h-full transition-all duration-300 rounded-full"
+                        style={{ width: `${Math.max(8, uploadProgressPercent)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Idle Compact Dropzone */
+                <div className="pointer-events-none flex items-center gap-3.5 w-full">
+                  <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/15 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 group-hover:bg-[#38BDF8] group-hover:text-[#111111] group-hover:border-[#38BDF8] transition-all duration-200">
+                    <Upload className="w-5 h-5 text-[#38BDF8] group-hover:text-[#111111] transition-colors" />
+                  </div>
+
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs sm:text-sm font-bold text-white">
+                        Kéo &amp; thả khung hình vào đây
+                      </p>
+                      <span className="text-[11px] text-[#38BDF8] font-semibold underline underline-offset-2">
+                        hoặc bấm để chọn file
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/55">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+                        ☁️ Cloudflare R2
+                      </span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#38BDF8]">
+                        🎬 16:9 WebP &lt; 500KB
+                      </span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                        ⚡ Nhiều ảnh cùng lúc
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="w-full sm:w-80">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/70 flex items-center justify-between">
-                  <span>Tiền tố / Tên frame</span>
-                  <span className="text-[10px] text-white/40 font-normal">(Để trống sẽ lấy tên file)</span>
-                </label>
+            {/* Right 4 cols: Frame Title Prefix & Quick Options */}
+            <div className="lg:col-span-4 flex flex-col justify-between p-3.5 bg-[#17171A] rounded-xl border border-white/10 space-y-2">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <label className="font-bold text-white/90 uppercase tracking-wider">
+                    Tiền tố / Tên frame
+                  </label>
+                  <span className="text-white/40 text-[10px] font-normal">Tùy chọn</span>
+                </div>
                 <input
                   type="text"
                   value={newStillAlt}
                   onChange={(e) => setNewStillAlt(e.target.value)}
-                  placeholder="VD: TVC Neon Stage, Sunset Car..."
-                  className="w-full px-3 py-2 rounded-lg bg-[#1A1A1C] border border-white/15 text-xs text-white placeholder:text-white/35 focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all"
+                  placeholder="VD: TVC Neon Stage, Sunset..."
+                  className="w-full px-3 py-1.5 rounded-lg bg-[#202024] border border-white/15 text-xs text-white placeholder:text-white/35 focus:outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8]/25 transition-all"
                 />
               </div>
+
+              <p className="text-[10px] text-white/45 leading-normal">
+                Để trống sẽ tự động lấy tên file ảnh gốc khi tải lên.
+              </p>
             </div>
-          </div>
-
-          {/* Interactive Drag & Drop Dropzone Area */}
-          <div
-            tabIndex={0}
-            role="button"
-            aria-label="Kéo thả hoặc nhấp để tải khung hình lên Cloudflare R2"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            onClick={() => {
-              if (!uploadingStill) {
-                fileInputRef.current?.click();
-              }
-            }}
-            onDragEnter={handleStillDragEnter}
-            onDragOver={handleStillDragOver}
-            onDragLeave={handleStillDragLeave}
-            onDrop={handleStillDrop}
-            className={`group relative flex flex-col items-center justify-center p-8 sm:p-12 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer text-center select-none overflow-hidden ${
-              isDraggingStills
-                ? 'border-[#38BDF8] bg-[#38BDF8]/15 shadow-[0_0_35px_rgba(56,189,248,0.3)] ring-2 ring-[#38BDF8]/40 scale-[1.008]'
-                : 'border-white/20 bg-[#161618] hover:border-white/40 hover:bg-[#1A1A1E]'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              disabled={uploadingStill}
-              onChange={handleUploadStill}
-              className="hidden"
-            />
-
-            {/* Dragging Active Overlay (pointer-events-none prevents any event flicker) */}
-            {isDraggingStills && (
-              <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center space-y-3 bg-[#111111]/90 backdrop-blur-xs p-4">
-                <div className="w-16 h-16 rounded-2xl bg-[#38BDF8] text-[#111111] flex items-center justify-center shadow-lg shadow-cyan-500/30 animate-bounce">
-                  <Upload className="w-8 h-8" />
-                </div>
-                <p className="text-sm font-bold text-white">
-                  Thả các frame hình ảnh vào đây để nén WebP &amp; tải lên Cloudflare R2
-                </p>
-                <span className="text-xs text-[#38BDF8] font-semibold bg-white/10 px-3 py-1 rounded-full border border-cyan-400/30">
-                  Tự động đồng bộ dải ArcWave Gallery theo đúng thứ tự
-                </span>
-              </div>
-            )}
-
-            {/* Uploading Progress State */}
-            {uploadingStill ? (
-              <div className="pointer-events-none flex flex-col items-center justify-center space-y-3.5 py-4 w-full max-w-md mx-auto">
-                <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center shadow-md border border-white/15">
-                  <RefreshCw className="w-7 h-7 text-[#38BDF8] animate-spin" />
-                </div>
-                <div className="space-y-1.5 w-full text-center">
-                  <p className="text-sm font-bold text-white line-clamp-1">
-                    {uploadProgressText || 'Đang nén WebP & tải lên Cloudflare R2...'}
-                  </p>
-                  <p className="text-xs text-white/60">
-                    Vui lòng đợi giây lát, các khung hình đang được tối ưu chuẩn WebP dưới 500KB
-                  </p>
-                  {/* Visual Progress Bar */}
-                  <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-2">
-                    <div
-                      className="bg-gradient-to-r from-[#2563EB] to-[#38BDF8] h-full transition-all duration-300 rounded-full"
-                      style={{ width: `${Math.max(10, uploadProgressPercent)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Idle Dropzone Content (pointer-events-none on children ensures rock-solid single target) */
-              <div className="pointer-events-none flex flex-col items-center justify-center space-y-3.5">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/15 text-white flex items-center justify-center shadow-md group-hover:scale-105 group-hover:bg-[#38BDF8] group-hover:text-[#111111] group-hover:border-[#38BDF8] transition-all duration-200">
-                  <Upload className="w-6 h-6 text-[#38BDF8] group-hover:text-[#111111] transition-colors" />
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm sm:text-base font-bold text-white">
-                    Kéo &amp; thả các khung hình (frames) vào đây
-                  </p>
-                  <p className="text-xs text-white/60">
-                    hoặc <span className="text-[#38BDF8] font-bold underline underline-offset-2">bấm vào đây để chọn file từ máy</span>
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px] text-white/70">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium">
-                    ☁️ Cloudflare R2 Storage
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium text-[#38BDF8]">
-                    🎬 Chuẩn 16:9 WebP &lt; 500KB
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white/5 border border-white/10 font-medium">
-                    📁 JPG, PNG, WEBP, AVIF
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-medium">
-                    ⚡ Kéo thả nhiều ảnh cùng lúc
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Feedback Banners */}
           {uploadedBatchStats && (
-            <div className="flex items-center justify-between gap-3 text-xs bg-emerald-950/60 text-emerald-200 p-3.5 rounded-xl border border-emerald-500/30 shadow-2xs">
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs bg-emerald-950/60 text-emerald-200 p-3 rounded-xl border border-emerald-500/30 shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
-                  Đã tự động nén WebP và tải lên Cloudflare R2 thành công{' '}
-                  <strong>{uploadedBatchStats.count} khung hình</strong> vào dải Gallery! (
+                  Đã nén WebP và tải lên Cloudflare R2 thành công{' '}
+                  <strong>{uploadedBatchStats.count} khung hình</strong>! (
                   {formatBytes(uploadedBatchStats.originalBytes)} →{' '}
                   <strong>{formatBytes(uploadedBatchStats.compressedBytes)}</strong>, tiết kiệm{' '}
-                  {uploadedBatchStats.savingsPercent}% dung lượng).
+                  {uploadedBatchStats.savingsPercent}%).
                 </span>
               </div>
               <button
@@ -635,7 +643,7 @@ export function StillsAndGearTab({
           )}
 
           {stillUploadError && (
-            <div className="flex items-center justify-between gap-3 text-xs bg-amber-950/60 text-amber-200 p-3.5 rounded-xl border border-amber-500/30 shadow-2xs">
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs bg-amber-950/60 text-amber-200 p-3 rounded-xl border border-amber-500/30 shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>{stillUploadError}</span>
@@ -653,90 +661,113 @@ export function StillsAndGearTab({
         </div>
 
         {/* Current Stills Grid (Numbered Frame 01, Frame 02, reorderable, editable) */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-              Danh sách khung hình Stills ({stills.length})
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                Danh sách khung hình ({stills.length})
+              </h3>
+              <span className="text-[11px] text-[#777777] hidden sm:inline">
+                · Chuẩn tỉ lệ 16:9 Cinema
+              </span>
+            </div>
             <span className="text-[11px] text-[#777777]">
-              Hover vào ảnh để đổi thứ tự, chỉnh sửa tên hoặc xóa frame
+              Hover vào ảnh để đổi thứ tự, đổi tên hoặc xóa
             </span>
           </div>
 
           {stills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-10 bg-[#FAFAFC] rounded-xl border border-dashed border-black/10 text-center space-y-2">
-              <ImageIcon className="w-8 h-8 text-black/30" />
+            <div className="flex flex-col items-center justify-center p-8 bg-[#FAFAFC] rounded-xl border border-dashed border-black/10 text-center space-y-2">
+              <ImageIcon className="w-7 h-7 text-black/30" />
               <p className="text-xs font-bold text-[#111111]">Chưa có khung hình Stills nào</p>
               <p className="text-xs text-[#777777] max-w-sm">
                 Hãy kéo thả ảnh vào khu vực phía trên để nén WebP và tải trực tiếp lên Cloudflare R2.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-              {stills.map((still, idx) => (
-                <div
-                  key={still.id}
-                  className="group relative aspect-video rounded-xl overflow-hidden bg-black border border-black/10 shadow-2xs"
-                >
-                  <img
-                    src={still.src}
-                    alt={still.alt || still.title || `Frame ${idx + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {stills.map((still, idx) => {
+                const src = resolveStillSrc(still, idx);
+                return (
+                  <div
+                    key={still.id}
+                    className="group relative aspect-video rounded-xl overflow-hidden bg-[#161618] border border-black/10 shadow-xs hover:border-black/25 transition-all duration-200"
+                  >
+                    <img
+                      src={src}
+                      alt={still.alt || still.title || `Frame ${idx + 1}`}
+                      loading="lazy"
+                      onError={(e) => {
+                        const defaultMatch =
+                          DEFAULT_STILLS.find((d) => d.id === still.id) || DEFAULT_STILLS[idx];
+                        if (defaultMatch?.src && (e.currentTarget as HTMLImageElement).src !== defaultMatch.src) {
+                          (e.currentTarget as HTMLImageElement).src = defaultMatch.src;
+                        }
+                      }}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
 
-                  {/* Always-visible top-left Frame index badge */}
-                  <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-[#111111]/90 backdrop-blur-md text-white text-[10px] font-bold tabular-nums shadow-sm border border-white/15">
-                    Frame {String(idx + 1).padStart(2, '0')}
-                  </div>
-
-                  {/* Hover overlay with action controls (Reorder Left, Reorder Right, Edit, Delete) */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between z-20">
-                    <div className="flex items-center justify-end gap-1">
-                      {idx > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handleMoveStill(idx, 'left')}
-                          className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
-                          title="Dời sang trái"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {idx < stills.length - 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleMoveStill(idx, 'right')}
-                          className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors shadow-xs cursor-pointer"
-                          title="Dời sang phải"
-                        >
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditStill(still)}
-                        className="p-1 rounded-md bg-white/20 text-white hover:bg-[#38BDF8] hover:text-[#111111] transition-colors shadow-xs cursor-pointer"
-                        title="Đổi tên frame này"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteStillWithCleanup(still)}
-                        className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors shadow-xs cursor-pointer ml-1"
-                        title="Xóa frame này"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                    {/* Minimalist Top-Left Frame Index Badge */}
+                    <div className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold tabular-nums shadow-xs border border-white/15">
+                      {String(idx + 1).padStart(2, '0')}
                     </div>
 
-                    <div className="text-[10px] text-white">
-                      <span className="block font-bold line-clamp-1">{still.title || still.alt}</span>
-                      <span className="text-white/60">16:9 Cinema Frame</span>
+                    {/* Always visible bottom caption bar (fades on hover when controls appear) */}
+                    <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-4 pb-1.5 px-2 pointer-events-none group-hover:opacity-0 transition-opacity duration-200">
+                      <p className="text-[10.5px] font-medium text-white truncate drop-shadow-xs">
+                        {still.title || still.alt}
+                      </p>
+                    </div>
+
+                    {/* Hover Overlay with Action Controls */}
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 flex flex-col justify-between z-20">
+                      <div className="flex items-center justify-end gap-1">
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveStill(idx, 'left')}
+                            className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors cursor-pointer shadow-2xs"
+                            title="Dời sang trái"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {idx < stills.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveStill(idx, 'right')}
+                            className="p-1 rounded-md bg-white/20 text-white hover:bg-white/40 transition-colors cursor-pointer shadow-2xs"
+                            title="Dời sang phải"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditStill(still)}
+                          className="p-1 rounded-md bg-white/20 text-white hover:bg-[#38BDF8] hover:text-[#111111] transition-colors cursor-pointer shadow-2xs"
+                          title="Đổi tên frame này"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStillWithCleanup(still)}
+                          className="p-1 rounded-md bg-red-600/80 text-white hover:bg-red-600 transition-colors cursor-pointer ml-0.5 shadow-2xs"
+                          title="Xóa frame này"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <div className="text-[10px] text-white space-y-0.5">
+                        <span className="block font-bold line-clamp-1">{still.title || still.alt}</span>
+                        <span className="text-white/60">16:9 Cinema Frame</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
